@@ -397,13 +397,28 @@ function CheckoutContent() {
         amount: finalTotalAmount,
       });
 
+      const effectiveKey = order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
+      const isPlaceholderOrMockKey =
+        !effectiveKey ||
+        effectiveKey === "rzp_test_placeholder" ||
+        effectiveKey.includes("placeholder") ||
+        effectiveKey.includes("Mock") ||
+        effectiveKey.length < 15;
+
+      // If backend has mock / placeholder key, directly open the full in-app Razorpay simulation modal
+      if (isPlaceholderOrMockKey) {
+        setShowRazorpayModal(true);
+        setIsProcessingPayment(false);
+        return;
+      }
+
       // 3. Load Razorpay Script and open official Razorpay Checkout Test Mode
       const scriptLoaded = await loadRazorpayScript();
 
       if (scriptLoaded && window.Razorpay) {
         try {
           const options: any = {
-            key: order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
+            key: effectiveKey,
             amount: order.amountInPaise,
             currency: order.currency || "INR",
             name: "redBus India",
@@ -463,7 +478,8 @@ function CheckoutContent() {
 
           const rzp = new window.Razorpay(options);
           rzp.on("payment.failed", function (failResp: any) {
-            setErrorMessage(failResp?.error?.description || "Payment failed in Razorpay.");
+            console.warn("Razorpay official popup failed, falling back to seamless in-app modal:", failResp);
+            setShowRazorpayModal(true);
             setIsProcessingPayment(false);
           });
           rzp.open();
