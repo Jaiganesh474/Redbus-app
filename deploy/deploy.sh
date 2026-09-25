@@ -26,7 +26,7 @@ After=syslog.target network.target mysql.service
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu/Redbus-app/backend
-ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /home/ubuntu/Redbus-app/backend/target/redbus-backend-0.0.1-SNAPSHOT.jar
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /home/ubuntu/Redbus-app/backend/target/redbus-backend.jar
 EnvironmentFile=/home/ubuntu/Redbus-app/backend/.env
 SuccessExitStatus=143
 Restart=always
