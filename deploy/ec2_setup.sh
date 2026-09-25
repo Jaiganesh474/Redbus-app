@@ -22,9 +22,9 @@ if [ ! -f /swapfile ]; then
     echo "✅ Swap Memory configured successfully!"
 fi
 
-# 3. Install Java 17 & Maven
-echo "☕ Installing Java 17 & Maven..."
-sudo apt-get install -y openjdk-17-jdk maven
+# 3. Install Java 17 / 21 & Maven
+echo "☕ Installing Java & Maven..."
+sudo apt-get install -y openjdk-17-jdk openjdk-21-jdk maven
 
 # 4. Install Node.js 20 & PM2
 echo "📦 Installing Node.js 20 & PM2..."
