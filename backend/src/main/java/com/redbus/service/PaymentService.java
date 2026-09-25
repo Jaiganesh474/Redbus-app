@@ -43,6 +43,11 @@ public class PaymentService {
     @Value("${app.razorpay.key-secret:redbusSecretKeyMock}")
     private String razorpayKeySecret;
 
+    private String cleanKey(String key) {
+        if (key == null) return "";
+        return key.trim().replace("\"", "").replace("'", "");
+    }
+
     @Transactional
     public PaymentOrderResponse createOrder(String pnr) {
         Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
@@ -52,12 +57,15 @@ public class PaymentService {
             throw new BadRequestException("Booking is already confirmed");
         }
 
+        String keyId = cleanKey(razorpayKeyId);
+        String keySecret = cleanKey(razorpayKeySecret);
+
         long amountInPaise = booking.getTotalAmount().multiply(BigDecimal.valueOf(100)).longValue();
         String orderId;
 
         // Create real order via Razorpay SDK with configured Test / Live credentials
         try {
-            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            RazorpayClient client = new RazorpayClient(keyId, keySecret);
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInPaise);
             orderRequest.put("currency", "INR");
@@ -68,9 +76,9 @@ public class PaymentService {
             orderId = order.get("id");
             log.info("Razorpay order created successfully: {} for PNR: {}", orderId, booking.getPnr());
         } catch (Exception e) {
-            log.error("Razorpay API order creation failed: {}", e.getMessage(), e);
+            log.error("Razorpay API order creation failed (Key: {}...): {}", keyId.length() > 8 ? keyId.substring(0, 8) : keyId, e.getMessage(), e);
             throw new BadRequestException("Razorpay order creation failed: " + e.getMessage() + 
-                    ". Please make sure valid RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are set in the backend .env");
+                    ". Please verify RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in /home/ubuntu/Redbus-app/backend/.env");
         }
 
         Payment payment = Payment.builder()
@@ -87,7 +95,7 @@ public class PaymentService {
                 .currency("INR")
                 .amountInPaise(amountInPaise)
                 .amount(booking.getTotalAmount())
-                .keyId(razorpayKeyId)
+                .keyId(keyId)
                 .pnr(booking.getPnr())
                 .build();
     }
@@ -105,7 +113,7 @@ public class PaymentService {
                 request.getRazorpayOrderId(),
                 request.getRazorpayPaymentId(),
                 request.getRazorpaySignature(),
-                razorpayKeySecret
+                cleanKey(razorpayKeySecret)
         );
 
         if (!isValidSignature) {
