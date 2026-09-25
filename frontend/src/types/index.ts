@@ -12,6 +12,22 @@ export interface User {
   walletBalance?: number;
 }
 
+export interface OperatorProfile {
+  id: number;
+  userId: number;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  kycDocUrl?: string;
+  bankAccountRef?: string;
+  commissionRate?: number;
+  status: string;
+  createdAt?: string;
+  totalBuses?: number;
+  totalSchedules?: number;
+}
+
 export interface SavedTraveller {
   id: number;
   name: string;

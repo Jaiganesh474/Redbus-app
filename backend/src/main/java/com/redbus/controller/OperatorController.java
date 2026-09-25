@@ -40,20 +40,17 @@ public class OperatorController {
         return operatorService.getOrCreateOperatorForUser(user);
     }
 
-    @GetMapping("/me")
+    @GetMapping({"/me", "/profile"})
     public ResponseEntity<OperatorDto> getProfile() {
         Operator op = getAuthenticatedOperator();
-        return ResponseEntity.ok(OperatorDto.builder()
-                .id(op.getId())
-                .userId(op.getUser().getId())
-                .companyName(op.getCompanyName())
-                .contactPerson(op.getContactPerson())
-                .email(op.getEmail())
-                .phone(op.getPhone())
-                .commissionRate(op.getCommissionRate())
-                .status(op.getStatus())
-                .createdAt(op.getCreatedAt())
-                .build());
+        return ResponseEntity.ok(operatorService.mapToOperatorDto(op));
+    }
+
+    @PutMapping({"/me", "/profile"})
+    public ResponseEntity<OperatorDto> updateProfile(@Valid @RequestBody UpdateOperatorProfileRequest req) {
+        Operator op = getAuthenticatedOperator();
+        OperatorDto updated = operatorService.updateProfile(op.getId(), req);
+        return ResponseEntity.ok(updated);
     }
 
     @GetMapping("/buses")

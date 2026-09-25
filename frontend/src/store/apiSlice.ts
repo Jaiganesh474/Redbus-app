@@ -10,6 +10,7 @@ import type {
   User,
   SavedTraveller,
   Operator,
+  OperatorProfile,
   BusResponse,
   ScheduleResponse,
   OperatorBooking,
@@ -49,7 +50,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos"],
+  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "OperatorProfile", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos"],
   endpoints: (builder) => ({
     // Auth
     login: builder.mutation<{ token: string; user: User }, any>({
@@ -175,10 +176,6 @@ export const apiSlice = createApi({
         body: formData,
       }),
     }),
-    getOperatorProfile: builder.query<Operator, void>({
-      query: () => "/operator/me",
-      providesTags: ["Auth"],
-    }),
     getOperatorBuses: builder.query<BusResponse[], void>({
       query: () => "/operator/buses",
       providesTags: ["OperatorBuses"],
@@ -225,6 +222,18 @@ export const apiSlice = createApi({
     getOperatorBookings: builder.query<OperatorBooking[], void>({
       query: () => "/operator/bookings",
       providesTags: ["OperatorAnalytics"],
+    }),
+    getOperatorProfile: builder.query<OperatorProfile, void>({
+      query: () => "/operator/profile",
+      providesTags: ["OperatorProfile"],
+    }),
+    updateOperatorProfile: builder.mutation<OperatorProfile, Partial<OperatorProfile>>({
+      query: (body) => ({
+        url: "/operator/profile",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["OperatorProfile", "Auth"],
     }),
 
     // Routes / Search
@@ -580,6 +589,7 @@ export const {
   useRegisterOperatorMutation,
   useUploadBusImageMutation,
   useGetOperatorProfileQuery,
+  useUpdateOperatorProfileMutation,
   useGetOperatorBusesQuery,
   useCreateBusMutation,
   useUpdateBusMutation,

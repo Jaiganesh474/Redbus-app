@@ -347,5 +347,60 @@ public class OperatorService {
         seatRepository.deleteByBusId(bus.getId());
         busRepository.delete(bus);
     }
+
+    @Transactional
+    public OperatorDto updateProfile(Long operatorId, UpdateOperatorProfileRequest req) {
+        Operator op = operatorRepository.findById(operatorId)
+                .orElseThrow(() -> new com.redbus.exception.ResourceNotFoundException("Operator not found with id: " + operatorId));
+
+        if (req.getCompanyName() != null && !req.getCompanyName().isBlank()) {
+            op.setCompanyName(req.getCompanyName().trim());
+        }
+        if (req.getContactPerson() != null && !req.getContactPerson().isBlank()) {
+            op.setContactPerson(req.getContactPerson().trim());
+            if (op.getUser() != null) {
+                op.getUser().setName(req.getContactPerson().trim());
+            }
+        }
+        if (req.getPhone() != null && !req.getPhone().isBlank()) {
+            op.setPhone(req.getPhone().trim());
+            if (op.getUser() != null) {
+                op.getUser().setPhone(req.getPhone().trim());
+            }
+        }
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+            op.setEmail(req.getEmail().trim());
+        }
+        if (req.getBankAccountRef() != null) {
+            op.setBankAccountRef(req.getBankAccountRef().trim());
+        }
+        if (req.getKycDocUrl() != null) {
+            op.setKycDocUrl(req.getKycDocUrl().trim());
+        }
+
+        Operator saved = operatorRepository.save(op);
+        return mapToOperatorDto(saved);
+    }
+
+    public OperatorDto mapToOperatorDto(Operator op) {
+        int totalBuses = busRepository.findByOperatorId(op.getId()).size();
+        int totalSchedules = scheduleRepository.findByOperatorId(op.getId()).size();
+
+        return OperatorDto.builder()
+                .id(op.getId())
+                .userId(op.getUser() != null ? op.getUser().getId() : null)
+                .companyName(op.getCompanyName())
+                .contactPerson(op.getContactPerson())
+                .email(op.getEmail())
+                .phone(op.getPhone())
+                .kycDocUrl(op.getKycDocUrl())
+                .bankAccountRef(op.getBankAccountRef())
+                .commissionRate(op.getCommissionRate())
+                .status(op.getStatus())
+                .createdAt(op.getCreatedAt())
+                .totalBuses(totalBuses)
+                .totalSchedules(totalSchedules)
+                .build();
+    }
 }
 

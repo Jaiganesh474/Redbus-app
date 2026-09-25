@@ -9,6 +9,8 @@ import {
   useGetOperatorSchedulesQuery,
   useGetOperatorCouponsQuery,
   useGetAvailableCouponsQuery,
+  useGetOperatorProfileQuery,
+  useUpdateOperatorProfileMutation,
   useCreateBusMutation,
   useUpdateBusMutation,
   useDeleteBusMutation,
@@ -54,11 +56,19 @@ import {
   Camera,
   Wand2,
   Sliders,
+  Building2,
+  CreditCard,
+  User as UserIcon,
+  Mail,
+  Phone,
+  Save,
+  Edit3,
+  FileCheck,
 } from "lucide-react";
 
 export default function OperatorPortalPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState<"analytics" | "fleet" | "schedules" | "coupons">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "fleet" | "schedules" | "coupons" | "profile">("analytics");
 
   // Modals
   const [isAddBusOpen, setIsAddBusOpen] = useState(false);
@@ -206,6 +216,68 @@ export default function OperatorPortalPage() {
   }, [operatorCoupons, availableCoupons]);
 
   const [createBusMutation, { isLoading: isCreatingBus }] = useCreateBusMutation();
+  const {
+    data: operatorProfile,
+    isLoading: isLoadingProfile,
+    refetch: refetchProfile,
+  } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated });
+
+  const [updateOperatorProfileMutation, { isLoading: isUpdatingProfile }] = useUpdateOperatorProfileMutation();
+
+  // Profile Edit form states
+  const [profileCompanyName, setProfileCompanyName] = useState("");
+  const [profileContactPerson, setProfileContactPerson] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profileBankAccountRef, setProfileBankAccountRef] = useState("");
+  const [profileKycDocUrl, setProfileKycDocUrl] = useState("");
+  const [isProfileFormInitialized, setIsProfileFormInitialized] = useState(false);
+
+  React.useEffect(() => {
+    if (operatorProfile && !isProfileFormInitialized) {
+      setProfileCompanyName(operatorProfile.companyName || "");
+      setProfileContactPerson(operatorProfile.contactPerson || "");
+      setProfilePhone(operatorProfile.phone || "");
+      setProfileEmail(operatorProfile.email || "");
+      setProfileBankAccountRef(operatorProfile.bankAccountRef || "");
+      setProfileKycDocUrl(operatorProfile.kycDocUrl || "");
+      setIsProfileFormInitialized(true);
+    }
+  }, [operatorProfile, isProfileFormInitialized]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    setFormSuccess("");
+
+    if (!profileCompanyName.trim()) {
+      setFormError("Company / Agency name cannot be empty.");
+      return;
+    }
+    if (!profileContactPerson.trim()) {
+      setFormError("Contact person name is required.");
+      return;
+    }
+
+    try {
+      await updateOperatorProfileMutation({
+        companyName: profileCompanyName.trim(),
+        contactPerson: profileContactPerson.trim(),
+        phone: profilePhone.trim(),
+        email: profileEmail.trim(),
+        bankAccountRef: profileBankAccountRef.trim(),
+        kycDocUrl: profileKycDocUrl.trim(),
+      }).unwrap();
+
+      setFormSuccess("Operator profile & business details updated successfully!");
+      refetchProfile();
+      refetchAnalytics();
+      setTimeout(() => setFormSuccess(""), 5000);
+    } catch (err: any) {
+      setFormError(err?.data?.message || "Failed to update profile. Please try again.");
+    }
+  };
+
   const [updateBusMutation, { isLoading: isUpdatingBus }] = useUpdateBusMutation();
   const [deleteBusMutation, { isLoading: isDeletingBus }] = useDeleteBusMutation();
   const [createScheduleMutation, { isLoading: isCreatingSchedule }] = useCreateScheduleMutation();
@@ -564,6 +636,14 @@ export default function OperatorPortalPage() {
               </button>
 
               <button
+                onClick={() => setActiveTab("profile")}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-white/20 shadow-md transition-all flex items-center space-x-1.5 cursor-pointer"
+              >
+                <Building2 className="w-4 h-4 text-amber-400" />
+                <span>Agency Profile</span>
+              </button>
+
+              <button
                 onClick={() => setIsAddCouponOpen(true)}
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/30 transition-all flex items-center space-x-1.5 cursor-pointer"
               >
@@ -589,6 +669,7 @@ export default function OperatorPortalPage() {
               { id: "fleet", label: `My Fleet (${buses.length})`, icon: Bus },
               { id: "schedules", label: `Active Schedules (${schedules.length})`, icon: Calendar },
               { id: "coupons", label: `Promotions & Coupons (${operatorCoupons.length})`, icon: Tag },
+              { id: "profile", label: "Agency Profile & Settings", icon: Building2 },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1225,6 +1306,279 @@ export default function OperatorPortalPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 5: OPERATOR & AGENCY PROFILE EDIT */}
+        {activeTab === "profile" && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Header / Intro */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-[#d84e55]" />
+                  <span>Agency & Commercial Operator Profile</span>
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Manage your public brand identity, contact person, passenger support numbers, and payout bank details.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Status: {operatorProfile?.status || "APPROVED"}</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left 2 Cols: Edit Profile Form */}
+              <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-red-50 text-[#d84e55] flex items-center justify-center font-bold">
+                      <Edit3 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">Edit Operator Credentials</h3>
+                      <p className="text-xs text-gray-400">Updates will reflect across all search results & passenger e-tickets</p>
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateProfile} className="space-y-5">
+                  {formError && (
+                    <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
+
+                  {/* Section 1: Brand & Representative */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                      1. Brand Identity & Representative
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Agency / Bus Brand Name <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Building2 className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            required
+                            value={profileCompanyName}
+                            onChange={(e) => setProfileCompanyName(e.target.value)}
+                            placeholder="e.g. Royal Travels India"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Authorized Signatory / Contact Person <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <UserIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            required
+                            value={profileContactPerson}
+                            onChange={(e) => setProfileContactPerson(e.target.value)}
+                            placeholder="e.g. Jai Ganesh"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Contact & Support */}
+                  <div className="space-y-4 pt-2 border-t border-gray-100">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                      2. Communication & Passenger Support
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Dispatch Contact Phone / Helpline
+                        </label>
+                        <div className="relative">
+                          <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            value={profilePhone}
+                            onChange={(e) => setProfilePhone(e.target.value)}
+                            placeholder="+91 9876543210"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Official Business Email
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="email"
+                            value={profileEmail}
+                            onChange={(e) => setProfileEmail(e.target.value)}
+                            placeholder="support@royaltravels.com"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Payout Settlement & KYC */}
+                  <div className="space-y-4 pt-2 border-t border-gray-100">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                      3. Settlement Bank Account & Compliance
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Bank Account / UPI / Settlement Reference
+                        </label>
+                        <div className="relative">
+                          <CreditCard className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            value={profileBankAccountRef}
+                            onChange={(e) => setProfileBankAccountRef(e.target.value)}
+                            placeholder="e.g. HDFC0001234 - AC 501004928192"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          Ticket sales earnings will be disbursed automatically to this settlement account.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          GSTIN / Business Registration / Document Reference
+                        </label>
+                        <div className="relative">
+                          <FileCheck className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            value={profileKycDocUrl}
+                            onChange={(e) => setProfileKycDocUrl(e.target.value)}
+                            placeholder="e.g. 33AAAAA0000A1Z5 / Permit #8849"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (operatorProfile) {
+                          setProfileCompanyName(operatorProfile.companyName || "");
+                          setProfileContactPerson(operatorProfile.contactPerson || "");
+                          setProfilePhone(operatorProfile.phone || "");
+                          setProfileEmail(operatorProfile.email || "");
+                          setProfileBankAccountRef(operatorProfile.bankAccountRef || "");
+                          setProfileKycDocUrl(operatorProfile.kycDocUrl || "");
+                        }
+                      }}
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      Reset Changes
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isUpdatingProfile}
+                      className="px-6 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-xs font-bold shadow-md shadow-red-500/20 transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isUpdatingProfile ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Saving Profile...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Save & Update Profile</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Col: Live Operator Summary Card */}
+              <div className="space-y-6">
+                {/* Brand Preview Card */}
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-[#1f222e] rounded-3xl p-6 text-white border border-slate-700/50 shadow-xl space-y-5">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-400/30 text-red-400 flex items-center justify-center font-black text-lg">
+                      {profileCompanyName ? profileCompanyName.charAt(0).toUpperCase() : "O"}
+                    </div>
+                    <div>
+                      <h4 className="text-base font-black truncate max-w-[180px]">
+                        {profileCompanyName || "Operator Brand"}
+                      </h4>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <UserIcon className="w-3 h-3 text-red-400" />
+                        <span>{profileContactPerson || "Authorized Manager"}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-4 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Verification Status</span>
+                      <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 font-bold rounded-md border border-emerald-400/30 text-[10px]">
+                        {operatorProfile?.status || "APPROVED"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Platform Commission</span>
+                      <span className="font-bold text-white">
+                        {operatorProfile?.commissionRate || "10.00"}% Standard Tier
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Total Registered Buses</span>
+                      <span className="font-bold text-white">{buses.length} Coaches</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Active Daily Routes</span>
+                      <span className="font-bold text-white">{schedules.length} Published</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-[11px] text-gray-300 space-y-1">
+                    <p className="font-bold text-white flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Direct Passenger Settlement</span>
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      All ticket revenues collected via Razorpay are settled automatically into your registered bank reference after departure.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
