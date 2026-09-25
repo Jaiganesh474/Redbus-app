@@ -1,0 +1,51 @@
+name: redBus CrewAI Journey & Dropping Plan Automation
+
+on:
+  schedule:
+    # Runs every 4 hours to process upcoming journeys
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      pnr:
+        description: 'Specific PNR to dispatch reminders and dropping plan for'
+        required: false
+        default: 'RB78945612'
+
+jobs:
+  run-crewai-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install CrewAI Dependencies
+        run: |
+          cd automation/crewai_pipeline
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute CrewAI Automated Journey & Dropping Reminders
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: 'gemini-1.5-flash'
+          BACKEND_API_BASE_URL: ${{ secrets.BACKEND_API_BASE_URL || 'http://localhost:8080/api' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp-relay.brevo.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL || 'reminders@redbus.example.com' }}
+          SENDER_NAME: 'redBus Journey Assistant'
+        run: |
+          cd automation/crewai_pipeline
+          if [ -n "${{ github.event.inputs.pnr }}" ]; then
+            python main.py --pnr "${{ github.event.inputs.pnr }}"
+          else
+            python main.py --cron-check
+          fi
