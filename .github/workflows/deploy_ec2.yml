@@ -1,0 +1,102 @@
+name: redBus AWS EC2 CI/CD Deployment & CrewAI Automation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Build & Validate Backend and Frontend
+  build-and-test:
+    name: Build & Validate Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Spring Boot Backend
+        run: |
+          cd backend
+          mvn clean compile -DskipTests
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Next.js Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+  # Job 2: Deploy to AWS EC2 over SSH
+  deploy-to-ec2:
+    name: Deploy to AWS EC2
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: SSH and Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME || 'ubuntu' }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            if [ ! -d "/home/ubuntu/Redbus-app" ]; then
+              echo "Cloning repository..."
+              git clone https://github.com/Jaiganesh474/Redbus-app.git /home/ubuntu/Redbus-app
+            fi
+            chmod +x /home/ubuntu/Redbus-app/deploy/deploy.sh
+            /home/ubuntu/Redbus-app/deploy/deploy.sh
+
+  # Job 3: Run CrewAI Automated Reminders & Dropping Point Planner
+  run-crewai-reminders:
+    name: Run CrewAI Journey Reminder & Dropping Planner
+    needs: deploy-to-ec2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install CrewAI Dependencies
+        run: |
+          cd automation/crewai_pipeline
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute CrewAI Reminders Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: 'gemini-1.5-flash'
+          BACKEND_API_BASE_URL: ${{ secrets.BACKEND_API_BASE_URL || format('http://{0}/api', secrets.EC2_HOST) }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp-relay.brevo.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL || 'reminders@redbus.example.com' }}
+          SENDER_NAME: 'redBus Journey Assistant'
+        run: |
+          cd automation/crewai_pipeline
+          python main.py --cron-check
