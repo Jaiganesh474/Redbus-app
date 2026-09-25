@@ -398,99 +398,77 @@ function CheckoutContent() {
       });
 
       const effectiveKey = order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
-      const isPlaceholderOrMockKey =
-        !effectiveKey ||
-        effectiveKey === "rzp_test_placeholder" ||
-        effectiveKey.includes("placeholder") ||
-        effectiveKey.includes("Mock") ||
-        effectiveKey.length < 15;
 
-      // If backend has mock / placeholder key, directly open the full in-app Razorpay simulation modal
-      if (isPlaceholderOrMockKey) {
-        setShowRazorpayModal(true);
+      // 3. Load Razorpay Script and open official Razorpay Checkout Test Page
+      const scriptLoaded = await loadRazorpayScript();
+
+      if (!scriptLoaded || !(window as any).Razorpay) {
+        setErrorMessage("Failed to load Razorpay checkout SDK. Please check your internet connection and try again.");
         setIsProcessingPayment(false);
         return;
       }
 
-      // 3. Load Razorpay Script and open official Razorpay Checkout Test Mode
-      const scriptLoaded = await loadRazorpayScript();
-
-      if (scriptLoaded && window.Razorpay) {
-        try {
-          const options: any = {
-            key: effectiveKey,
-            amount: order.amountInPaise,
-            currency: order.currency || "INR",
-            name: "redBus India",
-            description: `Bus Booking PNR: ${booking.pnr}`,
-            prefill: {
-              name: passengers[0]?.name || "Passenger",
-              email: contactEmail,
-              contact: contactPhone,
-            },
-            notes: {
+      const options: any = {
+        key: effectiveKey,
+        amount: order.amountInPaise,
+        currency: order.currency || "INR",
+        name: "redBus India",
+        description: `Bus Booking PNR: ${booking.pnr}`,
+        order_id: order.orderId,
+        prefill: {
+          name: passengers[0]?.name || "Passenger",
+          email: contactEmail,
+          contact: contactPhone,
+        },
+        notes: {
+          pnr: booking.pnr,
+        },
+        theme: {
+          color: "#d84e55",
+        },
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await verifyPaymentMutation({
               pnr: booking.pnr,
-            },
-            theme: {
-              color: "#d84e55",
-            },
-            handler: async function (response: any) {
-              try {
-                const verifyRes = await verifyPaymentMutation({
+              razorpayOrderId: response.razorpay_order_id || order.orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }).unwrap();
+
+            if (verifyRes.success) {
+              isPaymentSuccessRef.current = true;
+              dispatch(
+                addNotification({
+                  id: `booking-conf-${booking.pnr}`,
+                  type: "booking",
+                  title: "Trip Confirmed! 🚌",
+                  message: `Your booking for ${booking.sourceCity || activeRoute?.sourceCity || "Source"} ➔ ${booking.destinationCity || activeRoute?.destinationCity || "Destination"} is confirmed! PNR: ${booking.pnr}`,
+                  timestamp: "Just now",
+                  read: false,
+                  actionUrl: "/my-bookings",
+                  actionLabel: "View Ticket",
                   pnr: booking.pnr,
-                  razorpayOrderId: response.razorpay_order_id || order.orderId,
-                  razorpayPaymentId: response.razorpay_payment_id || "pay_test_success",
-                  razorpaySignature: response.razorpay_signature || "mock_sig_test",
-                }).unwrap();
-
-                if (verifyRes.success) {
-                  isPaymentSuccessRef.current = true;
-                  dispatch(
-                    addNotification({
-                      id: `booking-conf-${booking.pnr}`,
-                      type: "booking",
-                      title: "Trip Confirmed! 🚌",
-                      message: `Your booking for ${booking.sourceCity || activeRoute?.sourceCity || "Source"} ➔ ${booking.destinationCity || activeRoute?.destinationCity || "Destination"} is confirmed! PNR: ${booking.pnr}`,
-                      timestamp: "Just now",
-                      read: false,
-                      actionUrl: "/my-bookings",
-                      actionLabel: "View Ticket",
-                      pnr: booking.pnr,
-                    })
-                  );
-                  router.push(`/booking-confirmation?pnr=${booking.pnr}`);
-                }
-              } catch (vErr: any) {
-                setErrorMessage(vErr?.data?.message || "Payment verification failed.");
-              }
-            },
-            modal: {
-              ondismiss: function () {
-                setIsProcessingPayment(false);
-              },
-            },
-          };
-
-          // Only attach order_id if it's a real order created by Razorpay server (and not a fallback mock string)
-          if (order.orderId && !order.orderId.startsWith("order_mock_")) {
-            options.order_id = order.orderId;
+                })
+              );
+              router.push(`/booking-confirmation?pnr=${booking.pnr}`);
+            }
+          } catch (vErr: any) {
+            setErrorMessage(vErr?.data?.message || "Payment verification failed. Please contact support.");
           }
-
-          const rzp = new window.Razorpay(options);
-          rzp.on("payment.failed", function (failResp: any) {
-            console.warn("Razorpay official popup failed, falling back to seamless in-app modal:", failResp);
-            setShowRazorpayModal(true);
+        },
+        modal: {
+          ondismiss: function () {
             setIsProcessingPayment(false);
-          });
-          rzp.open();
-        } catch (rzpErr) {
-          console.warn("Razorpay popup launch error, opening in-app gateway modal:", rzpErr);
-          setShowRazorpayModal(true);
-        }
-      } else {
-        // Fallback to in-app Razorpay modal if script was blocked by browser
-        setShowRazorpayModal(true);
-      }
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", function (failResp: any) {
+        setErrorMessage(failResp?.error?.description || "Payment failed or was cancelled in Razorpay.");
+        setIsProcessingPayment(false);
+      });
+      rzp.open();
     } catch (err: any) {
       setErrorMessage(
         err?.data?.message || err?.message || "Failed to initiate payment. Please try again."

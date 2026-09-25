@@ -55,24 +55,22 @@ public class PaymentService {
         long amountInPaise = booking.getTotalAmount().multiply(BigDecimal.valueOf(100)).longValue();
         String orderId;
 
-        // Try creating real order via Razorpay SDK; fallback to simulated order if in test/mock mode
+        // Create real order via Razorpay SDK with configured Test / Live credentials
         try {
-            if (!razorpayKeyId.contains("Mock") && !razorpayKeySecret.contains("Mock")) {
-                RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
-                JSONObject orderRequest = new JSONObject();
-                orderRequest.put("amount", amountInPaise);
-                orderRequest.put("currency", "INR");
-                orderRequest.put("receipt", booking.getPnr());
-                orderRequest.put("payment_capture", 1);
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("amount", amountInPaise);
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", booking.getPnr());
+            orderRequest.put("payment_capture", 1);
 
-                Order order = client.orders.create(orderRequest);
-                orderId = order.get("id");
-            } else {
-                orderId = "order_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
-            }
+            Order order = client.orders.create(orderRequest);
+            orderId = order.get("id");
+            log.info("Razorpay order created successfully: {} for PNR: {}", orderId, booking.getPnr());
         } catch (Exception e) {
-            log.warn("Razorpay API call failed or in sandbox mode. Falling back to test order ID: {}", e.getMessage());
-            orderId = "order_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+            log.error("Razorpay API order creation failed: {}", e.getMessage(), e);
+            throw new BadRequestException("Razorpay order creation failed: " + e.getMessage() + 
+                    ". Please make sure valid RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are set in the backend .env");
         }
 
         Payment payment = Payment.builder()
@@ -174,12 +172,8 @@ public class PaymentService {
     }
 
     private boolean verifySignature(String orderId, String paymentId, String signature, String secret) {
-        // Accept mock verification if client/secret is in mock/sandbox mode or signature is test signature
-        if (orderId == null || orderId.startsWith("order_mock_") || 
-            signature == null || signature.startsWith("mock_sig") || 
-            "pay_test_success".equals(paymentId) ||
-            secret == null || secret.contains("placeholder") || secret.contains("Mock") || secret.contains("your_razorpay")) {
-            return true;
+        if (orderId == null || paymentId == null || signature == null || secret == null) {
+            return false;
         }
 
         try {
