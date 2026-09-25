@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: redbus-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/redbus_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 20000
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp-relay.brevo.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:your_smtp_username}
+    password: ${SPRING_MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:yourVerySecureAndLongSecretKeyForJwtAuthenticationWhichIsAtLeast256Bits2026!}
+    expiration-ms: 86400000 # 24 hours
+    refresh-expiration-ms: 604800000 # 7 days
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder_key}
+    key-secret: ${RAZORPAY_KEY_SECRET:your_razorpay_secret}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:redbusWebhookSecret}
+  gemini:
+    api-key: ${GEMINI_API_KEY:your_gemini_api_key}
+    model: ${GEMINI_MODEL:gemini-3.5-pro}
+  brevo:
+    smtp-host: ${BREVO_SMTP_HOST:smtp-relay.brevo.com}
+    smtp-port: ${BREVO_SMTP_PORT:587}
+    smtp-username: ${BREVO_SMTP_USERNAME:your_smtp_username}
+    smtp-password: ${BREVO_SMTP_PASSWORD:your_smtp_password}
+    api-key: ${BREVO_API_KEY:your_brevo_api_key}
+    sender-email: ${BREVO_SENDER_EMAIL:noreply@redbus.example.com}
+    sender-name: ${BREVO_SENDER_NAME:redBus India}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  seat-lock:
+    ttl-minutes: 5

@@ -1,0 +1,224 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-zomato: "Plus Jakarta Sans", "Poppins", "Okra", "Metropolis", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Poppins", "Okra", "Metropolis", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --primary: #d84e55;
+    --primary-hover: #b83e44;
+    --primary-dark: #1f222e;
+    --primary-light: #fff5f5;
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --border-light: #e5e7eb;
+    --card-bg: #ffffff;
+    --bg-page: #f8fafc;
+  }
+
+  .dark {
+    --primary: #ef4444;
+    --primary-hover: #dc2626;
+    --primary-dark: #0b0f19;
+    --primary-light: #1e1b2e;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-light: #334155;
+    --card-bg: #0f172a;
+    --bg-page: #080c15;
+  }
+}
+
+body {
+  background-color: #f7f9fa;
+  color: #1c1c1c;
+  font-family: var(--font-zomato), "Plus Jakarta Sans", "Okra", "Metropolis", "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.012em;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark body {
+  background-color: #0b0f19;
+  color: #f8fafc;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+  background: #d84e55;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b83e44;
+}
+
+/* Animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Seat Styles */
+.seat-available {
+  border: 1.5px solid #9ca3af;
+  background-color: #ffffff;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+.seat-available:hover {
+  border-color: #10b981;
+  background-color: #ecfdf5;
+  transform: translateY(-2px);
+}
+.seat-selected {
+  border: 1.5px solid #10b981;
+  background-color: #10b981;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+.seat-locked {
+  border: 1.5px solid #f59e0b;
+  background-color: #fef3c7;
+  color: #b45309;
+  cursor: not-allowed;
+}
+.seat-booked {
+  border: 1.5px solid #e5e7eb;
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+.seat-female {
+  border: 1.5px solid #ec4899;
+  background-color: #fdf2f8;
+  color: #be185d;
+}
+
+/* Dark Mode Seat Styles */
+html.dark .seat-available {
+  border-color: #475569;
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+html.dark .seat-available:hover {
+  border-color: #10b981;
+  background-color: #064e3b;
+}
+html.dark .seat-booked {
+  border-color: #334155;
+  background-color: #1e293b;
+  color: #64748b;
+}
+html.dark .seat-locked {
+  border-color: #b45309;
+  background-color: #451a03;
+  color: #fbbf24;
+}
+html.dark .seat-female {
+  border-color: #ec4899;
+  background-color: #500724;
+  color: #f472b6;
+}
+
+/* Mobile & Touch Device Optimizations (Android & iPhone) */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Smooth Touch Scrolling */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile Media Queries (iPhone, Android & Tablets) */
+@media (max-width: 640px) {
+  /* Prevent iOS automatic zoom on inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Safe tap target sizing */
+  button, 
+  [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Compact spacing for headings & cards on mobile */
+  h1 {
+    font-size: clamp(1.4rem, 5vw, 1.85rem) !important;
+    line-height: 1.25 !important;
+  }
+
+  h2 {
+    font-size: clamp(1.2rem, 4vw, 1.45rem) !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Compact container padding to eliminate wasted screen space */
+  .max-w-7xl,
+  .max-w-5xl,
+  .max-w-4xl {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Mobile container padding */
+  .mobile-container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ultra-compact padding for small phone screens */
+  .px-4 {
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Dynamic modal max heights for mobile keyboards */
+  .modal-mobile-fit {
+    max-height: calc(100vh - 2rem) !important;
+  }
+}
