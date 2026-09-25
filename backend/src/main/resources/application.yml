@@ -61,5 +61,7 @@ app:
     sender-name: ${BREVO_SENDER_NAME:redBus India}
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
   seat-lock:
     ttl-minutes: 5

@@ -77,6 +77,9 @@ public class SecurityConfig {
 
             // 6. Endpoint Authorization Rules (RBAC)
             .authorizeHttpRequests(auth -> auth
+                // Root and Health Endpoints
+                .requestMatchers("/", "/health", "/api/health", "/api/v1/health", "/actuator/**", "/favicon.ico", "/error").permitAll()
+
                 // Static file uploads (bus photos, vehicle images)
                 .requestMatchers("/uploads/**").permitAll()
 

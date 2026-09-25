@@ -37,6 +37,9 @@ public class EmailService {
     @Value("${app.brevo.sender-name:redBus India}")
     private String senderName;
 
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
     private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     /**
@@ -141,7 +144,7 @@ public class EmailService {
     public boolean sendVerificationEmail(User user, String tokenOrOtp) {
         String recipient = user.getEmail().trim();
         String subject = "🔐 Verify Your redBus Account - OTP: " + tokenOrOtp;
-        String verificationUrl = "http://localhost:3000/verify-email?token=" + tokenOrOtp + "&email=" + recipient;
+        String verificationUrl = frontendUrl.replaceAll("/$", "") + "/verify-email?token=" + tokenOrOtp + "&email=" + recipient;
 
         String htmlContent = buildVerificationEmailTemplate(user.getName(), tokenOrOtp, verificationUrl);
 
@@ -173,7 +176,7 @@ public class EmailService {
     public boolean sendPasswordResetOtpEmail(User user, String otp) {
         String recipient = user.getEmail().trim();
         String subject = "🔑 Reset Your redBus Password - OTP: " + otp;
-        String resetUrl = "http://localhost:3000/reset-password?email=" + recipient + "&otp=" + otp;
+        String resetUrl = frontendUrl.replaceAll("/$", "") + "/reset-password?email=" + recipient + "&otp=" + otp;
 
         String htmlContent = buildPasswordResetEmailTemplate(user.getName(), otp, resetUrl);
 
