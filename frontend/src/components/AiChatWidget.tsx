@@ -230,26 +230,45 @@ export default function AiChatWidget() {
 
   return (
     <AnimatePresence>
-      {/* Floating Trigger Button */}
+      {/* Floating Draggable Trigger Button */}
       {!isOpen && (
-        <motion.button
-          key="ask-ray-btn"
+        <motion.div
+          key="ask-ray-btn-container"
+          drag
+          dragMomentum={false}
+          dragElastic={0.1}
+          whileDrag={{ scale: 1.12, cursor: "grabbing" }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
-          type="button"
-          onClick={() => dispatch(toggleChat(true))}
-          className={`fixed bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:bottom-6 sm:right-6 z-50 items-center space-x-2.5 px-5 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 via-[#d84e55] to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-full shadow-2xl hover:scale-105 transition-all group active:scale-95 text-xs sm:text-sm font-extrabold tracking-wide cursor-pointer border border-white/20 whitespace-nowrap ${
-            isSeatSelectionOpen ? "hidden sm:flex" : "flex"
-          }`}
+          className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-50 cursor-grab active:cursor-grabbing touch-none select-none"
         >
-          <div className="relative flex items-center justify-center">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-spin-slow" />
-            <span className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 bg-emerald-400 rounded-full ring-2 ring-white animate-ping" />
-          </div>
-          <span>Ask RAY</span>
-        </motion.button>
+          <button
+            type="button"
+            onClick={() => dispatch(toggleChat(true))}
+            className="group relative flex items-center justify-center p-0 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-transform cursor-pointer focus:outline-none"
+            title="Ask RAY AI Assistant (Drag to move)"
+            aria-label="Ask RAY AI Assistant"
+          >
+            {/* Mobile View: Circular Glowing Gradient Bubble (Exact match to screenshot) */}
+            <div className="flex sm:hidden w-13 h-13 rounded-full bg-gradient-to-tr from-[#9333ea] via-[#c026d3] to-[#db2777] items-center justify-center text-white border-2 border-white/70 shadow-xl shadow-purple-600/40 ring-2 ring-purple-400/30">
+              <svg className="w-6 h-6 text-white drop-shadow-sm" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9.5 2C9.5 6.5 6.5 9.5 2 9.5C6.5 9.5 9.5 12.5 9.5 17C9.5 12.5 12.5 9.5 17 9.5C12.5 9.5 9.5 6.5 9.5 2Z" />
+                <path d="M18 9C18 11.2 16.2 13 14 13C16.2 13 18 14.8 18 17C18 14.8 19.8 13 22 13C19.8 13 18 11.2 18 9Z" />
+              </svg>
+            </div>
+
+            {/* Desktop View: Sleek Pill with Icon & "Ask RAY" Text */}
+            <div className="hidden sm:flex items-center space-x-2.5 px-5 py-3 bg-gradient-to-r from-purple-600 via-[#d84e55] to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-full border border-white/20 whitespace-nowrap text-sm font-extrabold tracking-wide shadow-2xl shadow-red-500/20">
+              <div className="relative flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-amber-300 animate-spin-slow" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-white animate-ping" />
+              </div>
+              <span>Ask RAY</span>
+            </div>
+          </button>
+        </motion.div>
       )}
 
       {/* RAY beta Sliding Chat Window */}
