@@ -38,6 +38,7 @@ import {
   MapPin,
   RefreshCw,
 } from "lucide-react";
+import { getRealtimeTripStatus } from "@/lib/dateUtils";
 
 export default function MyBookingsPage() {
   const dispatch = useAppDispatch();
@@ -324,6 +325,7 @@ export default function MyBookingsPage() {
             const approxBaseFare = totalPaid + walletUsed + discount - cancelFee;
             const isWalletFull = walletUsed > 0 && totalPaid === 0;
             const isSplitPay = walletUsed > 0 && totalPaid > 0;
+            const tripStatus = getRealtimeTripStatus(booking.travelDate, booking.departureTime, booking.arrivalTime, booking.status);
 
             return (
               <motion.div
@@ -375,17 +377,43 @@ export default function MyBookingsPage() {
                         <Tag className="w-3 h-3" /> {booking.couponCode}
                       </span>
                     )}
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        booking.status === "CONFIRMED"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : booking.status === "CANCELLED" || booking.status === "REFUNDED"
-                          ? "bg-red-50 text-red-700 border border-red-200"
-                          : "bg-amber-50 text-amber-700 border border-amber-200"
-                      }`}
-                    >
-                      {booking.status}
-                    </span>
+
+                    {/* Real-time Dynamic Trip Status Badge */}
+                    {tripStatus.isLive ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-black bg-red-500/10 text-red-600 border border-red-500/30 flex items-center gap-1.5 shadow-xs">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                        </span>
+                        <span>Trip Started</span>
+                      </span>
+                    ) : tripStatus.isCompleted ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                        <span>Trip Completed</span>
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                          booking.status === "CONFIRMED"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : booking.status === "CANCELLED" || booking.status === "REFUNDED"
+                            ? "bg-red-50 text-red-700 border border-red-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            booking.status === "CONFIRMED"
+                              ? "bg-emerald-500"
+                              : booking.status === "CANCELLED" || booking.status === "REFUNDED"
+                              ? "bg-red-500"
+                              : "bg-amber-500"
+                          }`}
+                        />
+                        <span>{booking.status}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -681,13 +709,28 @@ export default function MyBookingsPage() {
                   </div>
 
                   {booking.status === "CONFIRMED" && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBookingForCancel(booking)}
-                      className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      Cancel Booking & Refund
-                    </button>
+                    tripStatus.isLive ? (
+                      <span className="px-3.5 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-red-200">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                        </span>
+                        <span>Trip in Progress</span>
+                      </span>
+                    ) : tripStatus.isCompleted ? (
+                      <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Journey Completed</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBookingForCancel(booking)}
+                        className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Cancel Booking & Refund
+                      </button>
+                    )
                   )}
 
                   {(booking.status === "CANCELLED" || booking.status === "REFUNDED") && (

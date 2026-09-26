@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { useGetBookingByPnrQuery, useSendTicketEmailMutation } from "@/store/apiSlice";
+import { getRealtimeTripStatus } from "@/lib/dateUtils";
 import {
   CheckCircle2,
   Download,
@@ -69,6 +70,7 @@ function ConfirmationContent() {
   }
 
   const pdfDownloadUrl = `http://localhost:8080/api/bookings/${booking.pnr}/ticket-pdf`;
+  const tripStatus = getRealtimeTripStatus(booking.travelDate, booking.departureTime, booking.arrivalTime, booking.status);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -124,9 +126,30 @@ function ConfirmationContent() {
         {/* Banner Header */}
         <div className="bg-gradient-to-r from-[#d84e55] to-red-600 px-6 py-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-red-100 block">
-              Booking PNR
-            </span>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-red-100 block">
+                Booking PNR
+              </span>
+              {tripStatus.isLive ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white text-red-600 flex items-center gap-1 shadow-xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                  </span>
+                  <span>Trip Started (Live)</span>
+                </span>
+              ) : tripStatus.isCompleted ? (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-white border border-emerald-300/40 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-300"></span>
+                  <span>Trip Completed</span>
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>Confirmed</span>
+                </span>
+              )}
+            </div>
             <span className="font-mono text-xl sm:text-2xl font-black tracking-wide">
               {booking.pnr}
             </span>
