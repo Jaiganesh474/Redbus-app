@@ -22,6 +22,7 @@ import AutotypingPlaceholder from "@/components/AutotypingPlaceholder";
 import CityAutocompleteInput from "@/components/CityAutocompleteInput";
 import BusCard from "@/components/BusCard";
 import BusCardSkeleton from "@/components/BusCardSkeleton";
+import { getTodayDateStr, getTomorrowDateStr, formatJourneyDisplayDate } from "@/lib/dateUtils";
 import type { RouteItem } from "@/types";
 import {
   ArrowLeft,
@@ -60,7 +61,7 @@ function SearchResultsContent() {
   // Search parameters from URL or Redux
   const source = searchParams.get("source") || filters.sourceCity || "Bengaluru";
   const destination = searchParams.get("destination") || filters.destinationCity || "Chennai";
-  const date = searchParams.get("date") || filters.travelDate || new Date().toISOString().split("T")[0];
+  const date = searchParams.get("date") || filters.travelDate || getTomorrowDateStr();
   const busType = searchParams.get("busType") || filters.busType;
   const maxPriceParam = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : filters.maxPrice;
   const selectRouteParam = searchParams.get("selectRoute");
@@ -202,35 +203,17 @@ function SearchResultsContent() {
 
   const isSearching = isLoading || isMinLoading;
 
-  // Calculate Today and Tomorrow dates for quick pills
-  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
-  const tomorrowStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
-  }, []);
+  // Calculate Today and Tomorrow dates for quick pills in local timezone
+  const todayStr = useMemo(() => getTodayDateStr(), []);
+  const tomorrowStr = useMemo(() => getTomorrowDateStr(), []);
 
   const isToday = editingDate === todayStr;
   const isTomorrow = editingDate === tomorrowStr;
 
-  // Format date display (e.g. "20 Sep, 2026 (Today)")
+  // Format date display (e.g. "27 Sep, 2026 (Today)")
   const formattedJourneyDate = useMemo(() => {
-    try {
-      const parts = editingDate.split("-");
-      if (parts.length === 3) {
-        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-        const day = d.getDate();
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const month = monthNames[d.getMonth()];
-        const year = d.getFullYear();
-        let suffix = "";
-        if (isToday) suffix = " (Today)";
-        else if (isTomorrow) suffix = " (Tomorrow)";
-        return `${day} ${month}, ${year}${suffix}`;
-      }
-    } catch {}
-    return editingDate;
-  }, [editingDate, isToday, isTomorrow]);
+    return formatJourneyDisplayDate(editingDate);
+  }, [editingDate]);
 
   // Handle Search Submission from top bar
   const handleTopSearchSubmit = (e?: React.FormEvent) => {

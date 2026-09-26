@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { getTomorrowDateStr } from "@/lib/dateUtils";
 
 interface SearchState {
   sourceCity: string;
@@ -11,16 +12,10 @@ interface SearchState {
   sortBy: string; // 'departure_asc', 'departure_desc', 'price_asc', 'price_desc', 'rating_desc'
 }
 
-const getTomorrowDate = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
-};
-
 const initialState: SearchState = {
   sourceCity: "",
   destinationCity: "",
-  travelDate: getTomorrowDate(),
+  travelDate: getTomorrowDateStr(),
   busType: "",
   departureWindow: "ALL",
   minPrice: undefined,

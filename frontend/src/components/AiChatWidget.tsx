@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AutotypingPlaceholder from "./AutotypingPlaceholder";
 import { motion, AnimatePresence } from "framer-motion";
+import { getTodayDateStr } from "@/lib/dateUtils";
 
 function renderFormattedContent(text: string) {
   if (!text) return null;
@@ -224,7 +225,7 @@ export default function AiChatWidget() {
     dispatch(toggleChat(false));
     const src = encodeURIComponent(route.sourceCity || sourceCity);
     const dst = encodeURIComponent(route.destinationCity || destinationCity);
-    const dt = encodeURIComponent(route.travelDate || new Date().toISOString().split("T")[0]);
+    const dt = encodeURIComponent(route.travelDate || getTodayDateStr());
     router.push(`/search?source=${src}&destination=${dst}&date=${dt}&selectRoute=${route.id}`);
   };
 

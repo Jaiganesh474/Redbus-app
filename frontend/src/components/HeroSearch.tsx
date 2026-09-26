@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { setSearchParams, swapCities } from "@/store/searchSlice";
 import { useParseNlpQueryMutation, useGetAvailableCitiesQuery } from "@/store/apiSlice";
 import AiCityDropdown from "./AiCityDropdown";
+import { formatLocalDate, getTodayDateStr, getOffsetDateStr } from "@/lib/dateUtils";
 import {
   MapPin,
   ArrowRightLeft,
@@ -23,7 +24,7 @@ export default function HeroSearch() {
 
   const [source, setSource] = useState(searchState.sourceCity || "");
   const [destination, setDestination] = useState(searchState.destinationCity || "");
-  const [date, setDate] = useState(searchState.travelDate);
+  const [date, setDate] = useState(searchState.travelDate || getTodayDateStr());
   const [nlpQuery, setNlpQuery] = useState("");
   const [isNlpLoading, setIsNlpLoading] = useState(false);
 
@@ -84,9 +85,7 @@ export default function HeroSearch() {
   };
 
   const setQuickDate = (offsetDays: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + offsetDays);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = getOffsetDateStr(offsetDays);
     setDate(dateStr);
   };
 
@@ -227,7 +226,7 @@ export default function HeroSearch() {
                 type="date"
                 required
                 value={date}
-                min={new Date().toISOString().split("T")[0]}
+                min={getTodayDateStr()}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 focus:bg-white dark:focus:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] focus:border-transparent transition-all cursor-pointer"
               />

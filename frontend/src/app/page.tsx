@@ -25,6 +25,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { getTomorrowDateStr } from "@/lib/dateUtils";
+
 export default function HomePage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -34,9 +36,7 @@ export default function HomePage() {
   const { data: faqs = [] } = useGetPublicFaqsQuery();
 
   const handleQuickRouteSearch = (from: string, to: string) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateStr = tomorrow.toISOString().split("T")[0];
+    const dateStr = getTomorrowDateStr();
 
     dispatch(
       setSearchParams({
@@ -45,7 +45,7 @@ export default function HomePage() {
         travelDate: dateStr,
       })
     );
-    router.push(`/search?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${dateStr}`);
+    router.push(`/search?source=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}&date=${dateStr}`);
   };
 
   return (

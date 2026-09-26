@@ -21,6 +21,7 @@ import {
 import type { RouteItem, SeatItem } from "@/types";
 import WriteReviewModal from "./WriteReviewModal";
 import BusImageSlider from "./BusImageSlider";
+import { getTodayDateStr } from "@/lib/dateUtils";
 import {
   X,
   Star,
@@ -377,7 +378,7 @@ export default function BusDetailsModal({
 
   // Effective travel date
   const effectiveTravelDate =
-    route.travelDate || searchState.travelDate || new Date().toISOString().split("T")[0];
+    route.travelDate || searchState.travelDate || getTodayDateStr();
 
   const formattedJourneyDate = useMemo(() => {
     try {

@@ -7,6 +7,7 @@ import {
   useGetAvailableCouponsQuery,
   useGetMeQuery,
 } from "@/store/apiSlice";
+import { getTodayDateStr } from "@/lib/dateUtils";
 import type { AppNotification } from "@/types";
 
 export function useRealtimeNotifications() {
@@ -29,7 +30,7 @@ export function useRealtimeNotifications() {
 
   const notifications = useMemo(() => {
     const list: AppNotification[] = [];
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getTodayDateStr();
 
     // 1. If Authenticated User -> Real Bookings & Account Notifications
     if (isAuthenticated && activeUser) {
