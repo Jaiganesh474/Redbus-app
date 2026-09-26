@@ -152,56 +152,119 @@ function getDynamicCancellationTiers(
   ];
 }
 
-// Generate Realistic Boarding / Dropping Stops for Route
+interface CityStopInfo {
+  name: string;
+  address: string;
+  area: string;
+  offsetMins: number;
+}
+
+// City-specific Verified Stops Database
+const CITY_STOPS_DATABASE: Record<string, CityStopInfo[]> = {
+  bangalore: [
+    { name: "Majestic", address: "Front of Bhagya Vinayaga Temple, Opp Amar Hotel", area: "Majestic / Railway Station", offsetMins: 0 },
+    { name: "Anand Rao Circle", address: "Near Race Course Road Entrance", area: "Anand Rao Circle", offsetMins: 5 },
+    { name: "Shantinagar", address: "BMTC Bus Stand, Double Road Entrance", area: "Shantinagar", offsetMins: 15 },
+    { name: "Madiwala", address: "Opp Police Station, Near St. John's Hospital", area: "Madiwala", offsetMins: 25 },
+    { name: "Silk Board", address: "Near Silk Board Flyover Junction, Hosur Road", area: "Silk Board", offsetMins: 35 },
+    { name: "BTM Layout", address: "Near Udupi Garden Signal, 16th Main", area: "BTM Layout", offsetMins: 40 },
+    { name: "Jayanagar", address: "4th Block Complex, Opp Bus Terminus", area: "Jayanagar", offsetMins: 45 },
+    { name: "Koramangala", address: "Near Sony World Signal, 80 Feet Road", area: "Koramangala", offsetMins: 50 },
+    { name: "Electronic City", address: "Toll Gate Entrance, Opp Infosys Gate", area: "Electronic City", offsetMins: 60 },
+    { name: "Bellandur", address: "Near EcoSpace Tech Park, Outer Ring Road", area: "Bellandur", offsetMins: 70 },
+    { name: "Marathahalli", address: "Near Bridge, Opp Multiplex Signal", area: "Marathahalli", offsetMins: 75 },
+    { name: "Whitefield", address: "ITPL Main Gate, Hope Farm Junction", area: "Whitefield", offsetMins: 85 },
+    { name: "Yeshwanthpur", address: "Near Metro Station & Govardhan Theatre", area: "Yeshwanthpur", offsetMins: 90 },
+    { name: "Hebbal", address: "Hebbal Flyover, Near Esteem Mall", area: "Hebbal", offsetMins: 100 },
+  ],
+  chennai: [
+    { name: "Koyambedu", address: "Omni Bus Stand Platform 4, Near Rohini Theatre", area: "Koyambedu CMBT", offsetMins: 0 },
+    { name: "Ashok Nagar", address: "Near Metro Station Pillar 88, 100 Feet Road", area: "Ashok Nagar", offsetMins: 10 },
+    { name: "Guindy", address: "Kathipara Junction, Near Metro Station", area: "Guindy", offsetMins: 20 },
+    { name: "Central / Egmore", address: "Opp Chennai Central Railway Station", area: "Central", offsetMins: 25 },
+    { name: "Perungudi", address: "Infront of Dominos Pizza, After Toll", area: "Perungudi OMR", offsetMins: 35 },
+    { name: "Thoraipakkam", address: "OMR High Road, Opp BSR Mall", area: "Thoraipakkam", offsetMins: 40 },
+    { name: "Karapakkam", address: "Infront of Karapakkam Bus Stand And Madurai Sre Meenakshi Hotel", area: "Karapakkam", offsetMins: 45 },
+    { name: "Sholinganallur", address: "Infront of Royal Enfield Headquarters", area: "Sholinganallur Junction", offsetMins: 50 },
+    { name: "Semmancherry", address: "Infront of Sathyabama University Arch", area: "Semmancherry", offsetMins: 55 },
+    { name: "Navalur", address: "Infront of HP Petrol Bunk, After Navalur Toll", area: "Navalur Toll", offsetMins: 60 },
+    { name: "Siruseri", address: "Infront of HDFC ATM, Opp A2B Adyar Ananda Bhavan", area: "OMR / Siruseri", offsetMins: 65 },
+    { name: "Tambaram", address: "Near Railway Station West, GST Road", area: "Tambaram", offsetMins: 75 },
+    { name: "Chromepet", address: "Near MIT Bridge, GST Road", area: "Chromepet", offsetMins: 80 },
+    { name: "Porur", address: "Near Roundtana, Opp Saravana Stores", area: "Porur Toll", offsetMins: 90 },
+    { name: "Poonamallee Bypass", address: "Infront of Sai Sasi Mahal, Near Ambedkar Statue", area: "Poonamallee Bypass", offsetMins: 105 },
+    { name: "Poonamallee (KFC)", address: "Infront of KFC, Motel Highway", area: "Poonamallee Highway", offsetMins: 110 },
+    { name: "Sriperumbudur", address: "Opp Sriperumbudur Toll Plaza Arch", area: "Sriperumbudur", offsetMins: 125 },
+  ],
+  hyderabad: [
+    { name: "MGBS", address: "Mahatma Gandhi Bus Station, Platform 6", area: "MGBS / Imlibun", offsetMins: 0 },
+    { name: "Ameerpet", address: "Near Big Bazaar, Metro Pillar A1042", area: "Ameerpet", offsetMins: 15 },
+    { name: "SR Nagar", address: "Near Community Hall, Main Road", area: "SR Nagar", offsetMins: 20 },
+    { name: "KPHB Colony", address: "Near Metro Station, Pillar 740", area: "KPHB", offsetMins: 30 },
+    { name: "Kukatpally", address: "Near Y Junction, Opp BJP Office", area: "Kukatpally", offsetMins: 35 },
+    { name: "Miyapur", address: "Allwyn X Roads, Near Metro Station", area: "Miyapur", offsetMins: 45 },
+    { name: "Gachibowli", address: "Outer Ring Road Junction, Opp Bio Diversity Park", area: "Gachibowli", offsetMins: 55 },
+    { name: "Hitec City", address: "Cyber Towers Signal, Madhapur", area: "Hitec City", offsetMins: 60 },
+    { name: "Shamshabad", address: "Near Airport Toll Gate Plaza", area: "Shamshabad", offsetMins: 75 },
+  ],
+  coimbatore: [
+    { name: "Gandhipuram", address: "Omni Bus Stand, Cross Cut Road", area: "Gandhipuram", offsetMins: 0 },
+    { name: "Hopes College", address: "Avinashi Road Bus Stop", area: "Hopes College", offsetMins: 15 },
+    { name: "KMCH", address: "Near Hospital Gate, Airport Bypass", area: "KMCH", offsetMins: 25 },
+    { name: "Neelambur", address: "L&T Toll Plaza Bypass", area: "Neelambur", offsetMins: 35 },
+    { name: "Singanallur", address: "Near Singanallur Bus Stand", area: "Singanallur", offsetMins: 45 },
+  ],
+  mumbai: [
+    { name: "Borivali", address: "National Park Gate, Western Express Highway", area: "Borivali East", offsetMins: 0 },
+    { name: "Andheri", address: "Near Bisleri Factory, WEH", area: "Andheri East", offsetMins: 15 },
+    { name: "Bandra", address: "Kalanagar Junction, Near Highway", area: "Bandra East", offsetMins: 25 },
+    { name: "Sion", address: "Near Cinemax / Chunabhatti Bridge", area: "Sion", offsetMins: 35 },
+    { name: "Chembur", address: "Near Maitri Park, Amar Mahal", area: "Chembur", offsetMins: 45 },
+    { name: "Vashi", address: "Old Toll Naka / Highway Bridge", area: "Vashi", offsetMins: 60 },
+    { name: "Panvel", address: "Kalamboli / Near McDonald's Highway", area: "Panvel", offsetMins: 75 },
+  ],
+  pune: [
+    { name: "Wakad", address: "Near Ginger Hotel / Hinjawadi Bridge", area: "Wakad", offsetMins: 0 },
+    { name: "Hinjawadi", address: "Hinjawadi Flyover, Phase 1", area: "Hinjawadi", offsetMins: 10 },
+    { name: "Baner", address: "Near Balewadi Stadium Bridge", area: "Baner", offsetMins: 20 },
+    { name: "Swargate", address: "Near Laxmi Narayan Theatre", area: "Swargate", offsetMins: 35 },
+    { name: "Shivaji Nagar", address: "Bank of Maharashtra, Pune Railway", area: "Shivaji Nagar", offsetMins: 45 },
+    { name: "Viman Nagar", address: "Near Phoenix Marketcity", area: "Viman Nagar", offsetMins: 60 },
+  ],
+};
+
+function cleanStopName(rawName: string): { cleanName: string; extractedTime?: string } {
+  const match = rawName.match(/^(.*?)\s*\((\d{1,2}:\d{2})\)\s*$/);
+  if (match) {
+    return { cleanName: match[1].trim(), extractedTime: match[2].trim() };
+  }
+  return { cleanName: rawName.trim() };
+}
+
+// Generate Realistic, Strictly City-Specific Stops
 function getStopsForCity(
   city: string,
   baseTimeStr: string,
   isDropping: boolean,
   customPoints?: string[]
 ) {
-  const defaultBoardingList = [
-    { name: "Siruseri", address: "Infront of HDFC ATM, Opp A2B Adyar Ananda Bhavan", area: "OMR / Siruseri", offsetMins: 0 },
-    { name: "Navalur", address: "Infront of HP Petrol Bunk, After Navalur Toll", area: "Navalur Toll", offsetMins: 5 },
-    { name: "Semmancherry", address: "Infront of Sathyabama University Arch", area: "Semmancherry", offsetMins: 10 },
-    { name: "Sholinganallur", address: "Infront of Royal Enfield Headquarters", area: "Sholinganallur Junction", offsetMins: 15 },
-    { name: "Karapakkam", address: "Infront of Karapakkam Bus Stand And Madurai Sre Meenakshi Chettinadu Hotel", area: "Karapakkam", offsetMins: 20 },
-    { name: "Perungudi", address: "Infront of Dominos Pizza, After Toll", area: "Perungudi", offsetMins: 30 },
-    { name: "Poonamallee Bypass", address: "Infront of Sai Sasi Mahal, Near Ambedkar Statue", area: "Poonamallee Bypass", offsetMins: 150 },
-    { name: "Poonamallee Bypass (KFC)", address: "Infront of KFC, Motel Highway", area: "Poonamallee Highway", offsetMins: 155 },
-    { name: "Guindy", address: "Kathipara Junction, Near Metro Station", area: "Guindy", offsetMins: 45 },
-    { name: "Koyambedu", address: "Omni Bus Stand Platform 4, Near Rohini Theatre", area: "Koyambedu CMBT", offsetMins: 60 },
-  ];
+  const cityKey = (city || "").toLowerCase().replace(/[^a-z]/g, "");
+  const matchedKey =
+    cityKey.includes("bengaluru") || cityKey.includes("bangalore")
+      ? "bangalore"
+      : cityKey.includes("chennai") || cityKey.includes("madras")
+      ? "chennai"
+      : cityKey.includes("hyderabad") || cityKey.includes("secunderabad")
+      ? "hyderabad"
+      : cityKey.includes("coimbatore")
+      ? "coimbatore"
+      : cityKey.includes("mumbai") || cityKey.includes("bombay")
+      ? "mumbai"
+      : cityKey.includes("pune")
+      ? "pune"
+      : "";
 
-  const defaultDroppingList = [
-    { name: "Electronic City", address: "Toll Gate Entrance, Opp Infosys Gate", area: "Electronic City", offsetMins: 0 },
-    { name: "Silk Board", address: "Near Silk Board Flyover Junction, Hosur Road", area: "Silk Board", offsetMins: 15 },
-    { name: "Madiwala", address: "Opp Police Station, Near St. John's Hospital", area: "Madiwala", offsetMins: 25 },
-    { name: "Koramangala", address: "Near Sony World Signal, 80 Feet Road", area: "Koramangala", offsetMins: 35 },
-    { name: "Shantinagar", address: "BMTC Bus Stand, Double Road Entrance", area: "Shantinagar", offsetMins: 45 },
-    { name: "Majestic", address: "Front of Bhagya Vinayaga Temple, Opp Amar Hotel", area: "Majestic / Railway Station", offsetMins: 60 },
-    { name: "Yeshwanthpur", address: "Near Yeshwanthpur Metro Station & Govardhan Theatre", area: "Yeshwanthpur", offsetMins: 75 },
-    { name: "Hebbal", address: "Hebbal Flyover, Near Esteem Mall", area: "Hebbal", offsetMins: 90 },
-  ];
-
-  let rawList = isDropping ? defaultDroppingList : defaultBoardingList;
-
-  if (customPoints && customPoints.length > 0) {
-    const customItems = customPoints.map((pt, i) => {
-      const existing = rawList.find((r) => r.name.toLowerCase() === pt.toLowerCase());
-      return (
-        existing || {
-          name: pt,
-          address: `Near ${pt} Main Bus Stop & Junction (${city})`,
-          area: pt,
-          offsetMins: i * 15,
-        }
-      );
-    });
-    const otherItems = rawList.filter(
-      (r) => !customPoints.some((cp) => cp.toLowerCase() === r.name.toLowerCase())
-    );
-    rawList = [...customItems, ...otherItems];
-  }
+  const cityDatabase = matchedKey ? CITY_STOPS_DATABASE[matchedKey] || [] : [];
 
   let [hours, mins] = isDropping ? [5, 40] : [20, 15];
   if (baseTimeStr) {
@@ -212,15 +275,64 @@ function getStopsForCity(
     }
   }
 
-  return rawList.map((item) => {
-    const totalMinutes = (hours * 60 + mins + item.offsetMins) % (24 * 60);
+  // 1. If customPoints exist for route
+  if (customPoints && customPoints.length > 0) {
+    return customPoints.map((pt, i) => {
+      const { cleanName, extractedTime } = cleanStopName(pt);
+      const knownStop = cityDatabase.find(
+        (s) => s.name.toLowerCase() === cleanName.toLowerCase()
+      );
+
+      let finalTime = extractedTime;
+      if (!finalTime) {
+        const totalMinutes = (hours * 60 + mins + (knownStop?.offsetMins ?? i * 15)) % (24 * 60);
+        const stopHours = Math.floor(totalMinutes / 60);
+        const stopMins = totalMinutes % 60;
+        finalTime = `${String(stopHours).padStart(2, "0")}:${String(stopMins).padStart(2, "0")}`;
+      }
+
+      return {
+        name: cleanName,
+        time: finalTime,
+        address: knownStop ? knownStop.address : `Near ${cleanName} Main Bus Bay & Terminal`,
+        area: knownStop ? knownStop.area : cleanName,
+      };
+    });
+  }
+
+  // 2. City verified stops database
+  if (cityDatabase.length > 0) {
+    return cityDatabase.map((item) => {
+      const totalMinutes = (hours * 60 + mins + item.offsetMins) % (24 * 60);
+      const stopHours = Math.floor(totalMinutes / 60);
+      const stopMins = totalMinutes % 60;
+      const formattedTime = `${String(stopHours).padStart(2, "0")}:${String(stopMins).padStart(2, "0")}`;
+      return {
+        name: item.name,
+        time: formattedTime,
+        address: item.address,
+        area: item.area,
+      };
+    });
+  }
+
+  // 3. Fallback generic stops
+  const genericStops = [
+    { name: `${city} Central Bus Terminal`, offset: 0 },
+    { name: `${city} Bypass Highway Toll`, offset: 20 },
+    { name: `${city} Railway Station Junction`, offset: 35 },
+    { name: `${city} Outer Ring Road`, offset: 50 },
+  ];
+
+  return genericStops.map((item) => {
+    const totalMinutes = (hours * 60 + mins + item.offset) % (24 * 60);
     const stopHours = Math.floor(totalMinutes / 60);
     const stopMins = totalMinutes % 60;
-    const formattedTime = `${String(stopHours).padStart(2, "0")}:${String(stopMins).padStart(2, "0")}`;
     return {
-      ...item,
-      time: formattedTime,
-      fullAddress: `${item.address} (${city})`,
+      name: item.name,
+      time: `${String(stopHours).padStart(2, "0")}:${String(stopMins).padStart(2, "0")}`,
+      address: `Main Boarding / Dropping Bay, ${city}`,
+      area: item.name,
     };
   });
 }
@@ -293,14 +405,6 @@ export default function BusDetailsModal({
     },
     { skip: !isOpen }
   );
-  const { data: dynamicPriceQuote } = useGetDynamicPriceQuoteQuery(
-    {
-      source: route.sourceCity,
-      destination: route.destinationCity,
-      basePrice: route.basePrice,
-    },
-    { skip: !isOpen }
-  );
 
   // Realistic 1-second seat loading timer so seat layout loading looks authentic
   const [isMinSeatLoading, setIsMinSeatLoading] = useState(true);
@@ -341,8 +445,6 @@ export default function BusDetailsModal({
   const seats = layoutData?.seats || [];
   const lowerSeats = seats.filter((s) => s.deck === "LOWER");
   const upperSeats = seats.filter((s) => s.deck === "UPPER");
-  const isSleeper =
-    route.busType.toLowerCase().includes("sleeper") || upperSeats.length > 0;
 
   const totalPrice = selectedSeats.reduce((acc, s) => acc + (s.price || route.basePrice), 0);
 
@@ -383,7 +485,7 @@ export default function BusDetailsModal({
     router.push(`/checkout?routeId=${route.id}`);
   };
 
-  // Structured Boarding and Dropping Stops
+  // Structured City-Specific Boarding & Dropping Stops
   const boardingStops = useMemo(() => {
     return getStopsForCity(route.sourceCity, route.departureTime, false, route.boardingPoints);
   }, [route.sourceCity, route.departureTime, route.boardingPoints]);
@@ -432,8 +534,8 @@ export default function BusDetailsModal({
     const isFemale = seat.genderRestriction === "FEMALE" || seat.bookedGender === "FEMALE";
 
     let containerStyle =
-      "relative w-11 sm:w-12 h-20 sm:h-22 rounded-xl flex flex-col items-center justify-between py-1.5 sm:py-2 px-1 transition-all select-none ";
-    let pillowStyle = "w-6 sm:w-7 h-1.5 rounded-full transition-all ";
+      "relative w-10 sm:w-12 h-18 sm:h-22 rounded-xl flex flex-col items-center justify-between py-1.5 sm:py-2 px-1 transition-all select-none ";
+    let pillowStyle = "w-5 sm:w-7 h-1 sm:h-1.5 rounded-full transition-all ";
     let priceOrLabel = `₹${Math.round(seat.price || route.basePrice)}`;
     let priceColor = "text-gray-800 dark:text-slate-200 font-extrabold";
 
@@ -474,16 +576,16 @@ export default function BusDetailsModal({
         <div className="flex items-center justify-center my-auto">
           {isSold ? (
             isFemale ? (
-              <UserIcon className="w-3.5 h-3.5 text-pink-400 dark:text-pink-300" />
+              <UserIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-pink-400 dark:text-pink-300" />
             ) : (
-              <UserIcon className="w-3.5 h-3.5 text-gray-400 dark:text-slate-500" />
+              <UserIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-gray-400 dark:text-slate-500" />
             )
           ) : isSelected ? (
-            <CheckCircle2 className="w-4 h-4 text-white" />
+            <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" />
           ) : null}
         </div>
         <div className="flex flex-col items-center leading-none">
-          <span className={`text-[10px] sm:text-[11px] tracking-tight ${priceColor}`}>
+          <span className={`text-[9px] sm:text-[11px] tracking-tight ${priceColor}`}>
             {priceOrLabel}
           </span>
           <span
@@ -518,10 +620,10 @@ export default function BusDetailsModal({
           type="button"
           disabled={isSold}
           onClick={() => handleSeatClick(seat)}
-          className="relative w-10 sm:w-11 h-12 flex flex-col items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+          className="relative w-9 sm:w-11 h-11 sm:h-12 flex flex-col items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:scale-105 active:scale-95"
           title={`Seat ${seat.seatNumber} - ₹${seat.price || route.basePrice}`}
         >
-          <svg className="w-9 h-11" viewBox="0 0 44 48" fill="none">
+          <svg className="w-8 sm:w-9 h-10 sm:h-11" viewBox="0 0 44 48" fill="none">
             <rect x="6" y="8" width="32" height="34" rx="8" fill={fillColor} stroke={strokeColor} strokeWidth="2.5" />
             <path d="M11 26h22" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
             <rect
@@ -534,7 +636,7 @@ export default function BusDetailsModal({
             />
           </svg>
         </button>
-        <span className={`text-[10px] font-bold ${priceColor}`}>
+        <span className={`text-[9px] sm:text-[10px] font-bold ${priceColor}`}>
           {isSold ? "Sold" : `₹${Math.round(seat.price || route.basePrice)}`}
         </span>
         <span className="text-[8px] text-gray-400 font-medium">{seat.seatNumber}</span>
@@ -547,17 +649,17 @@ export default function BusDetailsModal({
     const rows = getDeckRows(deckSeats);
 
     return (
-      <div className="flex-1 max-w-[260px] min-w-[190px]">
-        <div className="flex items-center justify-between px-3 mb-2.5">
-          <span className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-wider">
+      <div className="flex-1 max-w-[260px] min-w-[150px] sm:min-w-[190px]">
+        <div className="flex items-center justify-between px-2 sm:px-3 mb-2">
+          <span className="text-[11px] sm:text-xs font-black text-gray-800 dark:text-white uppercase tracking-wider">
             {title}
           </span>
           {isLowerDeck ? (
             <div
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-gray-500 shadow-2xs"
+              className="w-6 sm:w-7 h-6 sm:h-7 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-gray-500 shadow-2xs"
               title="Driver Steering Wheel"
             >
-              <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="9" />
                 <circle cx="12" cy="12" r="3" />
                 <line x1="12" y1="3" x2="12" y2="9" />
@@ -568,7 +670,7 @@ export default function BusDetailsModal({
             </div>
           ) : (
             <div
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-xs text-gray-400 font-bold"
+              className="w-6 sm:w-7 h-6 sm:h-7 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-xs text-gray-400 font-bold"
               title="Upper Deck"
             >
               ⬆
@@ -576,8 +678,8 @@ export default function BusDetailsModal({
           )}
         </div>
 
-        <div className="rounded-t-[32px] sm:rounded-t-[36px] rounded-b-2xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 p-3.5 sm:p-4 shadow-xs flex flex-col justify-between min-h-[460px]">
-          <div className="space-y-3 sm:space-y-3.5">
+        <div className="rounded-t-[28px] sm:rounded-t-[36px] rounded-b-2xl border-2 border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 p-2 sm:p-4 shadow-xs flex flex-col justify-between min-h-[420px] sm:min-h-[460px]">
+          <div className="space-y-2.5 sm:space-y-3.5">
             {rows.map((rowNum) => {
               const rowSeats = deckSeats.filter((s, idx) => {
                 const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / 3) + 1;
@@ -594,32 +696,32 @@ export default function BusDetailsModal({
 
               return (
                 <div key={rowNum} className="flex items-center justify-between">
-                  <div className="w-11 sm:w-12 flex justify-center">
+                  <div className="w-10 sm:w-12 flex justify-center">
                     {leftSeat ? (
                       leftSeat.seatType === "SEATER"
                         ? renderSeaterChair(leftSeat)
                         : renderSleeperBerth(leftSeat)
                     ) : (
-                      <div className="w-11 sm:w-12 h-20 sm:h-22" />
+                      <div className="w-10 sm:w-12 h-18 sm:h-22" />
                     )}
                   </div>
 
-                  <div className="w-5 sm:w-6" />
+                  <div className="w-3 sm:w-6" />
 
-                  <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
                     {rightSeat1 ? (
                       rightSeat1.seatType === "SEATER"
                         ? renderSeaterChair(rightSeat1)
                         : renderSleeperBerth(rightSeat1)
                     ) : (
-                      <div className="w-11 sm:w-12 h-20 sm:h-22" />
+                      <div className="w-10 sm:w-12 h-18 sm:h-22" />
                     )}
                     {rightSeat2 ? (
                       rightSeat2.seatType === "SEATER"
                         ? renderSeaterChair(rightSeat2)
                         : renderSleeperBerth(rightSeat2)
                     ) : (
-                      <div className="w-11 sm:w-12 h-20 sm:h-22" />
+                      <div className="w-10 sm:w-12 h-18 sm:h-22" />
                     )}
                   </div>
                 </div>
@@ -627,8 +729,8 @@ export default function BusDetailsModal({
             })}
           </div>
 
-          <div className="pt-4 pb-1 text-center border-t border-dashed border-gray-200 dark:border-slate-700/60 mt-4">
-            <span className="inline-flex items-center text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">
+          <div className="pt-3 pb-1 text-center border-t border-dashed border-gray-200 dark:border-slate-700/60 mt-3">
+            <span className="inline-flex items-center text-[8px] sm:text-[9px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">
               ▼ Emergency Exit
             </span>
           </div>
@@ -648,8 +750,8 @@ export default function BusDetailsModal({
     <>
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2 sm:p-4">
-            {/* Backdrop with fade */}
+          <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-0 sm:p-4">
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -665,16 +767,16 @@ export default function BusDetailsModal({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", damping: 26, stiffness: 320 }}
-              className="bg-white dark:bg-[#0b0f19] rounded-3xl w-full max-w-6xl xl:max-w-7xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden relative z-10"
+              className="bg-white dark:bg-[#0b0f19] rounded-none sm:rounded-3xl w-full max-w-6xl xl:max-w-7xl shadow-2xl border-0 sm:border border-gray-200 dark:border-slate-800 flex flex-col h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[92vh] overflow-hidden relative z-10"
             >
               {/* TOP HEADER: Clean Navigation + Journey Date */}
-              <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+              <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                   {activeStep === "BOARD_DROP" ? (
                     <button
                       type="button"
                       onClick={() => setActiveStep("SEATS")}
-                      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-300 hover:text-gray-900 transition-colors cursor-pointer flex items-center justify-center"
+                      className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-300 hover:text-gray-900 transition-colors cursor-pointer flex items-center justify-center shrink-0"
                       title="Back to Seat Selection"
                     >
                       <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
@@ -683,14 +785,14 @@ export default function BusDetailsModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-gray-900 transition-colors cursor-pointer"
+                      className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-gray-900 transition-colors cursor-pointer shrink-0"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   )}
 
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center space-x-2">
+                  <div className="min-w-0">
+                    <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center space-x-1.5 truncate">
                       {activeStep === "BOARD_DROP" ? (
                         <span>Select boarding & dropping points</span>
                       ) : (
@@ -701,7 +803,7 @@ export default function BusDetailsModal({
                         </>
                       )}
                     </h2>
-                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-slate-400 font-medium">
+                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-slate-400 font-medium truncate">
                       {activeStep === "BOARD_DROP" ? (
                         <span className="font-semibold text-gray-700 dark:text-slate-300">
                           {route.sourceCity} ➔ {route.destinationCity} • {formattedJourneyDate}
@@ -713,7 +815,7 @@ export default function BusDetailsModal({
                           <span>{route.busType}</span>
                           <span> • </span>
                           <span className="text-[#d84e55] font-bold">{formattedJourneyDate}</span>
-                          <span className="hidden sm:inline"> ({route.departureTime} - {route.arrivalTime})</span>
+                          <span className="hidden md:inline"> ({route.departureTime} - {route.arrivalTime})</span>
                         </>
                       )}
                     </p>
@@ -721,7 +823,7 @@ export default function BusDetailsModal({
                 </div>
 
                 {/* Center Steps breadcrumbs (Desktop) */}
-                <div className="hidden md:flex items-center space-x-8 text-xs font-bold">
+                <div className="hidden md:flex items-center space-x-8 text-xs font-bold shrink-0">
                   <button
                     type="button"
                     onClick={() => setActiveStep("SEATS")}
@@ -765,7 +867,7 @@ export default function BusDetailsModal({
                 </div>
 
                 {/* Rating Badge */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 shrink-0">
                   <div className="flex items-center space-x-1 px-2.5 py-1 bg-[#15803d] text-white rounded-lg text-xs font-bold shadow-2xs">
                     <Star className="w-3.5 h-3.5 fill-white" />
                     <span>{reviewData?.averageRating?.toFixed(1) || route.rating.toFixed(1)}</span>
@@ -782,8 +884,8 @@ export default function BusDetailsModal({
               {activeStep === "SEATS" && (
                 <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-slate-800">
                   {/* Left Column: Redbus Dual Deck Seat Map */}
-                  <div className="lg:col-span-6 p-4 sm:p-5 bg-gray-50/70 dark:bg-slate-900/60 overflow-y-auto flex flex-col items-center">
-                    <div className="w-full max-w-xl space-y-4">
+                  <div className="lg:col-span-6 p-3 sm:p-5 bg-gray-50/70 dark:bg-slate-900/60 overflow-y-auto flex flex-col items-center">
+                    <div className="w-full max-w-xl space-y-3 sm:space-y-4">
                       {/* Decks Header */}
                       <div className="flex items-center justify-between px-2">
                         <span className="text-xs font-black text-gray-800 dark:text-slate-200 uppercase tracking-wider">
@@ -808,33 +910,33 @@ export default function BusDetailsModal({
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
-                            <div className="h-96 bg-gray-200 dark:bg-slate-700 rounded-3xl" />
-                            <div className="h-96 bg-gray-200 dark:bg-slate-700 rounded-3xl" />
+                            <div className="h-80 sm:h-96 bg-gray-200 dark:bg-slate-700 rounded-3xl" />
+                            <div className="h-80 sm:h-96 bg-gray-200 dark:bg-slate-700 rounded-3xl" />
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-row justify-center gap-4 sm:gap-6">
+                        <div className="flex flex-row justify-center gap-2 sm:gap-6">
                           {lowerSeats.length > 0 && renderDeckChassis("Lower Deck", lowerSeats, true)}
                           {upperSeats.length > 0 && renderDeckChassis("Upper Deck", upperSeats, false)}
                         </div>
                       )}
 
                       {/* Legend */}
-                      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-gray-600 dark:text-slate-400 font-bold pt-2 border-t border-gray-200 dark:border-slate-800">
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-5 text-[10px] sm:text-[11px] text-gray-600 dark:text-slate-400 font-bold pt-2 border-t border-gray-200 dark:border-slate-800">
                         <div className="flex items-center space-x-1.5">
-                          <div className="w-4 h-4 rounded-sm border-2 border-emerald-500 bg-white dark:bg-slate-800" />
+                          <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-sm border-2 border-emerald-500 bg-white dark:bg-slate-800" />
                           <span>Available</span>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          <div className="w-4 h-4 rounded-sm bg-[#15803d] border-2 border-[#15803d]" />
+                          <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-sm bg-[#15803d] border-2 border-[#15803d]" />
                           <span>Selected</span>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          <div className="w-4 h-4 rounded-sm bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600" />
+                          <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-sm bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600" />
                           <span>Sold</span>
                         </div>
                         <div className="flex items-center space-x-1.5">
-                          <div className="w-4 h-4 rounded-sm border border-pink-200 bg-pink-100 dark:bg-pink-950/40 flex items-center justify-center">
+                          <div className="w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-sm border border-pink-200 bg-pink-100 dark:bg-pink-950/40 flex items-center justify-center">
                             <div className="w-2 h-2 rounded-full bg-pink-500" />
                           </div>
                           <span>Female</span>
@@ -843,7 +945,7 @@ export default function BusDetailsModal({
                     </div>
                   </div>
 
-                  {/* Right Column: Tabbed Detail Panels (Highlights, Photos, Cancellation Policy, etc.) */}
+                  {/* Right Column: Tabbed Detail Panels */}
                   <div className="lg:col-span-6 flex flex-col justify-between bg-white dark:bg-[#0b0f19] overflow-hidden">
                     {/* Scrollable Tabs Bar */}
                     <div className="relative flex items-center px-1.5 py-2 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]">
@@ -897,7 +999,7 @@ export default function BusDetailsModal({
                     </div>
 
                     {/* Tab Contents */}
-                    <div className="flex-1 p-5 overflow-y-auto space-y-6">
+                    <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-6">
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={activeTab}
@@ -1168,19 +1270,19 @@ export default function BusDetailsModal({
               )}
 
               {/* ========================================================================= */}
-              {/* VIEW 2: SELECT BOARDING & DROPPING POINTS STEP (Exact Match with Image 1) */}
+              {/* VIEW 2: SELECT BOARDING & DROPPING POINTS STEP (Strictly City-Specific) */}
               {/* ========================================================================= */}
               {activeStep === "BOARD_DROP" && (
                 <div className="flex-1 overflow-y-auto flex flex-col bg-[#f8fafc] dark:bg-[#0b0f19]">
                   {/* Sub-Tabs: Boarding points vs Dropping points */}
-                  <div className="grid grid-cols-2 bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-slate-800 text-center font-bold text-xs sm:text-sm">
+                  <div className="grid grid-cols-2 bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-slate-800 text-center font-bold text-xs sm:text-sm shrink-0">
                     <button
                       type="button"
                       onClick={() => {
                         setBoardDropSubTab("boarding");
                         setAreaSearchTerm("");
                       }}
-                      className={`py-3.5 px-4 transition-all relative cursor-pointer ${
+                      className={`py-3 sm:py-3.5 px-3 sm:px-4 transition-all relative cursor-pointer ${
                         boardDropSubTab === "boarding"
                           ? "text-[#d84e55] font-extrabold"
                           : "text-gray-500 hover:text-gray-900 dark:text-slate-400"
@@ -1188,7 +1290,7 @@ export default function BusDetailsModal({
                     >
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs sm:text-sm">Boarding points</span>
-                        <span className="text-[11px] font-semibold text-gray-400 dark:text-slate-500">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-gray-400 dark:text-slate-500">
                           {route.sourceCity}
                         </span>
                       </div>
@@ -1203,7 +1305,7 @@ export default function BusDetailsModal({
                         setBoardDropSubTab("dropping");
                         setAreaSearchTerm("");
                       }}
-                      className={`py-3.5 px-4 transition-all relative cursor-pointer ${
+                      className={`py-3 sm:py-3.5 px-3 sm:px-4 transition-all relative cursor-pointer ${
                         boardDropSubTab === "dropping"
                           ? "text-[#d84e55] font-extrabold"
                           : "text-gray-500 hover:text-gray-900 dark:text-slate-400"
@@ -1211,7 +1313,7 @@ export default function BusDetailsModal({
                     >
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs sm:text-sm">Dropping points</span>
-                        <span className="text-[11px] font-semibold text-gray-400 dark:text-slate-500">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-gray-400 dark:text-slate-500">
                           {route.destinationCity}
                         </span>
                       </div>
@@ -1221,8 +1323,8 @@ export default function BusDetailsModal({
                     </button>
                   </div>
 
-                  {/* Search Area matching Image 1 */}
-                  <div className="p-4 sm:p-5 max-w-4xl w-full mx-auto space-y-4">
+                  {/* Search Area */}
+                  <div className="p-3.5 sm:p-5 max-w-4xl w-full mx-auto space-y-3.5 sm:space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs sm:text-sm font-bold text-gray-800 dark:text-slate-200">
                         Find the closest {boardDropSubTab === "boarding" ? "boarding" : "dropping"} point to
@@ -1246,19 +1348,19 @@ export default function BusDetailsModal({
                       </div>
                     </div>
 
-                    {/* Selected Highlight Card (if user already picked for this subtab) */}
+                    {/* Selected Highlight Card */}
                     {((boardDropSubTab === "boarding" && currentBoarding) ||
                       (boardDropSubTab === "dropping" && currentDropping)) && (
-                      <div className="p-4 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent rounded-2xl border border-emerald-500/30">
-                        <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 block mb-1">
+                      <div className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent rounded-2xl border border-emerald-500/30">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 dark:text-emerald-300 block mb-1">
                           Your selected {boardDropSubTab} point
                         </span>
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="font-black text-sm text-gray-900 dark:text-white">
+                            <span className="font-black text-xs sm:text-sm text-gray-900 dark:text-white">
                               {boardDropSubTab === "boarding" ? currentBoarding : currentDropping}
                             </span>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5">
                               {boardDropSubTab === "boarding"
                                 ? boardingStops.find((s) => s.name === currentBoarding)?.address
                                 : droppingStops.find((s) => s.name === currentDropping)?.address}
@@ -1271,9 +1373,9 @@ export default function BusDetailsModal({
                       </div>
                     )}
 
-                    {/* All Points Card matching Image 1 */}
+                    {/* All Points Card */}
                     <div className="bg-white dark:bg-[#0f172a] rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
-                      <div className="px-4 py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-xs font-bold text-gray-700 dark:text-slate-300">
+                      <div className="px-4 py-2.5 sm:py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-xs font-bold text-gray-700 dark:text-slate-300">
                         All {boardDropSubTab} points in {boardDropSubTab === "boarding" ? route.sourceCity : route.destinationCity}
                       </div>
 
@@ -1298,11 +1400,11 @@ export default function BusDetailsModal({
                                     dispatch(setDroppingPoint(stop.name));
                                   }
                                 }}
-                                className={`p-4 transition-all cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-800/50 ${
+                                className={`p-3.5 sm:p-4 transition-all cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-slate-800/50 ${
                                   isSelected ? "bg-red-50/40 dark:bg-red-950/20" : ""
                                 }`}
                               >
-                                <div className="flex items-start space-x-3.5 min-w-0 flex-1 pr-3">
+                                <div className="flex items-start space-x-3 min-w-0 flex-1 pr-2">
                                   <span className="font-black text-xs sm:text-sm text-gray-900 dark:text-white shrink-0 mt-0.5">
                                     {stop.time}
                                   </span>
@@ -1310,13 +1412,13 @@ export default function BusDetailsModal({
                                     <h4 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white">
                                       {stop.name}
                                     </h4>
-                                    <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                      {stop.address} ({boardDropSubTab === "boarding" ? route.sourceCity : route.destinationCity})
+                                    <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                                      {stop.address}
                                     </p>
                                   </div>
                                 </div>
 
-                                {/* Circular Radio Selector matching Image 1 */}
+                                {/* Circular Radio Selector */}
                                 <div className="shrink-0 pl-2">
                                   <div
                                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -1333,7 +1435,7 @@ export default function BusDetailsModal({
                           })
                         ) : (
                           <div className="p-8 text-center text-gray-400 text-xs">
-                            No stops matching &quot;{areaSearchTerm}&quot;. Try searching another area or city landmark.
+                            No stops matching &quot;{areaSearchTerm}&quot;. Try searching another area or landmark.
                           </div>
                         )}
                       </div>
@@ -1343,13 +1445,13 @@ export default function BusDetailsModal({
               )}
 
               {/* ========================================================================= */}
-              {/* BOTTOM ACTION BAR: Responsive for Mobile (Image 2) and Desktop (Image 3) */}
+              {/* BOTTOM ACTION BAR */}
               {/* ========================================================================= */}
-              <div className="p-3.5 sm:p-4 bg-white dark:bg-[#0f172a] border-t border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="p-3 sm:p-4 bg-white dark:bg-[#0f172a] border-t border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
                 {/* Left: Seat and Route summary */}
                 <div className="flex items-center justify-between sm:justify-start sm:space-x-4">
                   <div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1.5">
                       <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                         {selectedSeats.length > 0
                           ? `${selectedSeats.length} seat${selectedSeats.length > 1 ? "s" : ""} selected`
@@ -1364,13 +1466,13 @@ export default function BusDetailsModal({
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-1.5 text-[11px] text-gray-500 mt-0.5">
+                    <div className="flex items-center space-x-1 text-[10px] sm:text-[11px] text-gray-500 mt-0.5 truncate max-w-[260px] sm:max-w-none">
                       {currentBoarding && currentDropping ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate">
                           Board: {currentBoarding} • Drop: {currentDropping}
                         </span>
                       ) : currentBoarding ? (
-                        <span className="text-amber-600 font-medium">
+                        <span className="text-amber-600 font-medium truncate">
                           Board: {currentBoarding} • Select Dropping Point
                         </span>
                       ) : (
@@ -1381,7 +1483,7 @@ export default function BusDetailsModal({
                     </div>
                   </div>
 
-                  {/* Mobile Total Price indicator on left */}
+                  {/* Mobile Total Price */}
                   {selectedSeats.length > 0 && (
                     <div className="sm:hidden text-right">
                       <span className="text-[10px] text-gray-400 block font-medium">Total Fare</span>
@@ -1408,7 +1510,7 @@ export default function BusDetailsModal({
                       type="button"
                       disabled={selectedSeats.length === 0}
                       onClick={handleProceedToBoardDrop}
-                      className="w-full sm:w-auto px-6 py-3 bg-[#d84e55] hover:bg-[#b83e44] disabled:bg-gray-200 dark:disabled:bg-slate-800 disabled:text-gray-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed active:scale-95"
+                      className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-[#d84e55] hover:bg-[#b83e44] disabled:bg-gray-200 dark:disabled:bg-slate-800 disabled:text-gray-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed active:scale-95"
                     >
                       <span>Select boarding & dropping points</span>
                       <ChevronRight className="w-4 h-4" />
@@ -1418,7 +1520,7 @@ export default function BusDetailsModal({
                       type="button"
                       disabled={selectedSeats.length === 0 || !currentBoarding || !currentDropping}
                       onClick={handleProceedToBook}
-                      className="w-full sm:w-auto px-7 py-3 bg-[#d84e55] hover:bg-[#b83e44] disabled:bg-gray-200 dark:disabled:bg-slate-800 disabled:text-gray-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed active:scale-95"
+                      className="w-full sm:w-auto px-6 sm:px-7 py-2.5 sm:py-3 bg-[#d84e55] hover:bg-[#b83e44] disabled:bg-gray-200 dark:disabled:bg-slate-800 disabled:text-gray-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed active:scale-95"
                     >
                       <span>Proceed to Book</span>
                       <ChevronRight className="w-4 h-4 stroke-[3]" />

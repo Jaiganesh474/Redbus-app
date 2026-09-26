@@ -51,6 +51,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileNotifDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -68,7 +69,9 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setUserDropdownOpen(false);
       }
-      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+      const isInsideDesktopNotif = notifDropdownRef.current && notifDropdownRef.current.contains(event.target as Node);
+      const isInsideMobileNotif = mobileNotifDropdownRef.current && mobileNotifDropdownRef.current.contains(event.target as Node);
+      if (!isInsideDesktopNotif && !isInsideMobileNotif) {
         dispatch(toggleNotificationDropdown(false));
       }
     }
@@ -375,8 +378,9 @@ export default function Navbar() {
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center space-x-1.5">
+            <div className="md:hidden flex items-center space-x-1.5" ref={mobileNotifDropdownRef}>
               <button
+                type="button"
                 onClick={() => dispatch(toggleNotificationDropdown(!isNotificationOpen))}
                 className="relative p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white rounded-lg cursor-pointer"
                 aria-label="Notifications"
@@ -388,7 +392,9 @@ export default function Navbar() {
                   </span>
                 )}
               </button>
+              <NotificationDropdown onOpenAuthModal={() => setShowAuthModal(true)} />
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white"
               >
