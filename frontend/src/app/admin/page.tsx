@@ -14,6 +14,10 @@ import {
   useGetAdminUserActivityQuery,
   useSimulateAdminAiQueryMutation,
   useGetAdminOperatorEarningsQuery,
+  useGetAdminBannersQuery,
+  useCreateBannerMutation,
+  useDeleteBannerMutation,
+  useGenerateAiBannerMutation,
 } from "@/store/apiSlice";
 import {
   Shield,
@@ -48,14 +52,41 @@ import {
   Filter,
   Wallet,
   CreditCard,
+  Image as ImageIcon,
+  Trash2,
+  Plus,
+  Tag,
+  Eye,
+  Wand2,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState<
-    "operators" | "earnings" | "analytics" | "bookings" | "ai_monitoring" | "user_activity"
+    "operators" | "earnings" | "banners" | "analytics" | "bookings" | "ai_monitoring" | "user_activity"
   >("operators");
   const [page, setPage] = useState(0);
+
+  // Banner & AI Studio State
+  const [aiPrompt, setAiPrompt] = useState("Festive Diwali 25% discount for Bangalore to Goa AC sleeper buses");
+  const [targetRoute, setTargetRoute] = useState("");
+  const [targetDiscount, setTargetDiscount] = useState<number>(25);
+  const [bannerDraft, setBannerDraft] = useState<any>({
+    title: "",
+    subtitle: "",
+    tag: "AI EXCLUSIVE DEAL",
+    promoCode: "REDBUS25",
+    discountPercentage: 25,
+    bgGradient: "from-slate-950 via-red-950/80 to-slate-900",
+    badgeColor: "bg-red-500/20 text-red-300 border-red-500/30",
+    routeInfo: "Bangalore ⇄ Goa",
+    imageUrl: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80",
+    ctaText: "Claim 25% Off",
+    ctaLink: "/search",
+    active: true,
+    sortOrder: 1,
+    isAiGenerated: true,
+  });
 
   // Commission edit state
   const [editingCommissionId, setEditingCommissionId] = useState<number | null>(null);
@@ -113,6 +144,98 @@ export default function AdminDashboardPage() {
     skip: !isAdmin,
     pollingInterval: 10000,
   });
+
+  const {
+    data: adminBanners = [],
+    isLoading: isBannersLoading,
+    refetch: refetchBanners,
+  } = useGetAdminBannersQuery(undefined, { skip: !isAdmin });
+
+  const [createBannerMutation, { isLoading: isCreatingBanner }] = useCreateBannerMutation();
+  const [deleteBannerMutation, { isLoading: isDeletingBanner }] = useDeleteBannerMutation();
+  const [generateAiBannerMutation, { isLoading: isGeneratingAiBanner }] = useGenerateAiBannerMutation();
+
+  const handleGenerateAiBanner = async () => {
+    if (!aiPrompt.trim()) return;
+    setActionError("");
+    setActionSuccess("");
+    try {
+      const generated = await generateAiBannerMutation({
+        prompt: aiPrompt,
+        targetRoute: targetRoute.trim() || undefined,
+        targetDiscount: targetDiscount > 0 ? targetDiscount : undefined,
+      }).unwrap();
+
+      setBannerDraft({
+        title: generated.title || "",
+        subtitle: generated.subtitle || "",
+        tag: generated.tag || "AI EXCLUSIVE DEAL",
+        promoCode: generated.promoCode || "REDAI20",
+        discountPercentage: generated.discountPercentage || 20,
+        bgGradient: generated.bgGradient || "from-slate-950 via-red-950/80 to-slate-900",
+        badgeColor: generated.badgeColor || "bg-red-500/20 text-red-300 border-red-500/30",
+        routeInfo: generated.routeInfo || "Pan-India Super Express",
+        imageUrl: generated.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80",
+        ctaText: generated.ctaText || "Claim Offer",
+        ctaLink: generated.ctaLink || "/search",
+        active: true,
+        sortOrder: 1,
+        isAiGenerated: true,
+        promptUsed: aiPrompt,
+      });
+
+      setActionSuccess("AI Promotional Banner generated! Preview and customize below before publishing.");
+      setTimeout(() => setActionSuccess(""), 4000);
+    } catch (err: any) {
+      setActionError(err?.data?.message || "Failed to generate AI banner.");
+    }
+  };
+
+  const handlePublishBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bannerDraft.title.trim()) {
+      setActionError("Banner title is required.");
+      return;
+    }
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await createBannerMutation(bannerDraft).unwrap();
+      setActionSuccess(`Banner "${bannerDraft.title}" created successfully and published live to homepage!`);
+      refetchBanners();
+      setBannerDraft({
+        title: "",
+        subtitle: "",
+        tag: "EXCLUSIVE OFFER",
+        promoCode: "",
+        discountPercentage: 0,
+        bgGradient: "from-slate-950 via-red-950/80 to-slate-900",
+        badgeColor: "bg-red-500/20 text-red-300 border-red-500/30",
+        routeInfo: "",
+        imageUrl: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80",
+        ctaText: "Book Now",
+        ctaLink: "/search",
+        active: true,
+        sortOrder: 1,
+        isAiGenerated: false,
+      });
+      setTimeout(() => setActionSuccess(""), 4000);
+    } catch (err: any) {
+      setActionError(err?.data?.message || "Failed to publish banner.");
+    }
+  };
+
+  const handleDeleteBanner = async (id: number, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete banner "${title}"?`)) return;
+    try {
+      await deleteBannerMutation(id).unwrap();
+      setActionSuccess(`Banner "${title}" removed from homepage.`);
+      refetchBanners();
+      setTimeout(() => setActionSuccess(""), 3000);
+    } catch (err: any) {
+      setActionError(err?.data?.message || "Failed to delete banner.");
+    }
+  };
 
   const [verifyOperatorMutation, { isLoading: isVerifying }] = useVerifyOperatorMutation();
   const [suspendOperatorMutation, { isLoading: isSuspending }] = useSuspendOperatorMutation();
@@ -396,6 +519,21 @@ export default function AdminDashboardPage() {
           <span>User Activity & Fraud Shield</span>
           <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-black">
             ACTIVE
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("banners")}
+          className={`pb-3 text-xs font-bold flex items-center space-x-2 border-b-2 transition-colors shrink-0 cursor-pointer ${
+            activeTab === "banners"
+              ? "border-[#d84e55] text-[#d84e55]"
+              : "border-transparent text-gray-500 hover:text-gray-900"
+          }`}
+        >
+          <ImageIcon className="w-4 h-4 text-rose-500" />
+          <span>Promotional Banners & AI Studio</span>
+          <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-black">
+            {adminBanners.length} LIVE
           </span>
         </button>
 
@@ -737,6 +875,429 @@ export default function AdminDashboardPage() {
                               op.status
                             )}
                           </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: PROMOTIONAL BANNERS & AI PROMOTIONAL STUDIO */}
+      {activeTab === "banners" && (
+        <div className="space-y-8 animate-in fade-in">
+          {/* AI Banner Studio Header */}
+          <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-red-950 p-6 sm:p-8 rounded-3xl border border-purple-800/40 text-white shadow-xl relative overflow-hidden">
+            <div className="max-w-2xl space-y-2 relative z-10">
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-full text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span>AI Promotional Studio & Campaign Engine</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white">
+                Generate High-Converting Promotional Banners with AI
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Provide a suggestive prompt describing your festival offer, route discount, or luxury fleet promotion.
+                Our AI NLP engine will generate optimized headlines, promo codes, background styling, and publish directly to the customer homepage.
+              </p>
+            </div>
+
+            {/* Prompt Input Form */}
+            <div className="mt-6 bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/15 space-y-4 relative z-10">
+              <div>
+                <label className="block text-xs font-bold text-purple-200 mb-1.5">
+                  Suggestive AI Prompt / Campaign Goal
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Wand2 className="w-4 h-4 text-purple-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      placeholder="e.g. Diwali festive 30% discount on Bangalore to Goa luxury sleeper coaches"
+                      className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/20 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateAiBanner}
+                    disabled={isGeneratingAiBanner || !aiPrompt.trim()}
+                    className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+                  >
+                    {isGeneratingAiBanner ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Generating AI Banner...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Generate with AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Suggestive Prompt Chips */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-2">
+                  Click to try suggestive campaign prompts:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "🪔 Diwali Utsav 30% Off", prompt: "Diwali festival special flat 30% discount for Bangalore to Hyderabad luxury Volvo buses" },
+                    { label: "🏖️ Goa Beach Getaway 20%", prompt: "Weekend Beach Getaway 20% discount on Mumbai to Goa AC Sleeper buses" },
+                    { label: "🛡️ SafeTravel+ Solo Women 15%", prompt: "SafeTravel+ AI smart seating for solo women with 15% discount on Chennai to Coimbatore routes" },
+                    { label: "⚡ Midnight Flash Sale 25%", prompt: "Midnight Flash Sale flat 25% instant discount on Delhi to Manali express coaches" },
+                    { label: "👑 Volvo 9600 Luxury Sleeper", prompt: "Ultra-luxury Volvo 9600 Multi-Axle sleeper coaches with memory foam berths and 20% discount" },
+                  ].map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setAiPrompt(chip.prompt);
+                      }}
+                      className="px-2.5 py-1 bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg text-[11px] text-slate-200 transition-colors cursor-pointer text-left"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Preview & Customization Editor */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left: Interactive Preview */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-[#d84e55]" />
+                  <span>Live Homepage Banner Preview</span>
+                </h3>
+                <span className="text-[11px] text-gray-500 font-semibold">Real-Time Mobile & Desktop Look</span>
+              </div>
+
+              {/* Live Render Card */}
+              <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-slate-800 bg-slate-950 text-white min-h-[220px] p-5 sm:p-7 flex flex-col justify-between">
+                {/* Background Image */}
+                <div className="absolute inset-0 z-0">
+                  <img
+                    src={bannerDraft.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80"}
+                    alt="Preview"
+                    className="w-full h-full object-cover opacity-25"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-r ${bannerDraft.bgGradient || "from-slate-950 via-red-950/80 to-slate-900"} opacity-95`} />
+                </div>
+
+                <div className="relative z-10 space-y-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border backdrop-blur-md ${bannerDraft.badgeColor || "bg-red-500/20 text-red-300 border-red-500/30"}`}>
+                      <Sparkles className="w-3 h-3" />
+                      <span>{bannerDraft.tag || "EXCLUSIVE OFFER"}</span>
+                    </span>
+                    {bannerDraft.routeInfo && (
+                      <span className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] font-semibold text-slate-300">
+                        {bannerDraft.routeInfo}
+                      </span>
+                    )}
+                    {bannerDraft.isAiGenerated && (
+                      <span className="px-2 py-0.5 bg-purple-500/20 border border-purple-500/30 rounded-md text-[9px] font-bold text-purple-300">
+                        AI Generated
+                      </span>
+                    )}
+                  </div>
+
+                  <h4 className="text-lg sm:text-2xl font-black text-white leading-tight drop-shadow-md">
+                    {bannerDraft.title || "Your Banner Headline Will Appear Here"}
+                  </h4>
+
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-md line-clamp-2">
+                    {bannerDraft.subtitle || "Your promotional description, bus features, and discount perks will appear here."}
+                  </p>
+                </div>
+
+                <div className="relative z-10 flex items-center gap-3 pt-4">
+                  <span className="inline-flex items-center gap-1 px-4 py-2 bg-[#d84e55] text-white rounded-xl text-xs font-bold shadow-md shadow-red-600/30">
+                    <span>{bannerDraft.ctaText || "Claim Offer"}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                  {bannerDraft.promoCode && (
+                    <div className="flex items-center gap-1 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/15 text-xs font-black text-amber-300">
+                      <Tag className="w-3 h-3 text-amber-400" />
+                      <span>{bannerDraft.promoCode}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Customization & Publish Form */}
+            <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+              <div className="border-b border-gray-100 pb-3">
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-600" />
+                  <span>Customize & Publish Banner to Homepage</span>
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Refine the title, promo code, background theme, and instantly publish live.
+                </p>
+              </div>
+
+              <form onSubmit={handlePublishBanner} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">Banner Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bannerDraft.title}
+                    onChange={(e) => setBannerDraft({ ...bannerDraft, title: e.target.value })}
+                    placeholder="e.g. Diwali Utsav: Flat 30% Off All Routes"
+                    className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#d84e55] focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">Subtitle / Offer Description</label>
+                  <textarea
+                    rows={2}
+                    value={bannerDraft.subtitle}
+                    onChange={(e) => setBannerDraft({ ...bannerDraft, subtitle: e.target.value })}
+                    placeholder="e.g. Book luxury AC sleeper coaches and celebrate homecoming with family."
+                    className="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#d84e55] focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">Tag / Badge</label>
+                    <input
+                      type="text"
+                      value={bannerDraft.tag}
+                      onChange={(e) => setBannerDraft({ ...bannerDraft, tag: e.target.value })}
+                      placeholder="FESTIVE DEAL"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">Promo Code</label>
+                    <input
+                      type="text"
+                      value={bannerDraft.promoCode}
+                      onChange={(e) => setBannerDraft({ ...bannerDraft, promoCode: e.target.value.toUpperCase() })}
+                      placeholder="DIWALI30"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs font-mono font-bold text-red-600"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">Route Info</label>
+                    <input
+                      type="text"
+                      value={bannerDraft.routeInfo}
+                      onChange={(e) => setBannerDraft({ ...bannerDraft, routeInfo: e.target.value })}
+                      placeholder="Bangalore ⇄ Goa"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">CTA Button Text</label>
+                    <input
+                      type="text"
+                      value={bannerDraft.ctaText}
+                      onChange={(e) => setBannerDraft({ ...bannerDraft, ctaText: e.target.value })}
+                      placeholder="Claim 30% Off"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-gray-700">CTA Link</label>
+                    <input
+                      type="text"
+                      value={bannerDraft.ctaLink}
+                      onChange={(e) => setBannerDraft({ ...bannerDraft, ctaLink: e.target.value })}
+                      placeholder="/search"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">Background Gradient Style</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { name: "Crimson Ember", bg: "from-slate-950 via-red-950/80 to-slate-900", badgeColor: "bg-red-500/20 text-red-300 border-red-500/30" },
+                      { name: "Diwali Amber", bg: "from-amber-950/90 via-orange-900/80 to-slate-950", badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
+                      { name: "Emerald Forest", bg: "from-slate-950 via-emerald-950/80 to-slate-900", badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
+                      { name: "Cyber Purple", bg: "from-purple-950/90 via-fuchsia-950/80 to-slate-950", badgeColor: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
+                    ].map((theme, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setBannerDraft({ ...bannerDraft, bgGradient: theme.bg, badgeColor: theme.badgeColor })}
+                        className={`p-2 rounded-xl text-[11px] font-bold text-white border text-center transition-all cursor-pointer ${
+                          bannerDraft.bgGradient === theme.bg
+                            ? "ring-2 ring-[#d84e55] border-transparent"
+                            : "border-gray-200"
+                        } bg-gradient-to-r ${theme.bg}`}
+                      >
+                        {theme.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700">Image URL</label>
+                  <input
+                    type="text"
+                    value={bannerDraft.imageUrl}
+                    onChange={(e) => setBannerDraft({ ...bannerDraft, imageUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/photo-..."
+                    className="w-full px-3.5 py-1.5 border border-gray-300 rounded-xl text-xs"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isCreatingBanner || !bannerDraft.title.trim()}
+                  className="w-full py-3 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-xs font-bold shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {isCreatingBanner ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Publishing to Home Page...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Publish Banner Live to Home Page</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Active Banners Registry Table */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-[#d84e55]" />
+                  <span>Live Homepage Promotional Banners ({adminBanners.length})</span>
+                </h3>
+                <p className="text-xs text-gray-500">
+                  All active campaigns dynamically rotating on the passenger homepage slider
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => refetchBanners()}
+                className="p-2 text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl cursor-pointer"
+                title="Refresh banner list"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {isBannersLoading ? (
+              <div className="p-12 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#d84e55]" />
+                <span>Loading active banners...</span>
+              </div>
+            ) : adminBanners.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <ImageIcon className="w-8 h-8 text-gray-300 mx-auto" />
+                <p className="text-xs font-bold text-gray-600">No promotional banners active yet</p>
+                <p className="text-[11px] text-gray-400">Use the AI Studio above to generate and publish your first banner.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-gray-600">
+                  <thead className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase font-bold text-gray-500">
+                    <tr>
+                      <th className="px-6 py-4">Banner / Title</th>
+                      <th className="px-4 py-4">Badge / Promo</th>
+                      <th className="px-4 py-4">Target Route</th>
+                      <th className="px-4 py-4">Type</th>
+                      <th className="px-4 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {adminBanners.map((b) => (
+                      <tr key={b.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={b.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=100"}
+                              alt={b.title}
+                              className="w-12 h-10 object-cover rounded-lg border border-gray-200 shrink-0"
+                            />
+                            <div>
+                              <p className="font-bold text-gray-900 line-clamp-1">{b.title}</p>
+                              <p className="text-[11px] text-gray-500 line-clamp-1">{b.subtitle || "No description"}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            <span className="inline-block px-2 py-0.5 bg-gray-100 rounded text-[10px] font-bold text-gray-700">
+                              {b.tag || "OFFER"}
+                            </span>
+                            {b.promoCode && (
+                              <p className="text-[11px] font-mono font-bold text-red-600">{b.promoCode}</p>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4 font-semibold text-gray-700">
+                          {b.routeInfo || "All India Routes"}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {b.isAiGenerated ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">
+                              <Sparkles className="w-3 h-3 text-purple-600" />
+                              AI Crafted
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[10px] font-bold">
+                              Standard
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Live on Home
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBanner(b.id, b.title)}
+                            disabled={isDeletingBanner}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete banner"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}

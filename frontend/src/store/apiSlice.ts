@@ -37,6 +37,10 @@ import type {
   OperatorAiPriceIntelligence,
   OperatorWalletLedger,
   AdminOperatorEarnings,
+  Banner,
+  CreateBannerRequest,
+  GenerateAiBannerRequest,
+  UserDeviceSession,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
@@ -55,7 +59,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "OperatorProfile", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos", "Refunds", "OperatorWallet"],
+  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "OperatorProfile", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos", "Refunds", "OperatorWallet", "Banners", "DeviceSessions"],
   endpoints: (builder) => ({
     // Auth
     login: builder.mutation<{ token: string; user: User }, any>({
@@ -608,6 +612,64 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["AiMonitoring"],
     }),
+    // Banners
+    getBanners: builder.query<Banner[], void>({
+      query: () => "/banners",
+      providesTags: ["Banners"],
+    }),
+    getAdminBanners: builder.query<Banner[], void>({
+      query: () => "/banners/admin",
+      providesTags: ["Banners"],
+    }),
+    createBanner: builder.mutation<Banner, CreateBannerRequest>({
+      query: (body) => ({
+        url: "/banners/admin",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Banners"],
+    }),
+    updateBanner: builder.mutation<Banner, { id: number; data: CreateBannerRequest }>({
+      query: ({ id, data }) => ({
+        url: `/banners/admin/${id}`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["Banners"],
+    }),
+    deleteBanner: builder.mutation<{ message: string; id: number }, number>({
+      query: (id) => ({
+        url: `/banners/admin/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Banners"],
+    }),
+    generateAiBanner: builder.mutation<Banner, GenerateAiBannerRequest>({
+      query: (body) => ({
+        url: "/banners/admin/ai-generate",
+        method: "POST",
+        body,
+      }),
+    }),
+    // Device Sessions & Security
+    getUserDeviceSessions: builder.query<UserDeviceSession[], void>({
+      query: () => "/users/me/sessions",
+      providesTags: ["DeviceSessions"],
+    }),
+    revokeDeviceSession: builder.mutation<{ message: string }, number>({
+      query: (sessionId) => ({
+        url: `/users/me/sessions/${sessionId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["DeviceSessions"],
+    }),
+    revokeAllOtherSessions: builder.mutation<{ message: string }, void>({
+      query: () => ({
+        url: "/users/me/sessions/revoke-others",
+        method: "POST",
+      }),
+      invalidatesTags: ["DeviceSessions"],
+    }),
   }),
 });
 
@@ -689,5 +751,15 @@ export const {
   useGetAdminAiMonitoringQuery,
   useGetAdminUserActivityQuery,
   useSimulateAdminAiQueryMutation,
+  useGetBannersQuery,
+  useGetAdminBannersQuery,
+  useCreateBannerMutation,
+  useUpdateBannerMutation,
+  useDeleteBannerMutation,
+  useGenerateAiBannerMutation,
+  useGetUserDeviceSessionsQuery,
+  useRevokeDeviceSessionMutation,
+  useRevokeAllOtherSessionsMutation,
 } = apiSlice;
+
 

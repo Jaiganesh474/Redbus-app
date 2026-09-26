@@ -615,6 +615,63 @@ export interface AdminOperatorEarnings {
   operatorEarnings: OperatorEarningItem[];
 }
 
+export interface Banner {
+  id: number;
+  title: string;
+  subtitle?: string;
+  tag?: string;
+  promoCode?: string;
+  discountPercentage?: number;
+  bgGradient?: string;
+  badgeColor?: string;
+  routeInfo?: string;
+  imageUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  active?: boolean;
+  sortOrder?: number;
+  isAiGenerated?: boolean;
+  promptUsed?: string;
+  createdAt?: string;
+}
+
+export interface CreateBannerRequest {
+  title: string;
+  subtitle?: string;
+  tag?: string;
+  promoCode?: string;
+  discountPercentage?: number;
+  bgGradient?: string;
+  badgeColor?: string;
+  routeInfo?: string;
+  imageUrl?: string;
+  ctaText?: string;
+  ctaLink?: string;
+  active?: boolean;
+  sortOrder?: number;
+  isAiGenerated?: boolean;
+  promptUsed?: string;
+}
+
+export interface GenerateAiBannerRequest {
+  prompt: string;
+  targetRoute?: string;
+  targetDiscount?: number;
+}
+
+export interface UserDeviceSession {
+  id: number;
+  deviceName: string;
+  browser: string;
+  operatingSystem: string;
+  ipAddress: string;
+  location: string;
+  isCurrent: boolean;
+  lastActive: string;
+  createdAt: string;
+}
+
+
 
 
 
