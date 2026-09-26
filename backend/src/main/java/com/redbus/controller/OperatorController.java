@@ -34,6 +34,7 @@ public class OperatorController {
     private final AuthService authService;
     private final OperatorService operatorService;
     private final OperatorAnalyticsService operatorAnalyticsService;
+    private final com.redbus.service.PdfService pdfService;
 
     private Operator getAuthenticatedOperator() {
         User user = authService.getAuthenticatedUser();
@@ -133,6 +134,52 @@ public class OperatorController {
         return ResponseEntity.ok(operatorAnalyticsService.getOperatorBookings(op));
     }
 
+    @GetMapping("/manifest")
+    public ResponseEntity<List<OperatorPassengerManifestDto>> getPassengerManifest(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) Long busId,
+            @RequestParam(required = false) Long scheduleId
+    ) {
+        Operator op = getAuthenticatedOperator();
+        java.time.LocalDate travelDate = date != null ? date : java.time.LocalDate.now();
+        List<OperatorPassengerManifestDto> manifest = operatorAnalyticsService.getPassengerManifest(op, travelDate, busId, scheduleId);
+        return ResponseEntity.ok(manifest);
+    }
+
+    @GetMapping("/manifest/pdf")
+    public ResponseEntity<byte[]> downloadPassengerManifestPdf(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) Long busId,
+            @RequestParam(required = false) Long scheduleId,
+            @RequestParam(required = false) String routeName,
+            @RequestParam(required = false) String busRegNo,
+            @RequestParam(required = false) String departureTime
+    ) {
+        Operator op = getAuthenticatedOperator();
+        java.time.LocalDate travelDate = date != null ? date : java.time.LocalDate.now();
+        List<OperatorPassengerManifestDto> manifest = operatorAnalyticsService.getPassengerManifest(op, travelDate, busId, scheduleId);
+
+        byte[] pdfBytes = pdfService.generatePassengerManifestPdf(
+                manifest,
+                op.getCompanyName() != null ? op.getCompanyName() : op.getContactPerson(),
+                routeName,
+                travelDate,
+                busRegNo,
+                departureTime
+        );
+
+        String dateStr = travelDate.toString();
+        String safeRoute = routeName != null ? routeName.replaceAll("[^a-zA-Z0-9]", "_") : "bus_manifest";
+        String filename = "passenger_manifest_" + safeRoute + "_" + dateStr + ".pdf";
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(filename).build());
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
     @PutMapping("/buses/{id}/photos")
     public ResponseEntity<BusResponseDto> updateBusPhotos(
             @PathVariable Long id,
@@ -161,4 +208,5 @@ public class OperatorController {
         return ResponseEntity.noContent().build();
     }
 }
+
 

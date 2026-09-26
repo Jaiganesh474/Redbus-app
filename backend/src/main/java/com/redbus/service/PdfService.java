@@ -260,6 +260,166 @@ public class PdfService {
         }
     }
 
+    public byte[] generatePassengerManifestPdf(
+            List<com.redbus.dto.OperatorPassengerManifestDto> passengers,
+            String operatorName,
+            String routeName,
+            java.time.LocalDate travelDate,
+            String busRegNo,
+            String departureTime
+    ) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 24); // Landscape for clear table layout
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // Brand Colors
+            Color redBusColor = new Color(216, 78, 85);
+            Color darkSlate = new Color(30, 41, 59);
+            Color headerBg = new Color(241, 245, 249);
+            Color lightRowBg = new Color(248, 250, 252);
+            Color borderColor = new Color(226, 232, 240);
+
+            // Fonts
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, redBusColor);
+            Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, darkSlate);
+            Font metaFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, darkSlate);
+            Font metaValFont = FontFactory.getFont(FontFactory.HELVETICA, 9, darkSlate);
+            Font tableHeaderFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
+            Font tableBodyFont = FontFactory.getFont(FontFactory.HELVETICA, 8, darkSlate);
+            Font tableBodyBold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, darkSlate);
+            Font smallMuted = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.GRAY);
+
+            // Top Header: Brand & Document Title
+            PdfPTable topHeader = new PdfPTable(2);
+            topHeader.setWidthPercentage(100);
+            topHeader.setWidths(new float[]{1f, 1f});
+
+            PdfPCell brandCell = new PdfPCell();
+            brandCell.setBorder(Rectangle.NO_BORDER);
+            brandCell.addElement(new Paragraph("redBus AI Edition", titleFont));
+            brandCell.addElement(new Paragraph("Operator Passenger Onboarding Manifest & Conductor Chart", metaFont));
+            topHeader.addCell(brandCell);
+
+            PdfPCell agencyCell = new PdfPCell();
+            agencyCell.setBorder(Rectangle.NO_BORDER);
+            agencyCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            Paragraph opP = new Paragraph(operatorName != null ? operatorName : "Verified Bus Operator", subtitleFont);
+            opP.setAlignment(Element.ALIGN_RIGHT);
+            Paragraph dateP = new Paragraph("Trip Date: " + (travelDate != null ? travelDate.format(DATE_FMT) : "Daily Schedule"), metaFont);
+            dateP.setAlignment(Element.ALIGN_RIGHT);
+            agencyCell.addElement(opP);
+            agencyCell.addElement(dateP);
+            topHeader.addCell(agencyCell);
+
+            document.add(topHeader);
+            document.add(new Paragraph(" "));
+
+            // Metadata Summary Box
+            PdfPTable metaBox = new PdfPTable(4);
+            metaBox.setWidthPercentage(100);
+            metaBox.setWidths(new float[]{1.5f, 1.2f, 1.2f, 1.1f});
+
+            addMetaCell(metaBox, "Route / Service", routeName != null && !routeName.isEmpty() ? routeName : "All Routes", headerBg, borderColor, metaFont, metaValFont);
+            addMetaCell(metaBox, "Departure Time", departureTime != null ? departureTime : "Scheduled", headerBg, borderColor, metaFont, metaValFont);
+            addMetaCell(metaBox, "Bus Registration", busRegNo != null ? busRegNo : "Assigned Fleet", headerBg, borderColor, metaFont, metaValFont);
+            addMetaCell(metaBox, "Total Passengers", String.valueOf(passengers != null ? passengers.size() : 0) + " Booked", headerBg, borderColor, metaFont, metaValFont);
+
+            document.add(metaBox);
+            document.add(new Paragraph(" "));
+
+            // Passenger Table
+            PdfPTable table = new PdfPTable(8);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{0.5f, 1.5f, 2.0f, 0.9f, 2.0f, 2.0f, 1.4f, 1.2f});
+
+            addHeaderCell(table, "#", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Seat No & Berth", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Passenger Name", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Age/Sex", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Boarding Point", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Dropping Point", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "Contact No", redBusColor, tableHeaderFont);
+            addHeaderCell(table, "PNR / Verified", redBusColor, tableHeaderFont);
+
+            if (passengers == null || passengers.isEmpty()) {
+                PdfPCell emptyCell = new PdfPCell(new Phrase("No passengers booked for this journey date yet.", tableBodyFont));
+                emptyCell.setColspan(8);
+                emptyCell.setPadding(15);
+                emptyCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(emptyCell);
+            } else {
+                int index = 1;
+                for (com.redbus.dto.OperatorPassengerManifestDto p : passengers) {
+                    Color rowBg = (index % 2 == 0) ? lightRowBg : Color.WHITE;
+                    
+                    addTableDataCell(table, String.valueOf(index++), rowBg, borderColor, tableBodyFont, Element.ALIGN_CENTER);
+                    addTableDataCell(table, p.getSeatDisplay() != null ? p.getSeatDisplay() : p.getSeatNumber(), rowBg, borderColor, tableBodyBold, Element.ALIGN_LEFT);
+                    addTableDataCell(table, p.getPassengerName(), rowBg, borderColor, tableBodyBold, Element.ALIGN_LEFT);
+                    addTableDataCell(table, (p.getAge() != null ? p.getAge() : "-") + " / " + (p.getGender() != null ? p.getGender().substring(0, 1) : "-"), rowBg, borderColor, tableBodyFont, Element.ALIGN_CENTER);
+                    addTableDataCell(table, p.getBoardingPoint() != null ? p.getBoardingPoint() : "-", rowBg, borderColor, tableBodyFont, Element.ALIGN_LEFT);
+                    addTableDataCell(table, p.getDroppingPoint() != null ? p.getDroppingPoint() : "-", rowBg, borderColor, tableBodyFont, Element.ALIGN_LEFT);
+                    addTableDataCell(table, p.getContactPhone() != null ? p.getContactPhone() : "-", rowBg, borderColor, tableBodyFont, Element.ALIGN_LEFT);
+                    addTableDataCell(table, (p.getPnr() != null ? p.getPnr() : "-") + " [   ]", rowBg, borderColor, tableBodyBold, Element.ALIGN_CENTER);
+                }
+            }
+
+            document.add(table);
+            document.add(new Paragraph(" "));
+
+            // Conductor & Driver Sign-off Footer
+            PdfPTable footerTable = new PdfPTable(3);
+            footerTable.setWidthPercentage(100);
+            footerTable.setWidths(new float[]{1.5f, 1.5f, 1.5f});
+
+            PdfPCell sign1 = new PdfPCell(new Paragraph("Conductor Name & Sign:\n\n___________________________", metaValFont));
+            sign1.setBorder(Rectangle.BOX);
+            sign1.setPadding(8);
+            sign1.setBorderColor(borderColor);
+            footerTable.addCell(sign1);
+
+            PdfPCell sign2 = new PdfPCell(new Paragraph("Driver Name & Sign:\n\n___________________________", metaValFont));
+            sign2.setBorder(Rectangle.BOX);
+            sign2.setPadding(8);
+            sign2.setBorderColor(borderColor);
+            footerTable.addCell(sign2);
+
+            PdfPCell sign3 = new PdfPCell(new Paragraph("Trip Verification Code / Seal:\n\n[  OFFICIAL DISPATCH  ]", metaValFont));
+            sign3.setBorder(Rectangle.BOX);
+            sign3.setPadding(8);
+            sign3.setBorderColor(borderColor);
+            footerTable.addCell(sign3);
+
+            document.add(footerTable);
+
+            document.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Error generating passenger manifest PDF", e);
+            throw new RuntimeException("Could not generate passenger manifest PDF: " + e.getMessage());
+        }
+    }
+
+    private void addMetaCell(PdfPTable table, String label, String value, Color bg, Color border, Font labelFont, Font valFont) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(bg);
+        cell.setBorderColor(border);
+        cell.setPadding(6);
+        cell.addElement(new Paragraph(label, labelFont));
+        cell.addElement(new Paragraph(value, valFont));
+        table.addCell(cell);
+    }
+
+    private void addTableDataCell(PdfPTable table, String text, Color bg, Color border, Font font, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "-", font));
+        cell.setBackgroundColor(bg);
+        cell.setBorderColor(border);
+        cell.setPadding(5);
+        cell.setHorizontalAlignment(align);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        table.addCell(cell);
+    }
+
     private void addHeaderCell(PdfPTable table, String text, Color bg, Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setBackgroundColor(bg);
@@ -275,3 +435,4 @@ public class PdfService {
         table.addCell(cell);
     }
 }
+

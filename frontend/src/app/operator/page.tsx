@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/store";
 import {
@@ -21,6 +21,8 @@ import {
   useLazyGetAiCityPointsQuery,
   useGetAiBusPhotosQuery,
   useUpdateBusPhotosMutation,
+  useGetOperatorManifestQuery,
+  useLazyGetOperatorManifestQuery,
 } from "@/store/apiSlice";
 import AiCityDropdown from "@/components/AiCityDropdown";
 import BusImageSlider from "@/components/BusImageSlider";
@@ -64,11 +66,21 @@ import {
   Save,
   Edit3,
   FileCheck,
+  Download,
+  Printer,
+  Search,
+  RefreshCw,
+  CheckSquare,
+  Square,
+  FileText,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 
 export default function OperatorPortalPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState<"analytics" | "fleet" | "schedules" | "coupons" | "profile">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "fleet" | "schedules" | "manifest" | "coupons" | "profile">("analytics");
+
 
   // Modals
   const [isAddBusOpen, setIsAddBusOpen] = useState(false);
@@ -223,6 +235,111 @@ export default function OperatorPortalPage() {
   } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated });
 
   const [updateOperatorProfileMutation, { isLoading: isUpdatingProfile }] = useUpdateOperatorProfileMutation();
+
+  // Passenger Manifest & Conductor Verification states
+  const [manifestDate, setManifestDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [manifestScheduleId, setManifestScheduleId] = useState<string>("ALL");
+  const [manifestSearchQuery, setManifestSearchQuery] = useState("");
+  const [checkedPassengers, setCheckedPassengers] = useState<Record<string, boolean>>({});
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const {
+    data: manifestPassengers = [],
+    isLoading: isLoadingManifest,
+    isFetching: isFetchingManifest,
+    refetch: refetchManifest,
+  } = useGetOperatorManifestQuery(
+    {
+      date: manifestDate,
+      scheduleId: manifestScheduleId === "ALL" ? undefined : Number(manifestScheduleId),
+    },
+    { skip: !isAuthenticated }
+  );
+
+  const togglePassengerCheck = (passengerKey: string) => {
+    setCheckedPassengers((prev) => ({
+      ...prev,
+      [passengerKey]: !prev[passengerKey],
+    }));
+  };
+
+  const handleDownloadManifestPdf = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("redbus_token") : null;
+      let url = `/api/v1/operator/manifest/pdf?date=${manifestDate}`;
+      if (manifestScheduleId !== "ALL") {
+        url += `&scheduleId=${manifestScheduleId}`;
+      }
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const cleanApiBase = apiBase.endsWith("/api/v1") ? apiBase.slice(0, -7) : apiBase;
+      const fullUrl = `${cleanApiBase}${url}`;
+
+      const response = await fetch(fullUrl, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate Passenger Manifest PDF");
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `Passenger_Manifest_${manifestDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error("PDF Download error:", err);
+      alert(err?.message || "Failed to download PDF manifest. Please try again.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const filteredManifestPassengers = useMemo(() => {
+    if (!manifestPassengers) return [];
+    if (!manifestSearchQuery.trim()) return manifestPassengers;
+    const q = manifestSearchQuery.toLowerCase();
+    return manifestPassengers.filter(
+      (p) =>
+        p.passengerName?.toLowerCase().includes(q) ||
+        p.seatNumber?.toLowerCase().includes(q) ||
+        p.seatDisplay?.toLowerCase().includes(q) ||
+        p.pnr?.toLowerCase().includes(q) ||
+        p.contactPhone?.toLowerCase().includes(q) ||
+        p.boardingPoint?.toLowerCase().includes(q) ||
+        p.droppingPoint?.toLowerCase().includes(q) ||
+        p.busOperator?.toLowerCase().includes(q) ||
+        p.sourceCity?.toLowerCase().includes(q) ||
+        p.destinationCity?.toLowerCase().includes(q)
+    );
+  }, [manifestPassengers, manifestSearchQuery]);
+
+  const manifestStats = useMemo(() => {
+    const total = manifestPassengers.length;
+    const verifiedCount = manifestPassengers.filter(
+      (p) => checkedPassengers[`${p.pnr}_${p.seatNumber}`] || p.verificationStatus === "BOARDED"
+    ).length;
+    const lowerBerthCount = manifestPassengers.filter(
+      (p) => p.berthLabel === "Lower Berth" || (p.deck === "LOWER" && p.seatType === "SLEEPER")
+    ).length;
+    const upperBerthCount = manifestPassengers.filter(
+      (p) => p.berthLabel === "Upper Berth" || (p.deck === "UPPER" && p.seatType === "SLEEPER")
+    ).length;
+    const seaterCount = manifestPassengers.filter(
+      (p) => p.seatType === "SEATER" || p.berthLabel === "Seater"
+    ).length;
+
+    return { total, verifiedCount, lowerBerthCount, upperBerthCount, seaterCount };
+  }, [manifestPassengers, checkedPassengers]);
 
   // Profile Edit form states
   const [profileCompanyName, setProfileCompanyName] = useState("");
@@ -668,6 +785,7 @@ export default function OperatorPortalPage() {
               { id: "analytics", label: "Real-Time Analytics & Payouts", icon: BarChart3 },
               { id: "fleet", label: `My Fleet (${buses.length})`, icon: Bus },
               { id: "schedules", label: `Active Schedules (${schedules.length})`, icon: Calendar },
+              { id: "manifest", label: "Passenger Manifest & Boarding", icon: FileCheck },
               { id: "coupons", label: `Promotions & Coupons (${operatorCoupons.length})`, icon: Tag },
               { id: "profile", label: "Agency Profile & Settings", icon: Building2 },
             ].map((tab) => {
@@ -1133,11 +1251,22 @@ export default function OperatorPortalPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4 border-t md:border-t-0 pt-3 md:pt-0">
-                      <div className="text-right">
+                    <div className="flex flex-wrap items-center gap-3 border-t md:border-t-0 pt-3 md:pt-0">
+                      <div className="text-right mr-1">
                         <span className="text-[10px] text-gray-400 block uppercase font-bold">Base Fare</span>
                         <span className="text-lg font-black text-[#d84e55]">₹{sch.basePrice}</span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManifestScheduleId(sch.id.toString());
+                          setActiveTab("manifest");
+                        }}
+                        className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-[#d84e55] rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                      >
+                        <FileCheck className="w-3.5 h-3.5" />
+                        <span>Passenger List</span>
+                      </button>
                       <Link
                         href={`/bus-tickets/${sch.sourceCity.toLowerCase()}-to-${sch.destinationCity.toLowerCase()}`}
                         className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1"
@@ -1150,6 +1279,423 @@ export default function OperatorPortalPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: PASSENGER MANIFEST & CONDUCTOR BOARDING CHART */}
+        {activeTab === "manifest" && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Header / Date & Action Bar */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                <div>
+                  <div className="flex items-center space-x-2.5 mb-1">
+                    <span className="px-2.5 py-0.5 bg-red-50 text-[#d84e55] border border-red-100 text-xs font-bold rounded-lg flex items-center gap-1.5">
+                      <FileCheck className="w-3.5 h-3.5" /> Conductor Boarding Chart
+                    </span>
+                    <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg">
+                      Official Passenger Manifest
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900">
+                    Daily Passenger Verification & Onboarding Roster
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Filter by travel date to fetch real-time passenger rosters with Lower/Upper berths, seater numbers, boarding landmarks & contact numbers.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleDownloadManifestPdf}
+                    disabled={isDownloadingPdf}
+                    className="px-4 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-xs font-bold shadow-md shadow-red-500/20 transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Generating PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Download PDF Chart</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4 text-gray-600" />
+                    <span>Print Sheet</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => refetchManifest()}
+                    disabled={isFetchingManifest}
+                    className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all cursor-pointer"
+                    title="Refresh Passenger List"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isFetchingManifest ? "animate-spin text-[#d84e55]" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Date & Route Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                {/* Journey Date Selection with Quick Chips */}
+                <div className="md:col-span-6 space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                    Select Journey Date
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[
+                      {
+                        label: "Today",
+                        date: new Date().toISOString().split("T")[0],
+                      },
+                      {
+                        label: "Tomorrow",
+                        date: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+                      },
+                      {
+                        label: "Day After",
+                        date: new Date(Date.now() + 172800000).toISOString().split("T")[0],
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setManifestDate(preset.date)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          manifestDate === preset.date
+                            ? "bg-[#d84e55] text-white shadow-xs"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+
+                    <div className="relative inline-block">
+                      <input
+                        type="date"
+                        value={manifestDate}
+                        onChange={(e) => setManifestDate(e.target.value)}
+                        className="pl-3 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Route Schedule Filter */}
+                <div className="md:col-span-3 space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                    Filter by Route Schedule
+                  </label>
+                  <select
+                    value={manifestScheduleId}
+                    onChange={(e) => setManifestScheduleId(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  >
+                    <option value="ALL">All Routes & Schedules ({schedules.length})</option>
+                    {schedules.map((sch) => (
+                      <option key={sch.id} value={sch.id}>
+                        {sch.sourceCity} → {sch.destinationCity} ({sch.departureTime})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Search Passenger Bar */}
+                <div className="md:col-span-3 space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                    Search Passengers
+                  </label>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={manifestSearchQuery}
+                      onChange={(e) => setManifestSearchQuery(e.target.value)}
+                      placeholder="Name, Seat, PNR, Phone..."
+                      className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    />
+                    {manifestSearchQuery && (
+                      <button
+                        onClick={() => setManifestSearchQuery("")}
+                        className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Bookings</span>
+                <span className="text-xl font-black text-gray-900">{manifestStats.total}</span>
+                <span className="text-[10px] text-gray-500 block">Passengers on chart</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-gray-400 block">Conductor Verified</span>
+                <span className="text-xl font-black text-emerald-600">
+                  {manifestStats.verifiedCount} / {manifestStats.total}
+                </span>
+                <span className="text-[10px] text-emerald-600 font-semibold block">
+                  {manifestStats.total > 0
+                    ? `${Math.round((manifestStats.verifiedCount / manifestStats.total) * 100)}% Boarded`
+                    : "0% Boarded"}
+                </span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-emerald-100/60 bg-emerald-50/20 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-emerald-700 block">Lower Berths</span>
+                <span className="text-xl font-black text-emerald-800">{manifestStats.lowerBerthCount}</span>
+                <span className="text-[10px] text-emerald-600 block">Ground deck sleepers</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-indigo-100/60 bg-indigo-50/20 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-indigo-700 block">Upper Berths</span>
+                <span className="text-xl font-black text-indigo-800">{manifestStats.upperBerthCount}</span>
+                <span className="text-[10px] text-indigo-600 block">Upper deck sleepers</span>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-amber-100/60 bg-amber-50/20 shadow-xs col-span-2 sm:col-span-1">
+                <span className="text-[10px] uppercase font-bold text-amber-700 block">Seater Seats</span>
+                <span className="text-xl font-black text-amber-800">{manifestStats.seaterCount}</span>
+                <span className="text-[10px] text-amber-600 block">Push-back seats</span>
+              </div>
+            </div>
+
+            {/* Passenger Manifest Table */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
+              {isLoadingManifest ? (
+                <div className="p-12 text-center text-xs text-gray-400 space-y-3">
+                  <div className="w-8 h-8 border-3 border-[#d84e55] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p>Fetching passenger manifest for {manifestDate}...</p>
+                </div>
+              ) : filteredManifestPassengers.length === 0 ? (
+                <div className="p-12 text-center space-y-4">
+                  <div className="w-16 h-16 bg-red-50 text-[#d84e55] rounded-2xl flex items-center justify-center mx-auto">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    No Passengers Booked for {manifestDate}
+                  </h3>
+                  <p className="text-xs text-gray-500 max-w-md mx-auto">
+                    {manifestSearchQuery
+                      ? `No passenger match found for "${manifestSearchQuery}". Try changing your search query.`
+                      : "There are currently no passenger reservations for this journey date. Switch the date picker above or check active daily schedules."}
+                  </p>
+                  <div className="flex justify-center gap-2 pt-2">
+                    <button
+                      onClick={() => setManifestDate(new Date().toISOString().split("T")[0])}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      View Today&apos;s Manifest
+                    </button>
+                    <button
+                      onClick={() => setManifestDate(new Date(Date.now() + 86400000).toISOString().split("T")[0])}
+                      className="px-4 py-2 bg-[#d84e55] text-white rounded-xl text-xs font-bold cursor-pointer"
+                    >
+                      View Tomorrow&apos;s Manifest
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-black uppercase tracking-wider text-gray-500">
+                        <th className="py-3.5 px-4 w-12 text-center">Verify</th>
+                        <th className="py-3.5 px-4">#</th>
+                        <th className="py-3.5 px-4">Passenger Name</th>
+                        <th className="py-3.5 px-4">Seat / Berth Details</th>
+                        <th className="py-3.5 px-4">Route & Bus</th>
+                        <th className="py-3.5 px-4">Boarding Landmark</th>
+                        <th className="py-3.5 px-4">Dropping Landmark</th>
+                        <th className="py-3.5 px-4">Contact Phone</th>
+                        <th className="py-3.5 px-4 text-right">PNR & Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs">
+                      {filteredManifestPassengers.map((p, idx) => {
+                        const passengerKey = `${p.pnr}_${p.seatNumber}`;
+                        const isBoarded = checkedPassengers[passengerKey] || p.verificationStatus === "BOARDED";
+                        const isLower = p.berthLabel === "Lower Berth" || (p.deck === "LOWER" && p.seatType === "SLEEPER");
+                        const isUpper = p.berthLabel === "Upper Berth" || (p.deck === "UPPER" && p.seatType === "SLEEPER");
+                        const isSeater = p.seatType === "SEATER" || p.berthLabel === "Seater";
+
+                        return (
+                          <tr
+                            key={`${p.pnr}_${p.seatNumber}_${idx}`}
+                            className={`transition-colors hover:bg-gray-50/80 ${
+                              isBoarded ? "bg-emerald-50/30" : ""
+                            }`}
+                          >
+                            {/* Checkbox for Conductor */}
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => togglePassengerCheck(passengerKey)}
+                                className="cursor-pointer text-gray-400 hover:text-emerald-600 transition-colors"
+                                title={isBoarded ? "Mark as Not Boarded" : "Verify and Mark Boarded"}
+                              >
+                                {isBoarded ? (
+                                  <CheckSquare className="w-5 h-5 text-emerald-600" />
+                                ) : (
+                                  <Square className="w-5 h-5 text-gray-300" />
+                                )}
+                              </button>
+                            </td>
+
+                            {/* Row Index */}
+                            <td className="py-3 px-4 font-mono font-bold text-gray-400">
+                              {idx + 1}
+                            </td>
+
+                            {/* Passenger Name & Age */}
+                            <td className="py-3 px-4">
+                              <div className="flex items-center space-x-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                  {p.passengerName ? p.passengerName.charAt(0).toUpperCase() : "P"}
+                                </div>
+                                <div>
+                                  <span className={`font-bold block ${isBoarded ? "text-emerald-950 line-through decoration-emerald-500/50" : "text-gray-900"}`}>
+                                    {p.passengerName}
+                                  </span>
+                                  <span className="text-[11px] text-gray-400">
+                                    {p.gender || "Adult"}, {p.age ? `${p.age} yrs` : "N/A"}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Seat Number & Berth (Lower/Upper/Seater) */}
+                            <td className="py-3 px-4">
+                              <div className="space-y-1">
+                                {isLower && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-black rounded-lg">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    {p.seatDisplay || `${p.seatNumber} (Lower Berth)`}
+                                  </span>
+                                )}
+                                {isUpper && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200/80 text-indigo-800 text-xs font-black rounded-lg">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                                    {p.seatDisplay || `${p.seatNumber} (Upper Berth)`}
+                                  </span>
+                                )}
+                                {isSeater && (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-black rounded-lg">
+                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                    {p.seatDisplay || `${p.seatNumber} (Seater)`}
+                                  </span>
+                                )}
+                                {!isLower && !isUpper && !isSeater && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-lg">
+                                    {p.seatDisplay || p.seatNumber}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Route & Bus Info */}
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-gray-800 text-xs">
+                                {p.sourceCity} → {p.destinationCity}
+                              </div>
+                              <div className="text-[11px] text-gray-400 truncate max-w-[150px]">
+                                {p.busOperator || "Coach"} ({p.busRegistration || p.busType || "Bus"})
+                              </div>
+                            </td>
+
+                            {/* Boarding Point */}
+                            <td className="py-3 px-4">
+                              <div className="flex items-start space-x-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-bold text-gray-900 block">
+                                    {p.boardingPoint || "Main Depot"}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 block font-mono">
+                                    {p.departureTime}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Dropping Point */}
+                            <td className="py-3 px-4">
+                              <div className="flex items-start space-x-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-bold text-gray-900 block">
+                                    {p.droppingPoint || "City Center"}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 block font-mono">
+                                    {p.arrivalTime}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Contact Number with Call & WhatsApp */}
+                            <td className="py-3 px-4">
+                              <div className="space-y-1">
+                                <a
+                                  href={`tel:${p.contactPhone}`}
+                                  className="font-bold text-gray-900 hover:text-[#d84e55] flex items-center gap-1 transition-colors"
+                                >
+                                  <Phone className="w-3 h-3 text-gray-400" />
+                                  <span>{p.contactPhone || "N/A"}</span>
+                                </a>
+                                {p.contactPhone && (
+                                  <a
+                                    href={`https://wa.me/${p.contactPhone.replace(/[^0-9]/g, "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-emerald-700 hover:underline flex items-center gap-1 font-semibold"
+                                  >
+                                    <Smartphone className="w-2.5 h-2.5" />
+                                    <span>WhatsApp Msg</span>
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* PNR & Status */}
+                            <td className="py-3 px-4 text-right">
+                              <span className="font-mono font-black text-xs text-[#d84e55] bg-red-50 px-2 py-0.5 rounded-md block w-fit ml-auto">
+                                {p.pnr}
+                              </span>
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-wider block mt-0.5 ${
+                                  isBoarded ? "text-emerald-600" : "text-gray-400"
+                                }`}
+                              >
+                                {isBoarded ? "BOARDED" : p.status || "CONFIRMED"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

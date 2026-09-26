@@ -194,4 +194,87 @@ public class OperatorAnalyticsService {
                 .bookingTime(b.getCreatedAt())
                 .build();
     }
+
+    public List<com.redbus.dto.OperatorPassengerManifestDto> getPassengerManifest(
+            Operator operator,
+            LocalDate travelDate,
+            Long busId,
+            Long scheduleId
+    ) {
+        Long opId = operator.getId();
+        List<Booking> allBookings = bookingRepository.findByOperatorIdOrderByCreatedAtDesc(opId);
+
+        return allBookings.stream()
+                .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()) && !"EXPIRED".equalsIgnoreCase(b.getStatus()))
+                .filter(b -> b.getRoute() != null)
+                .filter(b -> travelDate == null || travelDate.equals(b.getRoute().getTravelDate()))
+                .filter(b -> busId == null || (b.getRoute().getBus() != null && busId.equals(b.getRoute().getBus().getId())))
+                .filter(b -> scheduleId == null || (b.getRoute().getSchedule() != null && scheduleId.equals(b.getRoute().getSchedule().getId())))
+                .flatMap(b -> {
+                    Route r = b.getRoute();
+                    Bus bus = r != null ? r.getBus() : null;
+                    List<BookingPassenger> passList = b.getPassengers() != null ? b.getPassengers() : Collections.emptyList();
+
+                    return passList.stream().map(p -> {
+                        String sNum = p.getSeatNumber() != null ? p.getSeatNumber().trim() : "";
+                        String deck = "LOWER";
+                        String seatType = "SEATER";
+                        if (p.getSeat() != null) {
+                            if (p.getSeat().getDeck() != null) deck = p.getSeat().getDeck();
+                            if (p.getSeat().getSeatType() != null) seatType = p.getSeat().getSeatType();
+                        } else if (bus != null && bus.getBusType() != null && bus.getBusType().toLowerCase().contains("sleeper")) {
+                            seatType = "SLEEPER";
+                            if (sNum.toUpperCase().startsWith("U")) deck = "UPPER";
+                        }
+
+                        // Determine Berth Label
+                        String berthLabel;
+                        String seatDisplay;
+                        if ("SLEEPER".equalsIgnoreCase(seatType) || (bus != null && bus.getBusType() != null && bus.getBusType().toLowerCase().contains("sleeper"))) {
+                            if ("UPPER".equalsIgnoreCase(deck) || sNum.toUpperCase().startsWith("U")) {
+                                berthLabel = "Upper Berth";
+                                seatDisplay = sNum + " (Upper Berth)";
+                            } else {
+                                berthLabel = "Lower Berth";
+                                seatDisplay = sNum + " (Lower Berth)";
+                            }
+                        } else {
+                            berthLabel = "Seater";
+                            seatDisplay = sNum + (sNum.toLowerCase().contains("seater") ? "" : " (Seater)");
+                        }
+
+                        String depTime = r != null && r.getDepartureTime() != null ? r.getDepartureTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "N/A";
+                        String arrTime = r != null && r.getArrivalTime() != null ? r.getArrivalTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "N/A";
+
+                        return com.redbus.dto.OperatorPassengerManifestDto.builder()
+                                .bookingId(b.getId())
+                                .pnr(b.getPnr())
+                                .passengerName(p.getName())
+                                .age(p.getAge())
+                                .gender(p.getGender())
+                                .seatNumber(sNum)
+                                .seatType(seatType)
+                                .deck(deck)
+                                .berthLabel(berthLabel)
+                                .seatDisplay(seatDisplay)
+                                .boardingPoint(b.getBoardingPoint() != null ? b.getBoardingPoint() : (r != null ? r.getSourceCity() : "N/A"))
+                                .droppingPoint(b.getDroppingPoint() != null ? b.getDroppingPoint() : (r != null ? r.getDestinationCity() : "N/A"))
+                                .contactPhone(b.getContactPhone())
+                                .contactEmail(b.getContactEmail())
+                                .travelDate(r != null ? r.getTravelDate() : null)
+                                .sourceCity(r != null ? r.getSourceCity() : "N/A")
+                                .destinationCity(r != null ? r.getDestinationCity() : "N/A")
+                                .departureTime(depTime)
+                                .arrivalTime(arrTime)
+                                .busOperator(bus != null ? bus.getOperatorName() : (operator.getCompanyName() != null ? operator.getCompanyName() : "Express Coach"))
+                                .busRegistration(bus != null ? bus.getRegistrationNumber() : "Fleet Bus")
+                                .busType(bus != null ? bus.getBusType() : "AC Coach")
+                                .status(b.getStatus())
+                                .build();
+                    });
+                })
+                .sorted(Comparator.comparing(com.redbus.dto.OperatorPassengerManifestDto::getSeatNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .collect(Collectors.toList());
+    }
 }
+

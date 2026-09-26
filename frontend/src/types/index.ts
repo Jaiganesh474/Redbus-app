@@ -287,6 +287,34 @@ export interface OperatorBooking {
   bookingTime: string;
 }
 
+export interface OperatorPassengerManifest {
+  bookingId: number;
+  pnr: string;
+  passengerName: string;
+  age: number;
+  gender: string;
+  seatNumber: string;
+  seatType: string;
+  deck: string;
+  berthLabel: string;
+  seatDisplay: string;
+  boardingPoint: string;
+  droppingPoint: string;
+  contactPhone: string;
+  contactEmail: string;
+  travelDate: string;
+  sourceCity: string;
+  destinationCity: string;
+  departureTime: string;
+  arrivalTime: string;
+  busOperator: string;
+  busRegistration: string;
+  busType: string;
+  status: string;
+  verificationStatus?: string;
+}
+
+
 export interface OperatorAnalytics {
   operatorName: string;
   companyName: string;
@@ -489,6 +517,7 @@ export interface AiBusPhoto {
   promptUsed: string;
   qualityScore: number;
 }
+
 
 
 

@@ -32,6 +32,7 @@ import type {
   DynamicPricePrediction,
   SmartSeatRecommendation,
   AiBusPhoto,
+  OperatorPassengerManifest,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
@@ -222,6 +223,16 @@ export const apiSlice = createApi({
     getOperatorBookings: builder.query<OperatorBooking[], void>({
       query: () => "/operator/bookings",
       providesTags: ["OperatorAnalytics"],
+    }),
+    getOperatorManifest: builder.query<
+      OperatorPassengerManifest[],
+      { date?: string; busId?: number; scheduleId?: number }
+    >({
+      query: (params) => ({
+        url: "/operator/manifest",
+        params: params || {},
+      }),
+      providesTags: ["OperatorAnalytics", "Booking"],
     }),
     getOperatorProfile: builder.query<OperatorProfile, void>({
       query: () => "/operator/profile",
@@ -598,6 +609,8 @@ export const {
   useCreateScheduleMutation,
   useGetOperatorAnalyticsQuery,
   useGetOperatorBookingsQuery,
+  useGetOperatorManifestQuery,
+  useLazyGetOperatorManifestQuery,
   useSearchRoutesQuery,
   useGetRouteByIdQuery,
   useGetRouteSeatsQuery,
