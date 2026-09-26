@@ -52,25 +52,33 @@ public class Banner {
     @Column(length = 100)
     private String accent;
 
-    @Column(length = 150)
-    private String route;
+    @Column(name = "route_info", length = 150)
+    private String routeInfo;
 
     @Column(name = "promo_code", length = 50)
     private String promoCode;
 
-    @Column(name = "discount_percent")
+    @Column(name = "discount_percentage")
     @Builder.Default
-    private Integer discountPercent = 0;
+    private Integer discountPercentage = 0;
 
-    @Column(name = "is_active")
+    @Column(name = "active")
     @Builder.Default
-    private Boolean isActive = true;
+    private Boolean active = true;
 
-    @Column(name = "priority")
+    @Column(name = "sort_order")
     @Builder.Default
-    private Integer priority = 1;
+    private Integer sortOrder = 1;
+
+    @Column(name = "is_ai_generated")
+    @Builder.Default
+    private Boolean isAiGenerated = false;
+
+    @Column(name = "prompt_used", length = 1000)
+    private String promptUsed;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }
+

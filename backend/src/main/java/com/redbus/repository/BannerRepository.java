@@ -8,6 +8,7 @@ import java.util.List;
 
 @Repository
 public interface BannerRepository extends JpaRepository<Banner, Long> {
-    List<Banner> findByIsActiveTrueOrderByPriorityAscCreatedAtDesc();
-    List<Banner> findAllByOrderByPriorityAscCreatedAtDesc();
+    List<Banner> findByActiveTrueOrderBySortOrderAsc();
+    List<Banner> findAllByOrderBySortOrderAsc();
 }
+

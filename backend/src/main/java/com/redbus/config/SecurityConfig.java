@@ -120,8 +120,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/bookings/my-bookings", "/api/v1/bookings/my-bookings").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/bookings/{pnr}", "/api/v1/bookings/{pnr}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/bookings/{pnr}/ticket-pdf", "/api/v1/bookings/{pnr}/ticket-pdf").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/bookings/*/send-ticket", "/api/v1/bookings/*/send-ticket").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/bookings/*/send-email", "/api/v1/bookings/*/send-email").permitAll()
+                .requestMatchers("/api/bookings/*/send-ticket", "/api/v1/bookings/*/send-ticket", "/api/bookings/**/send-ticket", "/api/v1/bookings/**/send-ticket").permitAll()
+                .requestMatchers("/api/bookings/*/send-email", "/api/v1/bookings/*/send-email", "/api/bookings/**/send-email", "/api/v1/bookings/**/send-email").permitAll()
 
                 // Operator Manifest PDF download endpoint (Permitted via JWT token query or header)
                 .requestMatchers(HttpMethod.GET, "/api/operator/manifest/pdf", "/api/v1/operator/manifest/pdf").permitAll()

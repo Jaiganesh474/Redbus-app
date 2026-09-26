@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,28 +40,30 @@ public class DeviceSessionService {
         String location = determineLocationFromIp(ip);
         String sessionToken = token != null ? token : UUID.randomUUID().toString();
 
-        // Check if session for this user with same IP and UserAgent already exists
-        List<UserDeviceSession> existingSessions = sessionRepository.findByUserAndIsActiveTrue(user);
-        for (UserDeviceSession s : existingSessions) {
-            if (ip.equals(s.getIpAddress()) && userAgent.equals(s.getUserAgent())) {
-                s.setLastActive(LocalDateTime.now());
-                s.setSessionToken(sessionToken);
-                return sessionRepository.save(s);
-            }
+        // Check if session for this user with same IP, browser, and OS already exists
+        Optional<UserDeviceSession> existingSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, ip, browser, os);
+        if (existingSessionOpt.isPresent()) {
+            UserDeviceSession s = existingSessionOpt.get();
+            s.setLastActiveAt(LocalDateTime.now());
+            s.setSessionToken(sessionToken);
+            s.setDeviceName(deviceName);
+            s.setLocation(location);
+            return sessionRepository.save(s);
         }
+
+        String deviceType = (os.contains("Android") || os.contains("iOS")) ? "Mobile" : "Desktop";
 
         UserDeviceSession newSession = UserDeviceSession.builder()
                 .user(user)
                 .sessionToken(sessionToken)
                 .deviceName(deviceName)
+                .deviceType(deviceType)
                 .browser(browser)
-                .operatingSystem(os)
+                .os(os)
                 .ipAddress(ip)
                 .location(location)
-                .userAgent(userAgent)
-                .isActive(true)
-                .lastActive(LocalDateTime.now())
-                .createdAt(LocalDateTime.now())
+                .lastActiveAt(LocalDateTime.now())
+                .isCurrentSession(true)
                 .build();
 
         return sessionRepository.save(newSession);
@@ -72,12 +75,14 @@ public class DeviceSessionService {
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
         String currentIp = extractClientIp(request);
-        String currentUa = request.getHeader("User-Agent");
+        String currentUa = request != null ? request.getHeader("User-Agent") : null;
+        String currentBrowser = detectBrowser(currentUa);
+        String currentOs = detectOs(currentUa);
 
-        List<UserDeviceSession> sessions = sessionRepository.findByUserAndIsActiveTrueOrderByLastActiveDesc(user);
+        List<UserDeviceSession> sessions = sessionRepository.findByUserOrderByLastActiveAtDesc(user);
 
         // If no sessions yet (e.g. user created before table), auto seed current session
-        if (sessions.isEmpty()) {
+        if (sessions.isEmpty() && request != null) {
             UserDeviceSession current = recordSession(user, request, "active-current-session");
             if (current != null) {
                 sessions = List.of(current);
@@ -89,7 +94,7 @@ public class DeviceSessionService {
 
         for (UserDeviceSession s : sessions) {
             boolean isCurrent = false;
-            if (!currentMarked && currentIp.equals(s.getIpAddress()) && (currentUa == null || currentUa.equals(s.getUserAgent()))) {
+            if (!currentMarked && currentIp.equals(s.getIpAddress()) && currentBrowser.equals(s.getBrowser()) && currentOs.equals(s.getOs())) {
                 isCurrent = true;
                 currentMarked = true;
             }
@@ -98,11 +103,11 @@ public class DeviceSessionService {
                     .id(s.getId())
                     .deviceName(s.getDeviceName())
                     .browser(s.getBrowser())
-                    .operatingSystem(s.getOperatingSystem())
+                    .operatingSystem(s.getOs())
                     .ipAddress(s.getIpAddress())
                     .location(s.getLocation())
                     .isCurrent(isCurrent)
-                    .lastActive(s.getLastActive())
+                    .lastActive(s.getLastActiveAt())
                     .createdAt(s.getCreatedAt())
                     .build());
         }
@@ -127,8 +132,7 @@ public class DeviceSessionService {
             throw new RuntimeException("Unauthorized to revoke this session");
         }
 
-        session.setIsActive(false);
-        sessionRepository.save(session);
+        sessionRepository.delete(session);
         log.info("Revoked session ID {} for user {}", sessionId, userEmail);
     }
 
@@ -138,14 +142,17 @@ public class DeviceSessionService {
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
         String currentIp = extractClientIp(request);
-        String currentUa = request.getHeader("User-Agent");
+        String currentUa = request != null ? request.getHeader("User-Agent") : null;
+        String currentBrowser = detectBrowser(currentUa);
+        String currentOs = detectOs(currentUa);
 
-        List<UserDeviceSession> sessions = sessionRepository.findByUserAndIsActiveTrue(user);
-        for (UserDeviceSession s : sessions) {
-            boolean isCurrent = currentIp.equals(s.getIpAddress()) && (currentUa == null || currentUa.equals(s.getUserAgent()));
-            if (!isCurrent) {
-                s.setIsActive(false);
-                sessionRepository.save(s);
+        Optional<UserDeviceSession> currentSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, currentIp, currentBrowser, currentOs);
+        if (currentSessionOpt.isPresent()) {
+            sessionRepository.deleteAllByUserExceptCurrent(user, currentSessionOpt.get().getId());
+        } else if (request != null) {
+            UserDeviceSession current = recordSession(user, request, UUID.randomUUID().toString());
+            if (current != null && current.getId() != null) {
+                sessionRepository.deleteAllByUserExceptCurrent(user, current.getId());
             }
         }
         log.info("Revoked all other sessions for user {}", userEmail);

@@ -72,17 +72,17 @@ public class BookingController {
         return ResponseEntity.ok(bookings);
     }
 
-    @PostMapping("/{pnr}/send-email")
+    @RequestMapping(value = {"/{pnr}/send-ticket", "/{pnr}/send-email"}, method = {RequestMethod.POST, RequestMethod.GET})
     public ResponseEntity<java.util.Map<String, Object>> sendTicketEmail(
             @PathVariable String pnr,
             @RequestParam(required = false) String email
     ) {
         com.redbus.entity.Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
                 .orElseThrow(() -> new com.redbus.exception.ResourceNotFoundException("Booking not found with PNR: " + pnr));
-        String target = (email != null && !email.isBlank()) ? email.trim() : booking.getContactEmail();
+        String target = (email != null && !email.isBlank()) ? email.trim() : (booking.getContactEmail() != null ? booking.getContactEmail().trim() : "customer@redbus.in");
         boolean sent;
         if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "REFUNDED".equalsIgnoreCase(booking.getStatus())) {
-            sent = emailService.sendBookingCancellationEmail(booking, booking.getRefundAmount());
+            sent = emailService.sendBookingCancellationEmail(booking, booking.getRefundAmount() != null ? booking.getRefundAmount() : java.math.BigDecimal.ZERO);
         } else {
             sent = emailService.sendBookingConfirmationEmail(booking, target);
         }
