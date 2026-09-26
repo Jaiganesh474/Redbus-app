@@ -25,16 +25,16 @@ CREATE TABLE IF NOT EXISTS banners (
 CREATE TABLE IF NOT EXISTS user_device_sessions (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    deviceName VARCHAR(150),
-    deviceType VARCHAR(50) DEFAULT 'Desktop',
+    device_name VARCHAR(150),
+    device_type VARCHAR(50) DEFAULT 'Desktop',
     browser VARCHAR(100),
     os VARCHAR(100),
-    ipAddress VARCHAR(100),
+    ip_address VARCHAR(100),
     location VARCHAR(150) DEFAULT 'India',
-    lastActiveAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    isCurrentSession BOOLEAN DEFAULT FALSE,
-    sessionToken VARCHAR(255),
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_current_session BOOLEAN DEFAULT FALSE,
+    session_token VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_device_session_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_device_sessions_user (user_id)
 );
