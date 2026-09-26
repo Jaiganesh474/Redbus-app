@@ -56,6 +56,10 @@ public class UserDeviceSession {
     @Column(name = "session_token")
     private String sessionToken;
 
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

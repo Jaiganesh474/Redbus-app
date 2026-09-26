@@ -14,7 +14,16 @@ import java.util.Optional;
 @Repository
 public interface UserDeviceSessionRepository extends JpaRepository<UserDeviceSession, Long> {
     List<UserDeviceSession> findByUserOrderByLastActiveAtDesc(User user);
+    List<UserDeviceSession> findByUserAndIsActiveTrueOrderByLastActiveAtDesc(User user);
+    List<UserDeviceSession> findByUserAndIsActiveFalseOrderByLastActiveAtDesc(User user);
+
     Optional<UserDeviceSession> findByUserAndIpAddressAndBrowserAndOs(User user, String ipAddress, String browser, String os);
+    Optional<UserDeviceSession> findByUserAndIpAddressAndBrowserAndOsAndIsActiveTrue(User user, String ipAddress, String browser, String os);
+    Optional<UserDeviceSession> findBySessionToken(String sessionToken);
+
+    @Modifying
+    @Query("UPDATE UserDeviceSession s SET s.isActive = false WHERE s.user = :user AND s.id <> :currentSessionId")
+    void deactivateAllByUserExceptCurrent(@Param("user") User user, @Param("currentSessionId") Long currentSessionId);
 
     @Modifying
     @Query("DELETE FROM UserDeviceSession s WHERE s.user = :user AND s.id <> :currentSessionId")

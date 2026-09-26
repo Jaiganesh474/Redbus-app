@@ -48,10 +48,27 @@ public class DeviceSessionController {
         String email = authentication.getName();
         try {
             deviceSessionService.revokeSession(email, id);
-            return ResponseEntity.ok(Map.of("message", "Device session revoked successfully", "sessionId", id));
+            return ResponseEntity.ok(Map.of("message", "Device session logged out successfully", "sessionId", id));
         } catch (Exception e) {
             log.error("Failed to revoke session ID {}: {}", id, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to revoke session"));
+        }
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<Map<String, Object>> deleteSessionPermanently(
+            @PathVariable Long id,
+            Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String email = authentication.getName();
+        try {
+            deviceSessionService.deleteSessionPermanently(email, id);
+            return ResponseEntity.ok(Map.of("message", "Session history deleted successfully", "sessionId", id));
+        } catch (Exception e) {
+            log.error("Failed to delete session history ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to delete session history"));
         }
     }
 

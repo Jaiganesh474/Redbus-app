@@ -28,16 +28,17 @@ public class DeviceSessionService {
 
     @Transactional
     public UserDeviceSession recordSession(User user, HttpServletRequest request, String token) {
-        if (user == null || request == null) return null;
+        if (user == null) return null;
 
         try {
-            String userAgent = request.getHeader("User-Agent");
-            if (userAgent == null) userAgent = "Unknown Browser";
+            String userAgent = request != null ? request.getHeader("User-Agent") : null;
+            if (userAgent == null || userAgent.isBlank()) userAgent = "Web Browser";
 
             String ip = extractClientIp(request);
             String browser = detectBrowser(userAgent);
             String os = detectOs(userAgent);
             String deviceName = browser + " on " + os;
+            String deviceType = detectDeviceType(userAgent, os);
             String location = determineLocationFromIp(ip);
             String sessionToken = token != null ? token : UUID.randomUUID().toString();
 
@@ -45,14 +46,14 @@ public class DeviceSessionService {
             Optional<UserDeviceSession> existingSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, ip, browser, os);
             if (existingSessionOpt.isPresent()) {
                 UserDeviceSession s = existingSessionOpt.get();
+                s.setIsActive(true);
                 s.setLastActiveAt(LocalDateTime.now());
                 s.setSessionToken(sessionToken);
                 s.setDeviceName(deviceName);
+                s.setDeviceType(deviceType);
                 s.setLocation(location);
                 return sessionRepository.save(s);
             }
-
-            String deviceType = (os.contains("Android") || os.contains("iOS")) ? "Mobile" : "Desktop";
 
             UserDeviceSession newSession = UserDeviceSession.builder()
                     .user(user)
@@ -65,6 +66,7 @@ public class DeviceSessionService {
                     .location(location)
                     .lastActiveAt(LocalDateTime.now())
                     .isCurrentSession(true)
+                    .isActive(true)
                     .build();
 
             return sessionRepository.save(newSession);
@@ -103,7 +105,7 @@ public class DeviceSessionService {
             sessions = new ArrayList<>();
         }
 
-        // If no sessions yet (e.g. user created before table), auto seed current session
+        // If no sessions yet (e.g. user created before session logging was active), auto seed current session
         if (sessions.isEmpty() && request != null) {
             try {
                 UserDeviceSession current = recordSession(user, request, "active-current-session");
@@ -120,7 +122,9 @@ public class DeviceSessionService {
 
         for (UserDeviceSession s : sessions) {
             boolean isCurrent = false;
-            if (!currentMarked && currentIp.equals(s.getIpAddress()) && currentBrowser.equals(s.getBrowser()) && currentOs.equals(s.getOs())) {
+            boolean isActive = s.getIsActive() != null ? s.getIsActive() : true;
+
+            if (isActive && !currentMarked && currentIp.equals(s.getIpAddress()) && currentBrowser.equals(s.getBrowser()) && currentOs.equals(s.getOs())) {
                 isCurrent = true;
                 currentMarked = true;
             }
@@ -128,19 +132,27 @@ public class DeviceSessionService {
             dtoList.add(UserDeviceSessionDto.builder()
                     .id(s.getId())
                     .deviceName(s.getDeviceName() != null ? s.getDeviceName() : "Web Browser Session")
+                    .deviceType(s.getDeviceType() != null ? s.getDeviceType() : "Desktop")
                     .browser(s.getBrowser() != null ? s.getBrowser() : "Browser")
                     .operatingSystem(s.getOs() != null ? s.getOs() : "OS")
                     .ipAddress(s.getIpAddress() != null ? s.getIpAddress() : "127.0.0.1")
-                    .location(s.getLocation() != null ? s.getLocation() : "India")
+                    .maskedIp(maskIpAddress(s.getIpAddress()))
+                    .location(s.getLocation() != null ? s.getLocation() : "India (Secure Cloud)")
                     .isCurrent(isCurrent)
+                    .isActive(isActive)
                     .lastActive(s.getLastActiveAt() != null ? s.getLastActiveAt() : LocalDateTime.now())
                     .createdAt(s.getCreatedAt() != null ? s.getCreatedAt() : LocalDateTime.now())
                     .build());
         }
 
-        // If no match directly, mark first as current
+        // If no active session was directly matched as current, mark the first active session as current
         if (!currentMarked && !dtoList.isEmpty()) {
-            dtoList.get(0).setIsCurrent(true);
+            for (UserDeviceSessionDto d : dtoList) {
+                if (Boolean.TRUE.equals(d.getIsActive())) {
+                    d.setIsCurrent(true);
+                    break;
+                }
+            }
         }
 
         return dtoList;
@@ -160,8 +172,30 @@ public class DeviceSessionService {
             throw new RuntimeException("Unauthorized to revoke this session");
         }
 
-        sessionRepository.delete(session);
+        // Mark as inactive (previous session) rather than hard deleting so history is retained
+        session.setIsActive(false);
+        session.setSessionToken(null);
+        session.setLastActiveAt(LocalDateTime.now());
+        sessionRepository.save(session);
         log.info("Revoked session ID {} for user {}", sessionId, userEmail);
+    }
+
+    @Transactional
+    public void deleteSessionPermanently(String userEmail, Long sessionId) {
+        if (userEmail == null || sessionId == null) return;
+
+        User user = userRepository.findByEmail(userEmail.trim())
+                .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
+
+        UserDeviceSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
+
+        if (!session.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized to delete this session");
+        }
+
+        sessionRepository.delete(session);
+        log.info("Permanently deleted session history ID {} for user {}", sessionId, userEmail);
     }
 
     @Transactional
@@ -178,14 +212,33 @@ public class DeviceSessionService {
 
         Optional<UserDeviceSession> currentSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, currentIp, currentBrowser, currentOs);
         if (currentSessionOpt.isPresent()) {
-            sessionRepository.deleteAllByUserExceptCurrent(user, currentSessionOpt.get().getId());
+            sessionRepository.deactivateAllByUserExceptCurrent(user, currentSessionOpt.get().getId());
         } else if (request != null) {
             UserDeviceSession current = recordSession(user, request, UUID.randomUUID().toString());
             if (current != null && current.getId() != null) {
-                sessionRepository.deleteAllByUserExceptCurrent(user, current.getId());
+                sessionRepository.deactivateAllByUserExceptCurrent(user, current.getId());
             }
         }
-        log.info("Revoked all other sessions for user {}", userEmail);
+        log.info("Deactivated all other sessions for user {}", userEmail);
+    }
+
+    public String maskIpAddress(String ip) {
+        if (ip == null || ip.isBlank()) return "Protected IP";
+        if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || "localhost".equalsIgnoreCase(ip)) {
+            return "127.0.0.1 (Localhost)";
+        }
+        // IPv4 format: xxx.xxx.xxx.xxx -> xxx.xxx.•••.•••
+        if (ip.contains(".")) {
+            String[] parts = ip.split("\\.");
+            if (parts.length == 4) {
+                return parts[0] + "." + parts[1] + ".•••.•••";
+            }
+        }
+        // IPv6 or short fallback
+        if (ip.length() > 6) {
+            return ip.substring(0, 4) + "••••" + ip.substring(ip.length() - 2);
+        }
+        return "Protected IP";
     }
 
     private String extractClientIp(HttpServletRequest request) {
@@ -220,11 +273,21 @@ public class DeviceSessionService {
         if (lower.contains("windows nt 6.3")) return "Windows 8.1";
         if (lower.contains("windows nt 6.1")) return "Windows 7";
         if (lower.contains("windows")) return "Windows";
-        if (lower.contains("macintosh") || lower.contains("mac os x")) return "macOS";
         if (lower.contains("android")) return "Android";
         if (lower.contains("iphone") || lower.contains("ipad") || lower.contains("ios")) return "iOS";
+        if (lower.contains("macintosh") || lower.contains("mac os x")) return "macOS";
         if (lower.contains("linux")) return "Linux";
         return "Desktop/Mobile OS";
+    }
+
+    private String detectDeviceType(String ua, String os) {
+        if (os.contains("Android") || os.contains("iOS") || (ua != null && (ua.contains("Mobile") || ua.contains("Phone")))) {
+            return "Mobile";
+        }
+        if (ua != null && (ua.contains("Tablet") || ua.contains("iPad"))) {
+            return "Tablet";
+        }
+        return "Desktop";
     }
 
     private String determineLocationFromIp(String ip) {

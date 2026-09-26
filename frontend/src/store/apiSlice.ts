@@ -663,6 +663,13 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["DeviceSessions"],
     }),
+    deleteDeviceSessionPermanently: builder.mutation<{ message: string }, number>({
+      query: (sessionId) => ({
+        url: `/users/me/sessions/${sessionId}/permanent`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["DeviceSessions"],
+    }),
     revokeAllOtherSessions: builder.mutation<{ message: string }, void>({
       query: () => ({
         url: "/users/me/sessions/revoke-others",
@@ -759,6 +766,7 @@ export const {
   useGenerateAiBannerMutation,
   useGetUserDeviceSessionsQuery,
   useRevokeDeviceSessionMutation,
+  useDeleteDeviceSessionPermanentlyMutation,
   useRevokeAllOtherSessionsMutation,
 } = apiSlice;
 

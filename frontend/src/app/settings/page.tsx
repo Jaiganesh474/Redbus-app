@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { updateUser } from "@/store/authSlice";
+import { updateUser, logout } from "@/store/authSlice";
 import {
   useUpdateProfileMutation,
   useForgotPasswordMutation,
   useGetUserDeviceSessionsQuery,
   useRevokeDeviceSessionMutation,
+  useDeleteDeviceSessionPermanentlyMutation,
   useRevokeAllOtherSessionsMutation,
 } from "@/store/apiSlice";
 import {
@@ -34,6 +36,9 @@ import {
   Clock,
   MapPin,
   RefreshCw,
+  Eye,
+  EyeOff,
+  History,
 } from "lucide-react";
 import AvatarSelectorModal from "@/components/AvatarSelectorModal";
 
@@ -55,6 +60,10 @@ export default function SettingsPage() {
   const [otpSentMessage, setOtpSentMessage] = useState("");
   const [sessionActionMessage, setSessionActionMessage] = useState("");
 
+  const router = useRouter();
+  const [showRawIp, setShowRawIp] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
+
   const [updateProfileMutation, { isLoading: isUpdating }] = useUpdateProfileMutation();
   const [forgotPasswordMutation, { isLoading: isSendingOtp }] = useForgotPasswordMutation();
 
@@ -65,10 +74,29 @@ export default function SettingsPage() {
   } = useGetUserDeviceSessionsQuery(undefined, { skip: !isAuthenticated });
 
   const [revokeSessionMutation, { isLoading: isRevokingSession }] = useRevokeDeviceSessionMutation();
+  const [deleteSessionPermanentlyMutation, { isLoading: isDeletingPermanent }] = useDeleteDeviceSessionPermanentlyMutation();
   const [revokeAllOtherMutation, { isLoading: isRevokingOthers }] = useRevokeAllOtherSessionsMutation();
 
-  const handleRevokeSession = async (sessionId: number, deviceName: string) => {
-    if (!window.confirm(`Log out from device "${deviceName}"?`)) return;
+  const activeSessions = deviceSessions.filter((s) => s.isActive !== false);
+  const previousSessions = deviceSessions.filter((s) => s.isActive === false);
+
+  const handleRevokeSession = async (sessionId: number, deviceName: string, isCurrent: boolean = false) => {
+    if (isCurrent) {
+      if (!window.confirm(`Log out from this device ("${deviceName}")? You will be signed out immediately and need to log in again.`)) return;
+      try {
+        await revokeSessionMutation(sessionId).unwrap();
+      } catch (e) {}
+      dispatch(logout());
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("redbus_token");
+        localStorage.removeItem("token");
+        sessionStorage.clear();
+      }
+      router.push("/");
+      return;
+    }
+
+    if (!window.confirm(`Log out device "${deviceName}"? This device token will be invalidated immediately.`)) return;
     setSessionActionMessage("");
     setErrorMessage("");
     try {
@@ -78,6 +106,18 @@ export default function SettingsPage() {
       setTimeout(() => setSessionActionMessage(""), 4000);
     } catch (err: any) {
       setErrorMessage(err?.data?.message || "Failed to log out device session.");
+    }
+  };
+
+  const handleDeletePermanent = async (sessionId: number, deviceName: string) => {
+    if (!window.confirm(`Permanently remove history record for "${deviceName}"?`)) return;
+    try {
+      await deleteSessionPermanentlyMutation(sessionId).unwrap();
+      setSessionActionMessage(`Deleted history entry for "${deviceName}".`);
+      refetchSessions();
+      setTimeout(() => setSessionActionMessage(""), 4000);
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || "Failed to delete session history.");
     }
   };
 
@@ -486,7 +526,7 @@ export default function SettingsPage() {
         </form>
 
         {/* Dynamic Logged-In Devices & Security Sessions Section */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-5">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
@@ -495,15 +535,30 @@ export default function SettingsPage() {
                   Logged-In Devices & Security Sessions
                 </h3>
                 <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full">
-                  {deviceSessions.length} ACTIVE
+                  {activeSessions.length} ACTIVE
                 </span>
+                {previousSessions.length > 0 && (
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full">
+                    {previousSessions.length} PREVIOUS
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-500">
-                Manage all browsers and devices currently signed in to your redBus account. You can revoke access anytime.
+                Manage all browsers and devices currently signed in to your redBus account. You can log out any device individually anytime.
               </p>
             </div>
 
             <div className="flex items-center space-x-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowRawIp(!showRawIp)}
+                className="p-2 text-gray-500 hover:text-gray-900 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-1 text-xs"
+                title={showRawIp ? "Hide full IP address" : "Show full IP address"}
+              >
+                {showRawIp ? <EyeOff className="w-4 h-4 text-[#d84e55]" /> : <Eye className="w-4 h-4" />}
+                <span className="text-[11px] font-semibold">{showRawIp ? "Mask IP" : "Show IP"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => refetchSessions()}
@@ -513,7 +568,7 @@ export default function SettingsPage() {
                 <RefreshCw className="w-4 h-4" />
               </button>
 
-              {deviceSessions.length > 1 && (
+              {activeSessions.length > 1 && (
                 <button
                   type="button"
                   onClick={handleRevokeAllOtherSessions}
@@ -539,87 +594,199 @@ export default function SettingsPage() {
               <RefreshCw className="w-4 h-4 animate-spin text-[#d84e55]" />
               <span>Loading logged-in sessions...</span>
             </div>
-          ) : deviceSessions.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">
-              No active session metadata found.
-            </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {deviceSessions.map((session) => {
-                const isMobile =
-                  session.operatingSystem?.toLowerCase().includes("android") ||
-                  session.operatingSystem?.toLowerCase().includes("ios") ||
-                  session.operatingSystem?.toLowerCase().includes("iphone");
+            <div className="space-y-6">
+              {/* 1. Active Sessions List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Active Logged-In Devices ({activeSessions.length})</span>
+                </h4>
 
-                return (
-                  <div
-                    key={session.id}
-                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="flex items-start space-x-3.5">
-                      <div
-                        className={`p-3 rounded-2xl border shrink-0 ${
-                          session.isCurrent
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                            : "bg-gray-50 border-gray-200 text-gray-600"
-                        }`}
-                      >
-                        {isMobile ? (
-                          <Smartphone className="w-5 h-5" />
-                        ) : (
-                          <Laptop className="w-5 h-5" />
-                        )}
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-sm text-gray-900">
-                            {session.deviceName || `${session.browser} on ${session.operatingSystem}`}
-                          </span>
-                          {session.isCurrent && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full border border-emerald-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                              This Device • Active Now
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center space-x-1">
-                            <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                            <span>{session.location || "India"}</span>
-                          </span>
-                          <span>•</span>
-                          <span className="font-mono text-gray-600">{session.ipAddress}</span>
-                          <span>•</span>
-                          <span className="flex items-center space-x-1">
-                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                            <span>
-                              {session.isCurrent
-                                ? "Active right now"
-                                : session.lastActive
-                                ? `Last active ${new Date(session.lastActive).toLocaleDateString()}`
-                                : "Recent"}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {!session.isCurrent && (
-                      <button
-                        type="button"
-                        onClick={() => handleRevokeSession(session.id, session.deviceName)}
-                        disabled={isRevokingSession}
-                        className="self-start sm:self-center px-3 py-1.5 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-xl transition-colors cursor-pointer flex items-center space-x-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Log Out</span>
-                      </button>
-                    )}
+                {activeSessions.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-gray-400 bg-gray-50 rounded-2xl border border-gray-100">
+                    No active sessions found.
                   </div>
-                );
-              })}
+                ) : (
+                  <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl p-2 bg-white shadow-xs">
+                    {activeSessions.map((session) => {
+                      const isMobile =
+                        session.deviceType === "Mobile" ||
+                        session.operatingSystem?.toLowerCase().includes("android") ||
+                        session.operatingSystem?.toLowerCase().includes("ios") ||
+                        session.operatingSystem?.toLowerCase().includes("iphone");
+
+                      const displayedIp = showRawIp ? session.ipAddress : (session.maskedIp || session.ipAddress.replace(/(\d+)\.(\d+)\.(\d+)\.(\d+)/, "$1.$2.•••.•••"));
+
+                      return (
+                        <div
+                          key={session.id}
+                          className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:rounded-t-xl last:rounded-b-xl hover:bg-gray-50/50 transition-colors"
+                        >
+                          <div className="flex items-start space-x-3.5">
+                            <div
+                              className={`p-3 rounded-2xl border shrink-0 ${
+                                session.isCurrent
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-xs"
+                                  : "bg-blue-50 border-blue-200 text-blue-600"
+                              }`}
+                            >
+                              {isMobile ? (
+                                <Smartphone className="w-5 h-5" />
+                              ) : (
+                                <Laptop className="w-5 h-5" />
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-sm text-gray-900">
+                                  {session.deviceName || `${session.browser} on ${session.operatingSystem}`}
+                                </span>
+                                {session.isCurrent ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full border border-emerald-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                                    This Device • Active Now
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full border border-blue-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                    Active Session
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-500">
+                                <span className="flex items-center space-x-1">
+                                  <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>{session.location || "India"}</span>
+                                </span>
+                                <span>•</span>
+                                <span className="font-mono text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md text-[11px]" title={session.ipAddress}>
+                                  IP: {displayedIp}
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center space-x-1">
+                                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>
+                                    {session.isCurrent
+                                      ? "Active right now"
+                                      : session.lastActive
+                                      ? `Last active ${new Date(session.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${new Date(session.lastActive).toLocaleDateString()}`
+                                      : "Active"}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="self-start sm:self-center shrink-0">
+                            {session.isCurrent ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeSession(session.id, session.deviceName, true)}
+                                disabled={isRevokingSession}
+                                className="px-3.5 py-1.5 text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-xs"
+                                title="Sign out from this device and return to login"
+                              >
+                                <LogOut className="w-3.5 h-3.5" />
+                                <span>Log Out This Device</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeSession(session.id, session.deviceName, false)}
+                                disabled={isRevokingSession}
+                                className="px-3.5 py-1.5 text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-xl transition-all cursor-pointer flex items-center space-x-1.5 shadow-xs"
+                                title="Revoke access for this remote device"
+                              >
+                                <LogOut className="w-3.5 h-3.5" />
+                                <span>Log Out Device</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Previous / Logged-Out Sessions History */}
+              {previousSessions.length > 0 && (
+                <div className="pt-4 border-t border-gray-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-gray-400" />
+                      <span>Previous / Logged-Out Sessions ({previousSessions.length})</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="text-xs font-bold text-[#d84e55] hover:underline cursor-pointer"
+                    >
+                      {showHistory ? "Hide History" : "Show History"}
+                    </button>
+                  </div>
+
+                  {showHistory && (
+                    <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl p-2 bg-gray-50/50">
+                      {previousSessions.map((session) => {
+                        const isMobile =
+                          session.deviceType === "Mobile" ||
+                          session.operatingSystem?.toLowerCase().includes("android") ||
+                          session.operatingSystem?.toLowerCase().includes("ios");
+
+                        const displayedIp = showRawIp ? session.ipAddress : (session.maskedIp || session.ipAddress.replace(/(\d+)\.(\d+)\.(\d+)\.(\d+)/, "$1.$2.•••.•••"));
+
+                        return (
+                          <div
+                            key={session.id}
+                            className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs opacity-75 hover:opacity-100 transition-opacity"
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="p-2 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 shrink-0">
+                                {isMobile ? <Smartphone className="w-4 h-4" /> : <Laptop className="w-4 h-4" />}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-gray-700">
+                                    {session.deviceName || `${session.browser} on ${session.operatingSystem}`}
+                                  </span>
+                                  <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] font-bold rounded-md">
+                                    Logged Out
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 mt-0.5">
+                                  <span>{session.location || "India"}</span>
+                                  <span>•</span>
+                                  <span className="font-mono text-[10px]">IP: {displayedIp}</span>
+                                  <span>•</span>
+                                  <span>
+                                    {session.lastActive
+                                      ? `Logged out on ${new Date(session.lastActive).toLocaleDateString()} at ${new Date(session.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                      : "Previous session"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePermanent(session.id, session.deviceName)}
+                              disabled={isDeletingPermanent}
+                              className="self-start sm:self-center p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                              title="Delete this history record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

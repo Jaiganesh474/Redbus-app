@@ -29,7 +29,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final DeviceSessionService deviceSessionService;
+    private final jakarta.servlet.http.HttpServletRequest httpServletRequest;
     private final SecureRandom random = new SecureRandom();
+
+    private void recordDeviceSessionSafely(User user, String token) {
+        try {
+            if (deviceSessionService != null && user != null) {
+                deviceSessionService.recordSession(user, httpServletRequest, token);
+            }
+        } catch (Exception e) {
+            log.warn("Device session could not be recorded: {}", e.getMessage());
+        }
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -147,6 +159,7 @@ public class AuthService {
         operatorRepository.save(op);
 
         String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole(), savedUser.getId());
+        recordDeviceSessionSafely(savedUser, token);
 
         return AuthResponse.builder()
                 .token(token)
@@ -178,6 +191,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId());
+        recordDeviceSessionSafely(user, token);
 
         return AuthResponse.builder()
                 .token(token)
@@ -216,6 +230,7 @@ public class AuthService {
         User saved = userRepository.save(user);
 
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
+        recordDeviceSessionSafely(saved, token);
 
         return AuthResponse.builder()
                 .token(token)
@@ -270,6 +285,7 @@ public class AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId());
+        recordDeviceSessionSafely(user, token);
 
         return AuthResponse.builder()
                 .token(token)
@@ -316,6 +332,7 @@ public class AuthService {
         User saved = userRepository.save(user);
 
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
+        recordDeviceSessionSafely(saved, token);
 
         return AuthResponse.builder()
                 .token(token)

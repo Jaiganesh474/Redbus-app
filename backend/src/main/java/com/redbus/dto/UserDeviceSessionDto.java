@@ -14,11 +14,14 @@ import java.time.LocalDateTime;
 public class UserDeviceSessionDto {
     private Long id;
     private String deviceName;
+    private String deviceType;
     private String browser;
     private String operatingSystem;
     private String ipAddress;
+    private String maskedIp;
     private String location;
     private Boolean isCurrent;
+    private Boolean isActive;
     private LocalDateTime lastActive;
     private LocalDateTime createdAt;
 }

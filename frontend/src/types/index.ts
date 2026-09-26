@@ -662,11 +662,14 @@ export interface GenerateAiBannerRequest {
 export interface UserDeviceSession {
   id: number;
   deviceName: string;
+  deviceType?: "Desktop" | "Mobile" | "Tablet" | string;
   browser: string;
   operatingSystem: string;
   ipAddress: string;
+  maskedIp?: string;
   location: string;
   isCurrent: boolean;
+  isActive?: boolean;
   lastActive: string;
   createdAt: string;
 }
