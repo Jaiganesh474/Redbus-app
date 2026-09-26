@@ -54,8 +54,8 @@ export const bookingSlice = createSlice({
         state.lockedSeatIds = [];
         state.lockExpiry = null;
         state.lockSecondsRemaining = 0;
-        state.boardingPoint = action.payload.boardingPoints?.[0] || "";
-        state.droppingPoint = action.payload.droppingPoints?.[0] || "";
+        state.boardingPoint = "";
+        state.droppingPoint = "";
         state.passengers = [];
       } else {
         state.selectedRoute = action.payload;
@@ -73,14 +73,8 @@ export const bookingSlice = createSlice({
     ) => {
       state.selectedRoute = action.payload.route;
       state.selectedSeats = action.payload.seats;
-      state.boardingPoint =
-        action.payload.boardingPoint ||
-        action.payload.route.boardingPoints?.[0] ||
-        "";
-      state.droppingPoint =
-        action.payload.droppingPoint ||
-        action.payload.route.droppingPoints?.[0] ||
-        "";
+      state.boardingPoint = action.payload.boardingPoint || "";
+      state.droppingPoint = action.payload.droppingPoint || "";
       state.passengers = action.payload.seats.map((seat) => ({
         seatId: seat.seatId,
         seatNumber: seat.seatNumber,
