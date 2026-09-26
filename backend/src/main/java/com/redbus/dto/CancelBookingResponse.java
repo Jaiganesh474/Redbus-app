@@ -13,6 +13,9 @@ import java.math.BigDecimal;
 public class CancelBookingResponse {
     private String pnr;
     private String status;
+    private String refundStatus;
+    private String refundDestination;
+    private String refundStage;
     private BigDecimal refundAmount;
     private BigDecimal walletBalance;
     private String message;

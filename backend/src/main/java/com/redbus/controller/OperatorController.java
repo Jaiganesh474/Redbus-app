@@ -5,6 +5,7 @@ import com.redbus.entity.Operator;
 import com.redbus.entity.User;
 import com.redbus.exception.BadRequestException;
 import com.redbus.service.AuthService;
+import com.redbus.service.BookingService;
 import com.redbus.service.OperatorAnalyticsService;
 import com.redbus.service.OperatorService;
 import com.redbus.service.PdfService;
@@ -39,6 +40,7 @@ public class OperatorController {
     private final AuthService authService;
     private final OperatorService operatorService;
     private final OperatorAnalyticsService operatorAnalyticsService;
+    private final BookingService bookingService;
     private final PdfService pdfService;
 
     private Operator getAuthenticatedOperator() {
@@ -219,5 +221,30 @@ public class OperatorController {
         Operator op = getAuthenticatedOperator();
         operatorService.deleteBus(op.getId(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/refunds")
+    public ResponseEntity<List<OperatorRefundDto>> getOperatorRefunds() {
+        Operator op = getAuthenticatedOperator();
+        return ResponseEntity.ok(operatorAnalyticsService.getOperatorRefunds(op));
+    }
+
+    @PostMapping("/refunds/{pnr}/approve")
+    public ResponseEntity<CancelBookingResponse> approveRefund(@PathVariable String pnr) {
+        Operator op = getAuthenticatedOperator();
+        CancelBookingResponse res = bookingService.approveOperatorRefund(pnr, op);
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/ai/price-intelligence")
+    public ResponseEntity<List<OperatorAiPriceIntelligenceDto>> getAiPriceIntelligence() {
+        Operator op = getAuthenticatedOperator();
+        return ResponseEntity.ok(operatorAnalyticsService.getAiPriceIntelligence(op));
+    }
+
+    @GetMapping("/wallet/ledger")
+    public ResponseEntity<OperatorWalletLedgerDto> getWalletLedger() {
+        Operator op = getAuthenticatedOperator();
+        return ResponseEntity.ok(operatorAnalyticsService.getWalletLedger(op));
     }
 }

@@ -158,6 +158,11 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
   };
 
   const handleProceedToBook = async () => {
+    if (user?.role === "ROLE_OPERATOR") {
+      setErrorMessage("Bus Operator accounts cannot book passenger tickets. Please log in with a passenger account to book.");
+      return;
+    }
+
     if (selectedSeats.length === 0) {
       setErrorMessage("Please select at least 1 seat to proceed.");
       return;

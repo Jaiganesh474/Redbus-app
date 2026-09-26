@@ -51,6 +51,7 @@ export default function MyBookingsPage() {
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [cancelReason, setCancelReason] = useState("Change of plans");
+  const [refundDestination, setRefundDestination] = useState<"WALLET" | "ORIGINAL_PAYMENT">("WALLET");
   const [cancelMessage, setCancelMessage] = useState("");
   const [expandedPnrs, setExpandedPnrs] = useState<Record<string, boolean>>({});
   const [emailStatusByPnr, setEmailStatusByPnr] = useState<Record<string, string>>({});
@@ -115,6 +116,7 @@ export default function MyBookingsPage() {
       const res = await cancelBookingMutation({
         pnr: selectedBookingForCancel.pnr,
         reason: cancelReason,
+        refundDestination,
       }).unwrap();
 
       if (res.walletBalance !== undefined && activeUser) {
@@ -125,20 +127,21 @@ export default function MyBookingsPage() {
         addNotification({
           id: `cancellation-${selectedBookingForCancel.pnr}-${Date.now()}`,
           type: "booking",
-          title: `Trip Cancelled (PNR: ${selectedBookingForCancel.pnr}) 🔄`,
+          title: `Cancellation Initiated (PNR: ${selectedBookingForCancel.pnr}) 🔄`,
           message:
             res.message ||
-            `Booking for ${selectedBookingForCancel.sourceCity} → ${selectedBookingForCancel.destinationCity} has been cancelled. Refund credited to redBus Wallet.`,
+            `Cancellation requested for ${selectedBookingForCancel.sourceCity} → ${selectedBookingForCancel.destinationCity}. Queued for operator audit.`,
           timestamp: "Just now",
           actionUrl: "/my-bookings",
-          actionLabel: "View Bookings",
+          actionLabel: "View Status",
           read: false,
           pnr: selectedBookingForCancel.pnr,
         })
       );
 
-      setCancelMessage(res.message || "Booking cancelled successfully. Refund credited to your redBus Wallet!");
+      setCancelMessage(res.message || "Cancellation requested! Refund queued for operator audit.");
       setSelectedBookingForCancel(null);
+      setShowTermsDialog(false);
     } catch (err: any) {
       setCancelMessage(err?.data?.message || "Failed to cancel booking.");
     }
@@ -401,11 +404,88 @@ export default function MyBookingsPage() {
                     </span>
                     {booking.refundAmount !== undefined && booking.refundAmount > 0 && (
                       <span className="text-[11px] text-emerald-600 font-bold block mt-0.5">
-                        Refunded to Wallet: ₹{booking.refundAmount.toFixed(2)}
+                        Refund: ₹{booking.refundAmount.toFixed(2)} ({booking.refundDestination === "ORIGINAL_PAYMENT" ? "Original Method" : "redBus Wallet"})
                       </span>
                     )}
                   </div>
                 </div>
+
+                {/* REAL-TIME PIPED REFUND STAGE TRACKER (When Cancelled / In Refund Pipeline) */}
+                {(booking.status === "CANCELLED" || booking.status === "REFUNDED" || booking.refundStatus) && (() => {
+                  const stage = booking.refundStage || (booking.status === "REFUNDED" ? "COMPLETED" : "OPERATOR_AUDIT");
+                  const destination = booking.refundDestination || "WALLET";
+                  const stages = [
+                    { key: "REQUESTED", label: "1. Refund Initiated", desc: "Cancellation registered", time: booking.refundRequestedAt ? new Date(booking.refundRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Done" },
+                    { key: "OPERATOR_AUDIT", label: "2. Operator Audit", desc: stage === "REQUESTED" ? "Queued for audit" : stage === "OPERATOR_AUDIT" ? "Operator reviewing ticket" : "Approved by operator", time: booking.refundApprovedAt ? new Date(booking.refundApprovedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Review" },
+                    { key: "REFUND_PROCESSING", label: "3. Disbursing Payout", desc: destination === "WALLET" ? "Direct redBus Wallet transfer" : "Payment gateway banking transfer", time: stage === "COMPLETED" ? "Success" : "Active" },
+                    { key: "COMPLETED", label: destination === "WALLET" ? "4. Credited to Wallet" : "4. Refund Settled", desc: destination === "WALLET" ? "Instant balance added" : "3-5 business days to source", time: stage === "COMPLETED" ? "Credited 🎉" : "Pending" },
+                  ];
+
+                  const getStepIndex = (s: string) => {
+                    if (s === "REQUESTED") return 0;
+                    if (s === "OPERATOR_AUDIT") return 1;
+                    if (s === "REFUND_PROCESSING") return 2;
+                    if (s === "COMPLETED" || booking.status === "REFUNDED") return 3;
+                    return 1;
+                  };
+
+                  const currentIdx = getStepIndex(stage);
+
+                  return (
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-gray-900 to-slate-950 text-white border border-slate-700/70 shadow-md space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                          <span className="text-xs font-black uppercase tracking-wider text-red-400">
+                            Live Refund Pipeline Tracker
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[11px] text-slate-300 font-medium">Payout Destination:</span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 border border-red-500/30 flex items-center gap-1">
+                            {destination === "WALLET" ? <Wallet className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                            {destination === "WALLET" ? "redBus Wallet (Instant)" : "Original Payment Method"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Piped Stage Horizontal Flow */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
+                        {stages.map((st, sIdx) => {
+                          const isPast = sIdx < currentIdx;
+                          const isCurrent = sIdx === currentIdx;
+                          const isFuture = sIdx > currentIdx;
+
+                          return (
+                            <div
+                              key={st.key}
+                              className={`p-3 rounded-xl border transition-all relative ${
+                                isCurrent
+                                  ? "bg-red-950/60 border-red-500/80 shadow-md shadow-red-500/20"
+                                  : isPast
+                                  ? "bg-slate-800/80 border-emerald-500/50"
+                                  : "bg-slate-900/40 border-slate-800 opacity-60"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isCurrent ? "text-red-400" : isPast ? "text-emerald-400" : "text-slate-500"}`}>
+                                  {isPast ? "✓ Verified" : isCurrent ? "⚡ Live Stage" : "Upcoming"}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">{st.time}</span>
+                              </div>
+                              <p className={`text-xs font-bold ${isCurrent ? "text-white" : isPast ? "text-slate-100" : "text-slate-400"}`}>
+                                {st.label}
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                {st.desc}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Expandable Invoice & Passenger Detailing Section */}
                 <div>
@@ -721,7 +801,7 @@ export default function MyBookingsPage() {
                 <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-emerald-700 font-bold text-sm">
                   <span className="flex items-center gap-1.5">
                     <Wallet className="w-4 h-4 text-emerald-600" />
-                    <span>Total Refund to redBus Wallet:</span>
+                    <span>Estimated Refund Amount:</span>
                   </span>
                   <span className="font-mono text-base font-black">
                     ₹{refundInfo.refundAmount.toFixed(2)}
@@ -729,12 +809,58 @@ export default function MyBookingsPage() {
                 </div>
               </div>
 
-              {/* Instant redBus Wallet Notice */}
-              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center space-x-2 text-xs text-emerald-900">
-                <Wallet className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="leading-snug">
-                  Refund will be credited <strong>instantly to your redBus Wallet</strong> upon confirmation and can be used on any future trip.
-                </span>
+              {/* Choose Refund Destination */}
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  Where would you like to receive your refund? *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRefundDestination("WALLET")}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      refundDestination === "WALLET"
+                        ? "border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-500/20 shadow-xs"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="flex items-center gap-1.5 text-xs font-black text-emerald-800">
+                        <Wallet className="w-4 h-4 text-emerald-600" />
+                        <span>redBus Wallet</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Recommended (Instant)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-tight">
+                      Instant balance upon operator audit approval. 100% usable on any bus ticket.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRefundDestination("ORIGINAL_PAYMENT")}
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      refundDestination === "ORIGINAL_PAYMENT"
+                        ? "border-blue-500 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="flex items-center gap-1.5 text-xs font-black text-blue-900">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        <span>Original Method</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-300">
+                        3-5 Days
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-tight">
+                      Settlement returned to original bank/card/UPI account within 3-5 business days.
+                    </p>
+                  </button>
+                </div>
               </div>
 
               {/* Reason Selector */}
@@ -776,7 +902,7 @@ export default function MyBookingsPage() {
                   }}
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  <span>Confirm & Refund (₹{refundInfo.refundAmount.toFixed(2)})</span>
+                  <span>Review Terms & Cancel (₹{refundInfo.refundAmount.toFixed(2)})</span>
                 </button>
               </div>
             </motion.div>

@@ -124,17 +124,19 @@ export default function Navbar() {
                 >
                   Bus Tickets
                 </Link>
-                <Link
-                  href="/my-bookings"
-                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
-                    pathname === "/my-bookings"
-                      ? "text-[#d84e55] bg-red-50 dark:bg-red-950/40 dark:text-red-400"
-                      : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/80"
-                  }`}
-                >
-                  <Ticket className="w-4 h-4" />
-                  <span>My Bookings</span>
-                </Link>
+                {activeUser?.role !== "ROLE_OPERATOR" && (
+                  <Link
+                    href="/my-bookings"
+                    className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
+                      pathname === "/my-bookings"
+                        ? "text-[#d84e55] bg-red-50 dark:bg-red-950/40 dark:text-red-400"
+                        : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <Ticket className="w-4 h-4" />
+                    <span>My Bookings</span>
+                  </Link>
+                )}
                 <Link
                   href="/faq"
                   className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
@@ -146,20 +148,20 @@ export default function Navbar() {
                   <HelpCircle className="w-4 h-4" />
                   <span>Help & FAQs</span>
                 </Link>
-                {(user?.role === "ROLE_OPERATOR" || user?.role === "ROLE_ADMIN") && (
+                {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
                   <Link
                     href="/operator"
-                    className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
+                    className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-1.5 ${
                       pathname === "/operator"
                         ? "text-[#d84e55] bg-red-50 dark:bg-red-950/40 dark:text-red-400"
                         : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/80"
                     }`}
                   >
                     <Bus className="w-4 h-4 text-[#d84e55] dark:text-red-400" />
-                    <span>Operator Portal</span>
+                    <span>Operator Hub</span>
                   </Link>
                 )}
-                {user?.role === "ROLE_ADMIN" && (
+                {activeUser?.role === "ROLE_ADMIN" && (
                   <Link
                     href="/admin"
                     className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
@@ -312,14 +314,16 @@ export default function Navbar() {
                             <span className="font-medium">My Profile</span>
                           </div>
                         </Link>
-                        <Link
-                          href="/my-bookings"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center space-x-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 hover:text-[#d84e55] dark:hover:text-red-400 transition-colors"
-                        >
-                          <Ticket className="w-4 h-4 text-gray-400 dark:text-slate-400" />
-                          <span className="font-medium">My Bookings</span>
-                        </Link>
+                        {activeUser?.role !== "ROLE_OPERATOR" && (
+                          <Link
+                            href="/my-bookings"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center space-x-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 hover:text-[#d84e55] dark:hover:text-red-400 transition-colors"
+                          >
+                            <Ticket className="w-4 h-4 text-gray-400 dark:text-slate-400" />
+                            <span className="font-medium">My Bookings</span>
+                          </Link>
+                        )}
                         <Link
                           href="/settings"
                           onClick={() => setUserDropdownOpen(false)}
@@ -335,7 +339,7 @@ export default function Navbar() {
                             className="flex items-center space-x-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 hover:text-[#d84e55] dark:hover:text-red-400 transition-colors"
                           >
                             <Bus className="w-4 h-4 text-[#d84e55] dark:text-red-400" />
-                            <span className="font-medium">Operator Portal</span>
+                            <span className="font-semibold text-[#d84e55] dark:text-red-400">Operator Hub</span>
                           </Link>
                         )}
                         {(activeUser.role === "ROLE_ADMIN" || activeUser.roles?.includes("ROLE_ADMIN")) && (
@@ -413,13 +417,15 @@ export default function Navbar() {
               >
                 Bus Tickets
               </Link>
-              <Link
-                href="/my-bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-              >
-                My Bookings
-              </Link>
+              {activeUser?.role !== "ROLE_OPERATOR" && (
+                <Link
+                  href="/my-bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                >
+                  My Bookings
+                </Link>
+              )}
               <Link
                 href="/faq"
                 onClick={() => setMobileMenuOpen(false)}
@@ -427,7 +433,16 @@ export default function Navbar() {
               >
                 Help & FAQs
               </Link>
-              {user?.role === "ROLE_ADMIN" && (
+              {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
+                <Link
+                  href="/operator"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-semibold text-[#d84e55] dark:text-red-400 hover:bg-gray-50 dark:hover:bg-slate-800"
+                >
+                  🚍 Operator Hub
+                </Link>
+              )}
+              {activeUser?.role === "ROLE_ADMIN" && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
@@ -478,13 +493,15 @@ export default function Navbar() {
                     >
                       My Profile
                     </Link>
-                    <Link
-                      href="/my-bookings"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                    >
-                      My Bookings
-                    </Link>
+                    {activeUser?.role !== "ROLE_OPERATOR" && (
+                      <Link
+                        href="/my-bookings"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      >
+                        My Bookings
+                      </Link>
+                    )}
                     <Link
                       href="/settings"
                       onClick={() => setMobileMenuOpen(false)}

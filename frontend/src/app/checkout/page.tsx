@@ -344,6 +344,11 @@ function CheckoutContent() {
       return;
     }
 
+    if (user?.role === "ROLE_OPERATOR") {
+      setErrorMessage("Bus Operator accounts are restricted from booking passenger tickets. Please log in with a passenger account.");
+      return;
+    }
+
     setIsProcessingPayment(true);
     try {
       // 1. Create Booking in database (with wallet balance applied if selected)

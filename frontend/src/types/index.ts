@@ -107,6 +107,11 @@ export interface BookingDetails {
   busType: string;
   totalAmount: number;
   status: "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "REFUNDED" | "EXPIRED";
+  refundStatus?: "REQUESTED" | "AUDIT_PENDING" | "APPROVED" | "REFUNDED";
+  refundDestination?: "WALLET" | "ORIGINAL_PAYMENT";
+  refundStage?: "REQUESTED" | "OPERATOR_AUDIT" | "REFUND_PROCESSING" | "COMPLETED";
+  refundRequestedAt?: string;
+  refundApprovedAt?: string;
   boardingPoint: string;
   droppingPoint: string;
   contactEmail: string;
@@ -517,6 +522,99 @@ export interface AiBusPhoto {
   promptUsed: string;
   qualityScore: number;
 }
+
+export interface OperatorRefund {
+  bookingId: number;
+  pnr: string;
+  passengerName: string;
+  contactEmail: string;
+  contactPhone: string;
+  sourceCity: string;
+  destinationCity: string;
+  travelDate: string;
+  busName: string;
+  seatNumbers: string[];
+  totalPaid: number;
+  refundAmount: number;
+  refundDestination: "WALLET" | "ORIGINAL_PAYMENT";
+  refundStatus: "REQUESTED" | "AUDIT_PENDING" | "APPROVED" | "REFUNDED";
+  refundStage: "REQUESTED" | "OPERATOR_AUDIT" | "REFUND_PROCESSING" | "COMPLETED";
+  cancellationReason?: string;
+  requestedAt?: string;
+  approvedAt?: string;
+}
+
+export interface CompetitorBenchmark {
+  operatorName: string;
+  busType: string;
+  price: number;
+  rating: number;
+  differenceFromMe: number;
+}
+
+export interface OperatorAiPriceIntelligence {
+  corridor: string;
+  myRouteId: number;
+  myBusType: string;
+  myCurrentPrice: number;
+  marketAveragePrice: number;
+  marketLowestPrice: number;
+  marketHighestPrice: number;
+  priceDifferencePercentage: number;
+  priceCompetitiveness: string;
+  aiRecommendation: string;
+  suggestedPromoCode: string;
+  suggestedPromoDiscount: number;
+  predictedDemandOccupancy: number;
+  competitorBenchmarks: CompetitorBenchmark[];
+}
+
+export interface OperatorWalletTransactionItem {
+  id: number;
+  pnr?: string;
+  type: string;
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface OperatorWalletLedger {
+  operatorId: number;
+  companyName: string;
+  currentWalletBalance: number;
+  totalEarningsCredited: number;
+  totalRefundsDebited: number;
+  totalPlatformCommissionPaid: number;
+  transactions: OperatorWalletTransactionItem[];
+}
+
+export interface OperatorEarningItem {
+  operatorId: number;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  status: string;
+  totalBuses: number;
+  totalRoutes: number;
+  totalConfirmedBookings: number;
+  totalCancelledBookings: number;
+  grossRevenue: number;
+  commissionPaid: number;
+  netEarnings: number;
+  walletBalance: number;
+  totalRefundsApproved: number;
+}
+
+export interface AdminOperatorEarnings {
+  systemGrossRevenue: number;
+  systemNetOperatorPayouts: number;
+  systemCommissionsCollected: number;
+  systemTotalRefundsProcessed: number;
+  operatorEarnings: OperatorEarningItem[];
+}
+
 
 
 

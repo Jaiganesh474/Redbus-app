@@ -33,6 +33,10 @@ import type {
   SmartSeatRecommendation,
   AiBusPhoto,
   OperatorPassengerManifest,
+  OperatorRefund,
+  OperatorAiPriceIntelligence,
+  OperatorWalletLedger,
+  AdminOperatorEarnings,
 } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
@@ -51,7 +55,7 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "OperatorProfile", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos"],
+  tagTypes: ["Route", "Seat", "Booking", "Auth", "Admin", "AdminOperators", "Seo", "SavedTraveller", "OperatorBuses", "OperatorSchedules", "OperatorAnalytics", "OperatorProfile", "Coupons", "BusReviews", "AiMonitoring", "UserActivity", "BusPhotos", "Refunds", "OperatorWallet"],
   endpoints: (builder) => ({
     // Auth
     login: builder.mutation<{ token: string; user: User }, any>({
@@ -246,6 +250,25 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["OperatorProfile", "Auth"],
     }),
+    getOperatorRefunds: builder.query<OperatorRefund[], void>({
+      query: () => "/operator/refunds",
+      providesTags: ["Refunds", "Booking"],
+    }),
+    approveOperatorRefund: builder.mutation<CancelBookingResponse, { pnr: string }>({
+      query: ({ pnr }) => ({
+        url: `/operator/refunds/${pnr}/approve`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Refunds", "Booking", "OperatorAnalytics", "OperatorWallet", "Auth"],
+    }),
+    getOperatorAiPriceIntelligence: builder.query<OperatorAiPriceIntelligence[], void>({
+      query: () => "/operator/ai/price-intelligence",
+      providesTags: ["OperatorAnalytics"],
+    }),
+    getOperatorWalletLedger: builder.query<OperatorWalletLedger, void>({
+      query: () => "/operator/wallet/ledger",
+      providesTags: ["OperatorWallet", "Booking", "Refunds"],
+    }),
 
     // Routes / Search
     searchRoutes: builder.query<
@@ -343,13 +366,13 @@ export const apiSlice = createApi({
       query: ({ page = 0, size = 10 } = {}) => `/bookings/my-bookings?page=${page}&size=${size}`,
       providesTags: ["Booking"],
     }),
-    cancelBooking: builder.mutation<CancelBookingResponse, { pnr: string; reason?: string }>({
-      query: ({ pnr, reason }) => ({
+    cancelBooking: builder.mutation<CancelBookingResponse, { pnr: string; reason?: string; refundDestination?: "WALLET" | "ORIGINAL_PAYMENT" }>({
+      query: ({ pnr, reason, refundDestination }) => ({
         url: `/bookings/${pnr}/cancel`,
         method: "POST",
-        body: { reason },
+        body: { reason, refundDestination },
       }),
-      invalidatesTags: ["Booking", "Seat", "OperatorAnalytics", "Auth"],
+      invalidatesTags: ["Booking", "Seat", "OperatorAnalytics", "Auth", "Refunds", "OperatorWallet"],
     }),
 
     // Payments
@@ -446,6 +469,10 @@ export const apiSlice = createApi({
         body: { commissionRate },
       }),
       invalidatesTags: ["AdminOperators", "Admin"],
+    }),
+    getAdminOperatorEarnings: builder.query<AdminOperatorEarnings, void>({
+      query: () => "/admin/operator-earnings",
+      providesTags: ["Admin", "AdminOperators"],
     }),
 
     // Public SEO & FAQs
@@ -611,6 +638,11 @@ export const {
   useGetOperatorBookingsQuery,
   useGetOperatorManifestQuery,
   useLazyGetOperatorManifestQuery,
+  useGetOperatorRefundsQuery,
+  useApproveOperatorRefundMutation,
+  useGetOperatorAiPriceIntelligenceQuery,
+  useGetOperatorWalletLedgerQuery,
+  useGetAdminOperatorEarningsQuery,
   useSearchRoutesQuery,
   useGetRouteByIdQuery,
   useGetRouteSeatsQuery,

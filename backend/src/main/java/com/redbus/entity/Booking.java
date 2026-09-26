@@ -92,6 +92,24 @@ public class Booking {
     @Builder.Default
     private BigDecimal refundAmount = BigDecimal.ZERO;
 
+    @Column(name = "refund_status", length = 30)
+    @Builder.Default
+    private String refundStatus = "NONE"; // 'NONE', 'REQUESTED', 'AUDIT_PENDING', 'APPROVED', 'REFUNDED'
+
+    @Column(name = "refund_destination", length = 30)
+    @Builder.Default
+    private String refundDestination = "WALLET"; // 'WALLET', 'ORIGINAL_PAYMENT'
+
+    @Column(name = "refund_stage", length = 30)
+    @Builder.Default
+    private String refundStage = "NONE"; // 'NONE', 'REQUESTED', 'OPERATOR_AUDIT', 'REFUND_PROCESSING', 'COMPLETED'
+
+    @Column(name = "refund_requested_at")
+    private LocalDateTime refundRequestedAt;
+
+    @Column(name = "refund_approved_at")
+    private LocalDateTime refundApprovedAt;
+
     @Column(name = "wallet_amount_used", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal walletAmountUsed = BigDecimal.ZERO;

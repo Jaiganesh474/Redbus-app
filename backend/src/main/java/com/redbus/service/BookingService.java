@@ -8,9 +8,9 @@ import com.redbus.exception.SeatLockException;
 import com.redbus.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +20,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,8 @@ public class BookingService {
     private final SeatRepository seatRepository;
     private final RouteSeatRepository routeSeatRepository;
     private final UserRepository userRepository;
+    private final OperatorRepository operatorRepository;
+    private final OperatorWalletTransactionRepository operatorWalletTransactionRepository;
     private final CouponService couponService;
     private final EmailService emailService;
 
@@ -61,6 +64,11 @@ public class BookingService {
                                 .build();
                         return userRepository.save(guest);
                     });
+        }
+
+        // Restriction: Bus Operators cannot book tickets on the platform
+        if (user.getRole() != null && ("ROLE_OPERATOR".equalsIgnoreCase(user.getRole()) || "OPERATOR".equalsIgnoreCase(user.getRole()))) {
+            throw new BadRequestException("Bus Operator accounts are restricted from booking passenger tickets. Please log in with a passenger account.");
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -174,6 +182,9 @@ public class BookingService {
                 .tripGuaranteeFee(tripGuaranteeFee)
                 .serviceFee(serviceFee)
                 .status(initialStatus)
+                .refundStatus("NONE")
+                .refundDestination("WALLET")
+                .refundStage("NONE")
                 .boardingPoint(request.getBoardingPoint())
                 .droppingPoint(request.getDroppingPoint())
                 .contactEmail(request.getContactEmail().trim())
@@ -198,7 +209,7 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
 
-        // If booking is 100% paid by wallet balance, immediately mark seats BOOKED and dispatch confirmation e-ticket
+        // If booking is 100% paid by wallet balance, immediately mark seats BOOKED and credit operator wallet
         if (isFullyPaidByWallet) {
             for (BookingPassenger bp : passengerEntities) {
                 routeSeatRepository.findByRouteIdAndSeatId(route.getId(), bp.getSeat().getId())
@@ -215,6 +226,8 @@ public class BookingService {
                         });
             }
 
+            creditOperatorWalletForBooking(saved);
+
             try {
                 emailService.sendBookingConfirmationEmail(saved, null);
             } catch (Exception e) {
@@ -223,6 +236,43 @@ public class BookingService {
         }
 
         return mapToDto(saved);
+    }
+
+    @Transactional
+    public void creditOperatorWalletForBooking(Booking booking) {
+        if (booking == null || booking.getOperatorId() == null) return;
+        Long opId = booking.getOperatorId();
+
+        Operator op = operatorRepository.findById(opId).orElse(null);
+        if (op == null) {
+            // Find first operator or by company name
+            op = operatorRepository.findAll().stream().findFirst().orElse(null);
+        }
+
+        if (op != null && op.getUser() != null) {
+            User opUser = op.getUser();
+            BigDecimal netEarnings = booking.getTotalAmount().add(booking.getWalletAmountUsed() != null ? booking.getWalletAmountUsed() : BigDecimal.ZERO)
+                    .subtract(booking.getCommissionAmount() != null ? booking.getCommissionAmount() : BigDecimal.ZERO)
+                    .max(BigDecimal.ZERO);
+
+            BigDecimal currentBal = opUser.getWalletBalance() != null ? opUser.getWalletBalance() : BigDecimal.ZERO;
+            BigDecimal newBal = currentBal.add(netEarnings);
+            opUser.setWalletBalance(newBal);
+            userRepository.save(opUser);
+
+            OperatorWalletTransaction tx = OperatorWalletTransaction.builder()
+                    .operatorId(op.getId())
+                    .bookingId(booking.getId())
+                    .pnr(booking.getPnr())
+                    .type("CREDIT_TICKET_FARE")
+                    .amount(netEarnings)
+                    .balanceAfter(newBal)
+                    .description("Ticket fare credited for PNR " + booking.getPnr() + " (Gross: ₹" + (booking.getTotalAmount().add(booking.getWalletAmountUsed())) + " less 10% commission ₹" + booking.getCommissionAmount() + ")")
+                    .build();
+            operatorWalletTransactionRepository.save(tx);
+
+            log.info("Credited Operator ID {} wallet with ₹{}. New wallet balance: ₹{}", op.getId(), netEarnings, newBal);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -284,12 +334,11 @@ public class BookingService {
     }
 
     @Transactional
-    public CancelBookingResponse cancelBooking(String pnr, String reason, Long currentUserId) {
+    public CancelBookingResponse cancelBooking(String pnr, String reason, String refundDestination, Long currentUserId) {
         Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
 
         if (currentUserId != null && !booking.getUser().getId().equals(currentUserId)) {
-            // Check if admin or owner
             User requestingUser = userRepository.findById(currentUserId).orElse(null);
             if (requestingUser == null || (!"ROLE_ADMIN".equals(requestingUser.getRole()) && !"ROLE_OPERATOR".equals(requestingUser.getRole()))) {
                 throw new BadRequestException("You are not authorized to cancel this booking");
@@ -309,13 +358,11 @@ public class BookingService {
         BigDecimal refundableBase = originalPaidTotal;
 
         if (Boolean.TRUE.equals(booking.getHasFreeCancellation())) {
-            // Free cancellation: 100% refund of the ticket amount (excluding non-refundable protection fee if any)
             if (booking.getFreeCancellationFee() != null) {
                 refundableBase = refundableBase.subtract(booking.getFreeCancellationFee());
             }
             refundAmount = refundableBase.max(BigDecimal.ZERO);
         } else {
-            // Dynamic time-based redBus cancellation refund policy
             Duration duration = Duration.between(now, departureDateTime);
             long hoursUntilDeparture = duration.toHours();
 
@@ -327,41 +374,26 @@ public class BookingService {
             } else if (hoursUntilDeparture >= 2) {
                 refundPercentage = new BigDecimal("0.50"); // 50% refund (2 to 12 hours before trip)
             } else {
-                refundPercentage = new BigDecimal("0.25"); // 25% refund (< 2 hours or same day before departure)
+                refundPercentage = new BigDecimal("0.25"); // 25% refund (< 2 hours before trip)
             }
 
             refundAmount = refundableBase.multiply(refundPercentage).setScale(2, RoundingMode.HALF_UP);
         }
 
+        String destination = (refundDestination != null && refundDestination.equalsIgnoreCase("ORIGINAL_PAYMENT"))
+                ? "ORIGINAL_PAYMENT"
+                : "WALLET";
+
         booking.setStatus("CANCELLED");
         booking.setCancellationReason(reason != null ? reason : "Cancelled by customer");
         booking.setRefundAmount(refundAmount);
+        booking.setRefundStatus("REQUESTED");
+        booking.setRefundDestination(destination);
+        booking.setRefundStage("OPERATOR_AUDIT");
+        booking.setRefundRequestedAt(LocalDateTime.now());
         bookingRepository.save(booking);
 
-        // Automatically return refund amount to user's redBus Wallet
-        User targetUser = (currentUserId != null) ? userRepository.findById(currentUserId).orElse(booking.getUser()) : booking.getUser();
-        BigDecimal updatedWalletBalance = BigDecimal.ZERO;
-        if (targetUser != null) {
-            if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal currentWallet = targetUser.getWalletBalance() != null ? targetUser.getWalletBalance() : BigDecimal.ZERO;
-                BigDecimal newWallet = currentWallet.add(refundAmount);
-                targetUser.setWalletBalance(newWallet);
-                userRepository.save(targetUser);
-                updatedWalletBalance = newWallet;
-                log.info("Successfully refunded ₹{} to user ID {} redBus Wallet. New wallet balance: ₹{}", refundAmount, targetUser.getId(), newWallet);
-            } else {
-                updatedWalletBalance = targetUser.getWalletBalance() != null ? targetUser.getWalletBalance() : BigDecimal.ZERO;
-            }
-
-            if (booking.getUser() != null && !booking.getUser().getId().equals(targetUser.getId()) && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-                User origUser = booking.getUser();
-                BigDecimal origWallet = origUser.getWalletBalance() != null ? origUser.getWalletBalance() : BigDecimal.ZERO;
-                origUser.setWalletBalance(origWallet.add(refundAmount));
-                userRepository.save(origUser);
-            }
-        }
-
-        // Free up the route seats
+        // Free up the route seats immediately so other travelers can book
         for (BookingPassenger passenger : booking.getPassengers()) {
             routeSeatRepository.findByRouteIdAndSeatId(route.getId(), passenger.getSeat().getId())
                     .ifPresent(rs -> {
@@ -372,23 +404,86 @@ public class BookingService {
                     });
         }
 
-        // Send cancellation email with updated cancelled ticket PDF attachment and wallet refund notification
+        // Send cancellation request notification
         try {
             emailService.sendBookingCancellationEmail(booking, refundAmount);
         } catch (Exception e) {
             log.warn("Failed to dispatch booking cancellation email for PNR {}: {}", booking.getPnr(), e.getMessage());
         }
 
-        String policyNote = Boolean.TRUE.equals(booking.getHasFreeCancellation())
-                ? " (100% Free Cancellation Protection applied)"
-                : "";
+        String destLabel = destination.equals("WALLET") ? "redBus Wallet (Instant upon audit)" : "Original Payment Method (3-5 business days)";
 
         return CancelBookingResponse.builder()
                 .pnr(booking.getPnr())
                 .status("CANCELLED")
+                .refundStatus("REQUESTED")
+                .refundDestination(destination)
+                .refundStage("OPERATOR_AUDIT")
                 .refundAmount(refundAmount)
-                .walletBalance(updatedWalletBalance)
-                .message("Booking cancelled successfully." + policyNote + " Refund of ₹" + refundAmount + " has been credited directly to your redBus Wallet!")
+                .walletBalance(booking.getUser().getWalletBalance() != null ? booking.getUser().getWalletBalance() : BigDecimal.ZERO)
+                .message("Cancellation initiated successfully! Refund of ₹" + refundAmount + " is queued for operator audit and will be disbursed to your " + destLabel + ".")
+                .build();
+    }
+
+    @Transactional
+    public CancelBookingResponse approveOperatorRefund(String pnr, Operator operator) {
+        Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
+
+        BigDecimal refundAmount = booking.getRefundAmount() != null ? booking.getRefundAmount() : BigDecimal.ZERO;
+        String destination = booking.getRefundDestination() != null ? booking.getRefundDestination() : "WALLET";
+
+        // 1. Debit the refund amount from operator's redBus wallet
+        if (operator != null && operator.getUser() != null) {
+            User opUser = operator.getUser();
+            BigDecimal currentOpWallet = opUser.getWalletBalance() != null ? opUser.getWalletBalance() : BigDecimal.ZERO;
+            BigDecimal newOpWallet = currentOpWallet.subtract(refundAmount);
+            opUser.setWalletBalance(newOpWallet);
+            userRepository.save(opUser);
+
+            OperatorWalletTransaction debitTx = OperatorWalletTransaction.builder()
+                    .operatorId(operator.getId())
+                    .bookingId(booking.getId())
+                    .pnr(booking.getPnr())
+                    .type("DEBIT_REFUND_AUDIT")
+                    .amount(refundAmount)
+                    .balanceAfter(newOpWallet)
+                    .description("Refund disbursed for PNR " + booking.getPnr() + " to passenger " + destination)
+                    .build();
+            operatorWalletTransactionRepository.save(debitTx);
+            log.info("Debited Operator ID {} wallet ₹{} for refund of PNR {}", operator.getId(), refundAmount, booking.getPnr());
+        }
+
+        // 2. Disburse refund to passenger if destination is WALLET
+        BigDecimal passengerWalletBalance = BigDecimal.ZERO;
+        User passenger = booking.getUser();
+        if ("WALLET".equalsIgnoreCase(destination) && passenger != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal passCurBal = passenger.getWalletBalance() != null ? passenger.getWalletBalance() : BigDecimal.ZERO;
+            BigDecimal passNewBal = passCurBal.add(refundAmount);
+            passenger.setWalletBalance(passNewBal);
+            userRepository.save(passenger);
+            passengerWalletBalance = passNewBal;
+            log.info("Credited passenger User ID {} redBus wallet with ₹{}. New balance: ₹{}", passenger.getId(), refundAmount, passNewBal);
+        } else if (passenger != null) {
+            passengerWalletBalance = passenger.getWalletBalance() != null ? passenger.getWalletBalance() : BigDecimal.ZERO;
+        }
+
+        // 3. Mark booking stage as COMPLETED / REFUNDED
+        booking.setStatus("REFUNDED");
+        booking.setRefundStatus("REFUNDED");
+        booking.setRefundStage("COMPLETED");
+        booking.setRefundApprovedAt(LocalDateTime.now());
+        bookingRepository.save(booking);
+
+        return CancelBookingResponse.builder()
+                .pnr(booking.getPnr())
+                .status("REFUNDED")
+                .refundStatus("REFUNDED")
+                .refundDestination(destination)
+                .refundStage("COMPLETED")
+                .refundAmount(refundAmount)
+                .walletBalance(passengerWalletBalance)
+                .message("Refund of ₹" + refundAmount + " approved and disbursed successfully to " + destination + "!")
                 .build();
     }
 
@@ -450,6 +545,11 @@ public class BookingService {
                 .tripGuaranteeFee(booking.getTripGuaranteeFee())
                 .serviceFee(booking.getServiceFee())
                 .status(booking.getStatus())
+                .refundStatus(booking.getRefundStatus())
+                .refundDestination(booking.getRefundDestination())
+                .refundStage(booking.getRefundStage())
+                .refundRequestedAt(booking.getRefundRequestedAt())
+                .refundApprovedAt(booking.getRefundApprovedAt())
                 .boardingPoint(booking.getBoardingPoint())
                 .droppingPoint(booking.getDroppingPoint())
                 .contactEmail(booking.getContactEmail())

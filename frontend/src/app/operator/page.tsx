@@ -23,6 +23,10 @@ import {
   useUpdateBusPhotosMutation,
   useGetOperatorManifestQuery,
   useLazyGetOperatorManifestQuery,
+  useGetOperatorRefundsQuery,
+  useApproveOperatorRefundMutation,
+  useGetOperatorAiPriceIntelligenceQuery,
+  useGetOperatorWalletLedgerQuery,
 } from "@/store/apiSlice";
 import AiCityDropdown from "@/components/AiCityDropdown";
 import BusImageSlider from "@/components/BusImageSlider";
@@ -75,11 +79,17 @@ import {
   FileText,
   Smartphone,
   ExternalLink,
+  RotateCcw,
+  Wallet,
+  ShieldAlert,
+  ArrowDownRight,
+  ArrowUpRight,
+  HelpCircle,
 } from "lucide-react";
 
 export default function OperatorPortalPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState<"analytics" | "fleet" | "schedules" | "manifest" | "coupons" | "profile">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "pricing-ai" | "refunds" | "wallet" | "fleet" | "schedules" | "manifest" | "coupons" | "profile">("analytics");
 
 
   // Modals
@@ -235,6 +245,54 @@ export default function OperatorPortalPage() {
   } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated });
 
   const [updateOperatorProfileMutation, { isLoading: isUpdatingProfile }] = useUpdateOperatorProfileMutation();
+
+  // AI Price Intelligence Hook
+  const {
+    data: aiPriceIntelligence = [],
+    isLoading: isLoadingAiPricing,
+    refetch: refetchAiPricing,
+  } = useGetOperatorAiPriceIntelligenceQuery(undefined, { skip: !isAuthenticated });
+
+  // Refunds & Audit Hooks
+  const {
+    data: operatorRefunds = [],
+    isLoading: isLoadingRefunds,
+    refetch: refetchRefunds,
+  } = useGetOperatorRefundsQuery(undefined, {
+    skip: !isAuthenticated,
+    pollingInterval: 12000,
+  });
+
+  const [approveOperatorRefundMutation, { isLoading: isApprovingRefund }] = useApproveOperatorRefundMutation();
+  const [approvingPnr, setApprovingPnr] = useState<string | null>(null);
+
+  const handleApproveRefund = async (pnr: string) => {
+    setApprovingPnr(pnr);
+    setFormError("");
+    setFormSuccess("");
+    try {
+      const res = await approveOperatorRefundMutation({ pnr }).unwrap();
+      setFormSuccess(res.message || `Refund for PNR ${pnr} approved & debited from operator redBus wallet!`);
+      refetchRefunds();
+      refetchWalletLedger();
+      refetchAnalytics();
+      setTimeout(() => setFormSuccess(""), 5000);
+    } catch (err: any) {
+      setFormError(err?.data?.message || "Failed to approve refund. Please check your wallet balance.");
+    } finally {
+      setApprovingPnr(null);
+    }
+  };
+
+  // Wallet Ledger Hook
+  const {
+    data: walletLedger,
+    isLoading: isLoadingWalletLedger,
+    refetch: refetchWalletLedger,
+  } = useGetOperatorWalletLedgerQuery(undefined, {
+    skip: !isAuthenticated,
+    pollingInterval: 12000,
+  });
 
   // Passenger Manifest & Conductor Verification states
   const [manifestDate, setManifestDate] = useState(
@@ -787,12 +845,15 @@ export default function OperatorPortalPage() {
           {/* Navigation Tabs */}
           <div className="flex flex-wrap gap-2 mt-8 border-t border-white/10 pt-4">
             {[
-              { id: "analytics", label: "Real-Time Analytics & Payouts", icon: BarChart3 },
+              { id: "analytics", label: "Real-Time Sales", icon: BarChart3 },
+              { id: "pricing-ai", label: "AI Price Intelligence", icon: Sparkles },
+              { id: "refunds", label: `Refunds & Audit (${operatorRefunds.filter((r) => r.refundStage === "OPERATOR_AUDIT" || r.refundStatus === "REQUESTED").length})`, icon: RotateCcw },
+              { id: "wallet", label: `redBus Wallet (₹${Number(walletLedger?.currentWalletBalance || 0).toLocaleString("en-IN")})`, icon: Wallet },
               { id: "fleet", label: `My Fleet (${buses.length})`, icon: Bus },
               { id: "schedules", label: `Active Schedules (${schedules.length})`, icon: Calendar },
-              { id: "manifest", label: "Passenger Manifest & Boarding", icon: FileCheck },
-              { id: "coupons", label: `Promotions & Coupons (${operatorCoupons.length})`, icon: Tag },
-              { id: "profile", label: "Agency Profile & Settings", icon: Building2 },
+              { id: "manifest", label: "Passenger Manifest", icon: FileCheck },
+              { id: "coupons", label: `Coupons (${displayCoupons.length})`, icon: Tag },
+              { id: "profile", label: "Agency Profile", icon: Building2 },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1039,7 +1100,555 @@ export default function OperatorPortalPage() {
           </div>
         )}
 
-        {/* TAB 2: FLEET MANAGER */}
+        {/* TAB 2: AI PRICE INTELLIGENCE & COMPETITIVE CORRIDORS */}
+        {activeTab === "pricing-ai" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-400/30 inline-flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    Autonomous Market Benchmarking Engine
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                    AI Competitor Price Intelligence & Demand Optimization
+                  </h2>
+                  <p className="text-xs sm:text-sm text-purple-200 mt-1 max-w-2xl">
+                    Compare your bus fares against competitors across identical route corridors in real time. Deploy dynamic promotional discounts and AI vouchers to boost seat load factors by up to 34%.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchAiPricing()}
+                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Corridor Analysis</span>
+                </button>
+              </div>
+            </div>
+
+            {isLoadingAiPricing ? (
+              <div className="py-16 text-center text-xs text-gray-500 bg-white rounded-3xl border border-gray-100">
+                <Sparkles className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-2" />
+                <span>Synthesizing competitive route pricing models...</span>
+              </div>
+            ) : aiPriceIntelligence.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 space-y-3">
+                <Sparkles className="w-12 h-12 text-purple-300 mx-auto" />
+                <h3 className="text-base font-bold text-gray-900">No Active Corridors Found</h3>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  Publish schedules with bus routes to unlock autonomous corridor price comparisons and AI promotional recommendations.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {aiPriceIntelligence.map((intel, idx) => {
+                  const isCompetitive = intel.priceDifferencePercentage < -5;
+                  const isPremium = intel.priceDifferencePercentage > 5;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-white rounded-3xl border border-gray-200 p-6 shadow-xs hover:shadow-md transition-all space-y-6"
+                    >
+                      {/* Corridor Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-sm shrink-0">
+                            <Bus className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">
+                              Active Corridor
+                            </span>
+                            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                              <span>{intel.corridor}</span>
+                              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-700">
+                                {intel.myBusType}
+                              </span>
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                              isCompetitive
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : isPremium
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-blue-50 text-blue-700 border border-blue-200"
+                            }`}
+                          >
+                            {intel.priceDifferencePercentage < 0
+                              ? `${Math.abs(intel.priceDifferencePercentage)}% Lower than Market Avg`
+                              : intel.priceDifferencePercentage > 0
+                              ? `${intel.priceDifferencePercentage}% Higher than Market Avg`
+                              : "Market Equilibrium Match"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Pricing Comparative Metrics Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100">
+                          <span className="text-[10px] text-purple-600 font-bold uppercase tracking-wider block">
+                            Your Current Base Fare
+                          </span>
+                          <span className="text-2xl font-black text-purple-900 mt-1 block">
+                            ₹{Number(intel.myCurrentPrice).toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-purple-700 font-semibold mt-0.5 block">
+                            Live on redBus
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                            Corridor Market Average
+                          </span>
+                          <span className="text-2xl font-black text-gray-800 mt-1 block">
+                            ₹{Number(intel.marketAveragePrice).toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium mt-0.5 block">
+                            Calculated across operators
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                            Market Lowest Fare
+                          </span>
+                          <span className="text-2xl font-black text-emerald-700 mt-1 block">
+                            ₹{Number(intel.marketLowestPrice).toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
+                            Budget competitor tier
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">
+                            Estimated Occupancy
+                          </span>
+                          <span className="text-2xl font-black text-blue-900 mt-1 block">
+                            {intel.predictedDemandOccupancy}%
+                          </span>
+                          <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">
+                            AI demand forecast
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* AI Recommendation and Promotional Action */}
+                      <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50 border border-purple-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1.5 flex-1">
+                          <span className="text-xs font-black uppercase tracking-wider text-purple-800 flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            AI Strategy Recommendation
+                          </span>
+                          <p className="text-xs text-purple-950 font-medium leading-relaxed">
+                            {intel.aiRecommendation}
+                          </p>
+                        </div>
+
+                        {intel.suggestedPromoCode && (
+                          <div className="bg-white p-3.5 rounded-xl border border-purple-200 shadow-2xs space-y-2 shrink-0 md:min-w-[240px]">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-gray-700">Suggested Promo Code:</span>
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                Save {intel.suggestedPromoDiscount}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-black text-sm bg-purple-100/70 text-purple-800 px-3 py-1 rounded-lg border border-purple-300 flex-1 text-center">
+                                {intel.suggestedPromoCode}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(intel.suggestedPromoCode);
+                                  setFormSuccess(`Copied promo code ${intel.suggestedPromoCode} to clipboard! Paste it into Promotions & Coupons.`);
+                                  setTimeout(() => setFormSuccess(""), 4000);
+                                }}
+                                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                              >
+                                Copy Code
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Competitor Benchmark Breakdown Table */}
+                      {intel.competitorBenchmarks && intel.competitorBenchmarks.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                            Corridor Competitor Benchmarks
+                          </span>
+                          <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                                <tr>
+                                  <th className="px-4 py-2.5">Operator</th>
+                                  <th className="px-4 py-2.5">Bus Type</th>
+                                  <th className="px-4 py-2.5">Rating</th>
+                                  <th className="px-4 py-2.5">Base Fare</th>
+                                  <th className="px-4 py-2.5">Delta vs Your Price</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {intel.competitorBenchmarks.map((bench, bIdx) => {
+                                  const isHigher = bench.differenceFromMe > 0;
+                                  const isLower = bench.differenceFromMe < 0;
+
+                                  return (
+                                    <tr key={bIdx} className="hover:bg-gray-50/60">
+                                      <td className="px-4 py-2.5 font-bold text-gray-900">{bench.operatorName}</td>
+                                      <td className="px-4 py-2.5 text-gray-600">{bench.busType}</td>
+                                      <td className="px-4 py-2.5">
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                          ★ {bench.rating}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 font-black text-gray-900">
+                                        ₹{Number(bench.price).toFixed(2)}
+                                      </td>
+                                      <td className="px-4 py-2.5 font-bold">
+                                        {bench.differenceFromMe === 0 ? (
+                                          <span className="text-gray-500">Same Price</span>
+                                        ) : isHigher ? (
+                                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                            +₹{Math.abs(bench.differenceFromMe).toFixed(2)} (Competitor Higher)
+                                          </span>
+                                        ) : (
+                                          <span className="text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                                            -₹{Math.abs(bench.differenceFromMe).toFixed(2)} (Competitor Cheaper)
+                                          </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: REFUNDS & CANCELLATIONS AUDIT SECTION */}
+        {activeTab === "refunds" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-gradient-to-r from-slate-900 via-gray-900 to-red-950 rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-red-500/20 text-red-300 border border-red-400/30 inline-flex items-center gap-1.5 mb-2">
+                    <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+                    Operator Passenger Cancellation Audit & Disbursement
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                    Refund Audit & Wallet Settlement Console
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
+                    Inspect passenger cancellation requests, verify reason and itinerary, and disburse refund amounts directly from your operator redBus wallet in real time.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchRefunds()}
+                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Queue</span>
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-1">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Pending Operator Audit
+                </span>
+                <span className="text-2xl font-black text-amber-600 block">
+                  {operatorRefunds.filter((r) => r.refundStage === "OPERATOR_AUDIT" || r.refundStatus === "REQUESTED").length} Requests
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">Awaiting disbursement approval</span>
+              </div>
+
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-1">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Completed & Disbursed
+                </span>
+                <span className="text-2xl font-black text-emerald-700 block">
+                  {operatorRefunds.filter((r) => r.refundStage === "COMPLETED" || r.refundStatus === "REFUNDED").length} Refunds
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">Debited from operator wallet</span>
+              </div>
+
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-1">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Total Refunded Amount
+                </span>
+                <span className="text-2xl font-black text-red-600 block">
+                  ₹{operatorRefunds.filter((r) => r.refundStage === "COMPLETED" || r.refundStatus === "REFUNDED").reduce((sum, r) => sum + Number(r.refundAmount || 0), 0).toFixed(2)}
+                </span>
+                <span className="text-[10px] text-gray-500 font-medium">Settled to passenger wallets/banks</span>
+              </div>
+            </div>
+
+            {/* Refunds Table */}
+            {isLoadingRefunds ? (
+              <div className="py-16 text-center text-xs text-gray-400 bg-white rounded-3xl border border-gray-100">
+                Loading refund requests...
+              </div>
+            ) : operatorRefunds.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 space-y-3">
+                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                <h3 className="text-base font-bold text-gray-900">No Cancellation Requests in Queue</h3>
+                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                  All passenger cancellations have been audited and refunded, or there are no pending cancellation requests.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs">
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4 text-[#d84e55]" />
+                    <span>Passenger Cancellation & Refund Queue</span>
+                  </h3>
+                  <span className="text-xs text-gray-500 font-medium">
+                    Showing {operatorRefunds.length} total cancellations
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50/70 text-gray-500 font-bold border-b border-gray-200">
+                      <tr>
+                        <th className="px-5 py-3">PNR & Travel Date</th>
+                        <th className="px-5 py-3">Passenger</th>
+                        <th className="px-5 py-3">Route & Bus</th>
+                        <th className="px-5 py-3">Seat(s)</th>
+                        <th className="px-5 py-3">Total Paid</th>
+                        <th className="px-5 py-3">Refund Amount</th>
+                        <th className="px-5 py-3">Destination</th>
+                        <th className="px-5 py-3">Reason</th>
+                        <th className="px-5 py-3">Status</th>
+                        <th className="px-5 py-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {operatorRefunds.map((refItem) => {
+                        const isPending = refItem.refundStage === "OPERATOR_AUDIT" || refItem.refundStatus === "REQUESTED";
+                        const isBusy = approvingPnr === refItem.pnr && isApprovingRefund;
+
+                        return (
+                          <tr key={refItem.bookingId} className="hover:bg-gray-50/60 transition-colors">
+                            <td className="px-5 py-3.5 font-mono font-bold text-gray-900">
+                              <div>{refItem.pnr}</div>
+                              <div className="text-[10px] text-gray-400 font-sans font-normal">{refItem.travelDate || "Date"}</div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="font-bold text-gray-900">{refItem.passengerName}</div>
+                              <div className="text-[10px] text-gray-400">{refItem.contactPhone || refItem.contactEmail}</div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="font-semibold text-gray-800">{refItem.sourceCity} ➔ {refItem.destinationCity}</div>
+                              <div className="text-[10px] text-gray-500">{refItem.busName}</div>
+                            </td>
+                            <td className="px-5 py-3.5 font-black text-[#d84e55]">
+                              {refItem.seatNumbers?.join(", ") || "N/A"}
+                            </td>
+                            <td className="px-5 py-3.5 font-semibold text-gray-700">
+                              ₹{Number(refItem.totalPaid).toFixed(2)}
+                            </td>
+                            <td className="px-5 py-3.5 font-black text-emerald-700 text-sm">
+                              ₹{Number(refItem.refundAmount).toFixed(2)}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 flex items-center gap-1 w-fit">
+                                {refItem.refundDestination === "ORIGINAL_PAYMENT" ? <CreditCard className="w-3 h-3" /> : <Wallet className="w-3 h-3 text-emerald-600" />}
+                                {refItem.refundDestination === "ORIGINAL_PAYMENT" ? "Original Method" : "redBus Wallet"}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-600 max-w-[140px] truncate" title={refItem.cancellationReason}>
+                              {refItem.cancellationReason || "Change of plans"}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              {isPending ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> Audit Pending
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> Disbursed
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5 text-right">
+                              {isPending ? (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleApproveRefund(refItem.pnr)}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1 ml-auto"
+                                >
+                                  {isBusy ? (
+                                    <span>Debiting...</span>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Approve & Refund</span>
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-gray-400 font-medium">Completed</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: REDBUS WALLET & FINANCIAL LEDGER */}
+        {activeTab === "wallet" && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Wallet Hero Card */}
+            <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 inline-flex items-center gap-1.5">
+                    <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                    Operator redBus Wallet Account
+                  </span>
+                  <div className="text-3xl sm:text-4xl font-black tracking-tight text-white flex items-center gap-2">
+                    <span>₹{Number(walletLedger?.currentWalletBalance || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <p className="text-xs text-emerald-200/90 max-w-xl leading-relaxed">
+                    Earnings from passenger ticket bookings are credited directly to your operator wallet upon reservation. Cancellation refunds approved by you are debited from this wallet.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 bg-white/10 p-4 rounded-2xl border border-white/10 shrink-0">
+                  <div>
+                    <span className="text-[10px] text-emerald-300 font-bold uppercase block">Total Credited Sales</span>
+                    <span className="text-lg font-black text-white">
+                      ₹{Number(walletLedger?.totalEarningsCredited || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-red-300 font-bold uppercase block">Total Debited Refunds</span>
+                    <span className="text-lg font-black text-white">
+                      ₹{Number(walletLedger?.totalRefundsDebited || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Ledger Table */}
+            <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs space-y-4 p-6">
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-4 border-b border-gray-100">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#d84e55]" />
+                    <span>Real-Time Wallet Transaction Ledger</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Itemized record of ticket fare credits, platform fees, and cancellation audit debits
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchWalletLedger()}
+                  className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Ledger</span>
+                </button>
+              </div>
+
+              {isLoadingWalletLedger ? (
+                <div className="py-12 text-center text-xs text-gray-400">Loading ledger transactions...</div>
+              ) : !walletLedger?.transactions || walletLedger.transactions.length === 0 ? (
+                <div className="p-8 text-center text-xs text-gray-500">
+                  No wallet transactions recorded yet. When tickets are booked or refunded, transactions will appear here.
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3">Tx ID & Date</th>
+                        <th className="px-4 py-3">PNR</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Description</th>
+                        <th className="px-4 py-3">Amount</th>
+                        <th className="px-4 py-3 text-right">Balance After</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {walletLedger.transactions.map((tx) => {
+                        const isCredit = tx.type?.includes("CREDIT");
+                        return (
+                          <tr key={tx.id} className="hover:bg-gray-50/60">
+                            <td className="px-4 py-3 font-mono">
+                              <div className="font-bold text-gray-900">TX-{tx.id}</div>
+                              <div className="text-[10px] text-gray-400">{tx.createdAt ? new Date(tx.createdAt).toLocaleString() : "Just now"}</div>
+                            </td>
+                            <td className="px-4 py-3 font-mono font-bold text-gray-700">
+                              {tx.pnr || "N/A"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                  isCredit
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {tx.type}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {tx.description}
+                            </td>
+                            <td className="px-4 py-3 font-black text-sm">
+                              <span className={isCredit ? "text-emerald-700" : "text-red-600"}>
+                                {isCredit ? "+" : "-"}₹{Number(tx.amount).toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono font-bold text-gray-900">
+                              ₹{Number(tx.balanceAfter).toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: FLEET MANAGER */}
         {activeTab === "fleet" && (
           <div className="space-y-6 animate-in fade-in">
             <div className="flex items-center justify-between">

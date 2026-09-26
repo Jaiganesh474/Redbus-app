@@ -33,6 +33,11 @@ public class BookingResponseDto {
     private String contactPhone;
     private String cancellationReason;
     private BigDecimal refundAmount;
+    private String refundStatus;
+    private String refundDestination;
+    private String refundStage;
+    private LocalDateTime refundRequestedAt;
+    private LocalDateTime refundApprovedAt;
     private BigDecimal walletAmountUsed;
     private String couponCode;
     private BigDecimal discountAmount;

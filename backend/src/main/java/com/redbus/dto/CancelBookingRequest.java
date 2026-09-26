@@ -12,4 +12,5 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CancelBookingRequest {
     private String reason;
+    private String refundDestination; // 'WALLET' or 'ORIGINAL_PAYMENT'
 }

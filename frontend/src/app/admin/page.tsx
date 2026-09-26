@@ -13,6 +13,7 @@ import {
   useGetAdminAiMonitoringQuery,
   useGetAdminUserActivityQuery,
   useSimulateAdminAiQueryMutation,
+  useGetAdminOperatorEarningsQuery,
 } from "@/store/apiSlice";
 import {
   Shield,
@@ -24,6 +25,7 @@ import {
   XCircle,
   Clock,
   ArrowUpRight,
+  ArrowDownRight,
   AlertTriangle,
   Building2,
   Percent,
@@ -44,12 +46,14 @@ import {
   Play,
   Check,
   Filter,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState<
-    "operators" | "analytics" | "bookings" | "ai_monitoring" | "user_activity"
+    "operators" | "earnings" | "analytics" | "bookings" | "ai_monitoring" | "user_activity"
   >("operators");
   const [page, setPage] = useState(0);
 
@@ -99,6 +103,15 @@ export default function AdminDashboardPage() {
   } = useGetAdminUserActivityQuery(undefined, {
     skip: !isAdmin,
     pollingInterval: 6000,
+  });
+
+  const {
+    data: operatorEarnings,
+    isLoading: isEarningsLoading,
+    refetch: refetchEarnings,
+  } = useGetAdminOperatorEarningsQuery(undefined, {
+    skip: !isAdmin,
+    pollingInterval: 10000,
   });
 
   const [verifyOperatorMutation, { isLoading: isVerifying }] = useVerifyOperatorMutation();
@@ -342,6 +355,21 @@ export default function AdminDashboardPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab("earnings")}
+          className={`pb-3 text-xs font-bold flex items-center space-x-2 border-b-2 transition-colors shrink-0 cursor-pointer ${
+            activeTab === "earnings"
+              ? "border-[#d84e55] text-[#d84e55]"
+              : "border-transparent text-gray-500 hover:text-gray-900"
+          }`}
+        >
+          <Wallet className="w-4 h-4 text-emerald-600" />
+          <span>Operator Earnings & Wallets</span>
+          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-black">
+            FINANCIALS
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("ai_monitoring")}
           className={`pb-3 text-xs font-bold flex items-center space-x-2 border-b-2 transition-colors shrink-0 cursor-pointer ${
             activeTab === "ai_monitoring"
@@ -536,6 +564,179 @@ export default function AdminDashboardPage() {
                               Suspend
                             </button>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: OPERATOR FINANCIALS & EARNINGS ANALYTICS */}
+      {activeTab === "earnings" && (
+        <div className="space-y-6 animate-in fade-in">
+          {/* Earnings Financial KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-gray-400">Total Gross Bookings</span>
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-gray-900">
+                ₹{operatorEarnings ? Number(operatorEarnings.systemGrossRevenue || 0).toLocaleString("en-IN") : "0"}
+              </p>
+              <p className="text-[11px] text-gray-500 font-medium">100% Passenger Fares</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-emerald-200 bg-emerald-50/30 shadow-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-emerald-700">Platform Commission (10%)</span>
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <Percent className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-emerald-800">
+                ₹{operatorEarnings ? Number(operatorEarnings.systemCommissionsCollected || 0).toLocaleString("en-IN") : "0"}
+              </p>
+              <p className="text-[11px] text-emerald-700 font-semibold">10% redBus Platform Revenue</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-indigo-200 bg-indigo-50/20 shadow-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-indigo-700">Operator Net Payouts (90%)</span>
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-indigo-900">
+                ₹{operatorEarnings ? Number(operatorEarnings.systemNetOperatorPayouts || 0).toLocaleString("en-IN") : "0"}
+              </p>
+              <p className="text-[11px] text-indigo-600 font-medium">Net Credited to Operators</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-rose-200 bg-rose-50/20 shadow-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-rose-700">Audited Refunds Processed</span>
+                <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+                  <ArrowDownRight className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-2xl font-black text-rose-700">
+                ₹{operatorEarnings ? Number(operatorEarnings.systemTotalRefundsProcessed || 0).toLocaleString("en-IN") : "0"}
+              </p>
+              <p className="text-[11px] text-rose-600 font-medium">Total Refund Disbursements</p>
+            </div>
+          </div>
+
+          {/* Breakdown by Operator Table */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
+                  <span>Operator Earnings & Wallet Ledger Analytics</span>
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Real-time 90/10 financial split, passenger refund debits, and live redBus operator wallet balances
+                </p>
+              </div>
+              <button
+                onClick={() => refetchEarnings()}
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh Ledger</span>
+              </button>
+            </div>
+
+            {isEarningsLoading ? (
+              <div className="py-12 text-center text-xs text-gray-400">Loading operator earnings analytics...</div>
+            ) : !operatorEarnings || !operatorEarnings.operatorEarnings || operatorEarnings.operatorEarnings.length === 0 ? (
+              <div className="py-12 text-center text-xs text-gray-400">No operator earnings data available.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-100 text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-6 py-3.5">Operator</th>
+                      <th className="px-4 py-3.5">Bookings</th>
+                      <th className="px-4 py-3.5">Gross Revenue</th>
+                      <th className="px-4 py-3.5">Platform Cut (10%)</th>
+                      <th className="px-4 py-3.5">Net Earnings (90%)</th>
+                      <th className="px-4 py-3.5">Refunds Debited</th>
+                      <th className="px-4 py-3.5">Operator Wallet Balance</th>
+                      <th className="px-6 py-3.5 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-gray-700">
+                    {operatorEarnings.operatorEarnings.map((op) => (
+                      <tr key={op.operatorId} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-gray-900 text-sm">{op.companyName}</div>
+                          <div className="text-[11px] text-gray-400">{op.email}</div>
+                          <span className="text-[10px] text-gray-400 font-mono">ID: #{op.operatorId}</span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-bold text-gray-800">{op.totalConfirmedBookings} Bookings</span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-semibold text-gray-900">
+                            ₹{Number(op.grossRevenue || 0).toLocaleString("en-IN")}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-[11px]">
+                            ₹{Number(op.commissionPaid || 0).toLocaleString("en-IN")}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-black text-indigo-700">
+                            ₹{Number(op.netEarnings || 0).toLocaleString("en-IN")}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-bold text-rose-600">
+                            ₹{Number(op.totalRefundsApproved || 0).toLocaleString("en-IN")}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="flex items-center space-x-1.5">
+                            <Wallet className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span className="font-black text-amber-900 text-sm">
+                              ₹{Number(op.walletBalance || 0).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                              op.status === "APPROVED"
+                                ? "text-emerald-700 bg-emerald-100"
+                                : op.status === "PENDING"
+                                ? "text-amber-800 bg-amber-100"
+                                : "text-red-700 bg-red-100"
+                            }`}
+                          >
+                            {op.status === "APPROVED" ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3" /> Active
+                              </>
+                            ) : (
+                              op.status
+                            )}
+                          </span>
                         </td>
                       </tr>
                     ))}

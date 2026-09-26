@@ -36,6 +36,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final RouteSeatRepository routeSeatRepository;
     private final EmailService emailService;
+    private final BookingService bookingService;
 
     @Value("${app.razorpay.key-id:rzp_test_redbusKeyMock}")
     private String razorpayKeyId;
@@ -130,6 +131,9 @@ public class PaymentService {
 
         booking.setStatus("CONFIRMED");
         bookingRepository.save(booking);
+
+        // Credit Operator redBus wallet with net ticket earnings
+        bookingService.creditOperatorWalletForBooking(booking);
 
         // Automatically dispatch confirmation e-ticket email with PDF attachment
         try {

@@ -102,8 +102,9 @@ public class BookingController {
             @RequestHeader(value = "Authorization", required = false) String authHeader
     ) {
         Long userId = extractUserIdFromHeader(authHeader);
-        String reason = request != null ? request.getReason() : "Customer cancelled online";
-        CancelBookingResponse response = bookingService.cancelBooking(pnr, reason, userId);
+        String reason = request != null && request.getReason() != null ? request.getReason() : "Customer cancelled online";
+        String destination = request != null && request.getRefundDestination() != null ? request.getRefundDestination() : "WALLET";
+        CancelBookingResponse response = bookingService.cancelBooking(pnr, reason, destination, userId);
         return ResponseEntity.ok(response);
     }
 

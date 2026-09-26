@@ -38,6 +38,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final BusRouteService busRouteService;
     private final BookingService bookingService;
+    private final com.redbus.service.OperatorAnalyticsService operatorAnalyticsService;
 
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsDto> getStats() {
@@ -191,5 +192,10 @@ public class AdminController {
                 .map(busRouteService::mapToRouteDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(routes);
+    }
+
+    @GetMapping("/operator-earnings")
+    public ResponseEntity<com.redbus.dto.AdminOperatorEarningsDto> getOperatorEarnings() {
+        return ResponseEntity.ok(operatorAnalyticsService.getAdminOperatorEarnings());
     }
 }
