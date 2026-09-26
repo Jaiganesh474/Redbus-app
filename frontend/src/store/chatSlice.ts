@@ -6,6 +6,7 @@ interface ChatState {
   sessionId: string;
   messages: ChatMessageItem[];
   isTyping: boolean;
+  isSeatSelectionOpen: boolean;
 }
 
 const initialWelcomeMessage: ChatMessageItem = {
@@ -27,6 +28,7 @@ const initialState: ChatState = {
   sessionId: "session-" + Math.random().toString(36).substring(2, 10),
   messages: [initialWelcomeMessage],
   isTyping: false,
+  isSeatSelectionOpen: false,
 };
 
 export const chatSlice = createSlice({
@@ -35,6 +37,9 @@ export const chatSlice = createSlice({
   reducers: {
     toggleChat: (state, action: PayloadAction<boolean | undefined>) => {
       state.isOpen = action.payload !== undefined ? action.payload : !state.isOpen;
+    },
+    setSeatSelectionOpen: (state, action: PayloadAction<boolean>) => {
+      state.isSeatSelectionOpen = action.payload;
     },
     addMessage: (state, action: PayloadAction<ChatMessageItem>) => {
       state.messages.push(action.payload);
@@ -49,5 +54,5 @@ export const chatSlice = createSlice({
   },
 });
 
-export const { toggleChat, addMessage, setTyping, clearChat } = chatSlice.actions;
+export const { toggleChat, setSeatSelectionOpen, addMessage, setTyping, clearChat } = chatSlice.actions;
 export default chatSlice.reducer;

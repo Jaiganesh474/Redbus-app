@@ -96,7 +96,7 @@ function renderFormattedContent(text: string) {
 export default function AiChatWidget() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isOpen, messages, isTyping, sessionId } = useAppSelector((state) => state.chat);
+  const { isOpen, messages, isTyping, sessionId, isSeatSelectionOpen } = useAppSelector((state) => state.chat);
   const { user } = useAppSelector((state) => state.auth);
   const searchState = useAppSelector((state) => state.search);
 
@@ -240,7 +240,9 @@ export default function AiChatWidget() {
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
           type="button"
           onClick={() => dispatch(toggleChat(true))}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:bottom-6 sm:right-6 z-50 flex items-center space-x-2.5 px-5 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 via-[#d84e55] to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-full shadow-2xl hover:scale-105 transition-all group active:scale-95 text-xs sm:text-sm font-extrabold tracking-wide cursor-pointer border border-white/20 whitespace-nowrap"
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:bottom-6 sm:right-6 z-50 items-center space-x-2.5 px-5 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 via-[#d84e55] to-red-600 hover:from-purple-700 hover:to-red-700 text-white rounded-full shadow-2xl hover:scale-105 transition-all group active:scale-95 text-xs sm:text-sm font-extrabold tracking-wide cursor-pointer border border-white/20 whitespace-nowrap ${
+            isSeatSelectionOpen ? "hidden sm:flex" : "flex"
+          }`}
         >
           <div className="relative flex items-center justify-center">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-spin-slow" />

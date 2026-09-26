@@ -11,6 +11,7 @@ import {
   setBoardingPoint,
   setDroppingPoint,
 } from "@/store/bookingSlice";
+import { setSeatSelectionOpen } from "@/store/chatSlice";
 import {
   useGetRouteSeatsQuery,
   useGetBusReviewsQuery,
@@ -111,16 +112,20 @@ export default function BusDetailsModal({
   // Realistic 1-second seat loading timer so seat layout loading looks authentic
   const [isMinSeatLoading, setIsMinSeatLoading] = useState(true);
 
-  // Prevent background scrolling when modal is open
+  // Prevent background scrolling and hide Ask RAY on mobile when modal is open
   useEffect(() => {
     if (isOpen) {
+      dispatch(setSeatSelectionOpen(true));
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = originalOverflow || "auto";
+        dispatch(setSeatSelectionOpen(false));
       };
+    } else {
+      dispatch(setSeatSelectionOpen(false));
     }
-  }, [isOpen]);
+  }, [isOpen, dispatch]);
 
   useEffect(() => {
     if (isOpen) {
