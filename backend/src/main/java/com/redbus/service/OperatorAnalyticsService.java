@@ -203,13 +203,29 @@ public class OperatorAnalyticsService {
     ) {
         Long opId = operator.getId();
         List<Booking> allBookings = bookingRepository.findByOperatorIdOrderByCreatedAtDesc(opId);
+        final com.redbus.entity.Schedule targetSchedule = (scheduleId != null)
+                ? scheduleRepository.findById(scheduleId).orElse(null)
+                : null;
 
         return allBookings.stream()
                 .filter(b -> !"CANCELLED".equalsIgnoreCase(b.getStatus()) && !"EXPIRED".equalsIgnoreCase(b.getStatus()))
                 .filter(b -> b.getRoute() != null)
                 .filter(b -> travelDate == null || travelDate.equals(b.getRoute().getTravelDate()))
                 .filter(b -> busId == null || (b.getRoute().getBus() != null && busId.equals(b.getRoute().getBus().getId())))
-                .filter(b -> scheduleId == null || (b.getRoute().getSchedule() != null && scheduleId.equals(b.getRoute().getSchedule().getId())))
+                .filter(b -> {
+                    if (scheduleId == null) return true;
+                    Route r = b.getRoute();
+                    if (r == null) return false;
+                    if (scheduleId.equals(r.getId())) return true;
+                    if (targetSchedule != null) {
+                        boolean matchSrc = targetSchedule.getSourceCity() == null || targetSchedule.getSourceCity().equalsIgnoreCase(r.getSourceCity());
+                        boolean matchDst = targetSchedule.getDestinationCity() == null || targetSchedule.getDestinationCity().equalsIgnoreCase(r.getDestinationCity());
+                        boolean matchTime = targetSchedule.getDepartureTime() == null || targetSchedule.getDepartureTime().equals(r.getDepartureTime());
+                        boolean matchBus = targetSchedule.getBus() == null || (r.getBus() != null && targetSchedule.getBus().getId().equals(r.getBus().getId()));
+                        return matchSrc && matchDst && matchTime && matchBus;
+                    }
+                    return false;
+                })
                 .flatMap(b -> {
                     Route r = b.getRoute();
                     Bus bus = r != null ? r.getBus() : null;

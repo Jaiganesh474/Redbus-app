@@ -7,9 +7,13 @@ import com.redbus.exception.BadRequestException;
 import com.redbus.service.AuthService;
 import com.redbus.service.OperatorAnalyticsService;
 import com.redbus.service.OperatorService;
+import com.redbus.service.PdfService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,7 +39,7 @@ public class OperatorController {
     private final AuthService authService;
     private final OperatorService operatorService;
     private final OperatorAnalyticsService operatorAnalyticsService;
-    private final com.redbus.service.PdfService pdfService;
+    private final PdfService pdfService;
 
     private Operator getAuthenticatedOperator() {
         User user = authService.getAuthenticatedUser();
@@ -136,19 +141,19 @@ public class OperatorController {
 
     @GetMapping("/manifest")
     public ResponseEntity<List<OperatorPassengerManifestDto>> getPassengerManifest(
-            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long busId,
             @RequestParam(required = false) Long scheduleId
     ) {
         Operator op = getAuthenticatedOperator();
-        java.time.LocalDate travelDate = date != null ? date : java.time.LocalDate.now();
+        LocalDate travelDate = date != null ? date : LocalDate.now();
         List<OperatorPassengerManifestDto> manifest = operatorAnalyticsService.getPassengerManifest(op, travelDate, busId, scheduleId);
         return ResponseEntity.ok(manifest);
     }
 
     @GetMapping("/manifest/pdf")
     public ResponseEntity<byte[]> downloadPassengerManifestPdf(
-            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long busId,
             @RequestParam(required = false) Long scheduleId,
             @RequestParam(required = false) String routeName,
@@ -156,7 +161,7 @@ public class OperatorController {
             @RequestParam(required = false) String departureTime
     ) {
         Operator op = getAuthenticatedOperator();
-        java.time.LocalDate travelDate = date != null ? date : java.time.LocalDate.now();
+        LocalDate travelDate = date != null ? date : LocalDate.now();
         List<OperatorPassengerManifestDto> manifest = operatorAnalyticsService.getPassengerManifest(op, travelDate, busId, scheduleId);
 
         byte[] pdfBytes = pdfService.generatePassengerManifestPdf(
@@ -172,9 +177,9 @@ public class OperatorController {
         String safeRoute = routeName != null ? routeName.replaceAll("[^a-zA-Z0-9]", "_") : "bus_manifest";
         String filename = "passenger_manifest_" + safeRoute + "_" + dateStr + ".pdf";
 
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(filename).build());
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
@@ -208,5 +213,3 @@ public class OperatorController {
         return ResponseEntity.noContent().build();
     }
 }
-
-
