@@ -10,6 +10,7 @@ import {
   syncPassengers,
   hydrateBookingState,
   ensureDefaultPassenger,
+  resetBookingState,
 } from "@/store/bookingSlice";
 import {
   useGetRouteByIdQuery,
@@ -384,6 +385,7 @@ function CheckoutContent() {
             pnr: booking.pnr,
           })
         );
+        dispatch(resetBookingState());
         router.push(`/booking-confirmation?pnr=${booking.pnr}`);
         return;
       }
@@ -450,6 +452,7 @@ function CheckoutContent() {
                   pnr: booking.pnr,
                 })
               );
+              dispatch(resetBookingState());
               router.push(`/booking-confirmation?pnr=${booking.pnr}`);
             }
           } catch (vErr: any) {

@@ -269,13 +269,17 @@ export default function OperatorPortalPage() {
     setIsDownloadingPdf(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("redbus_token") : null;
-      let url = `/api/v1/operator/manifest/pdf?date=${manifestDate}`;
+      let endpoint = `/operator/manifest/pdf?date=${manifestDate}`;
       if (manifestScheduleId !== "ALL") {
-        url += `&scheduleId=${manifestScheduleId}`;
+        endpoint += `&scheduleId=${manifestScheduleId}`;
       }
+      if (token) {
+        endpoint += `&token=${encodeURIComponent(token)}`;
+      }
+
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-      const cleanApiBase = apiBase.endsWith("/api/v1") ? apiBase.slice(0, -7) : apiBase;
-      const fullUrl = `${cleanApiBase}${url}`;
+      const baseUrl = apiBase.endsWith("/") ? apiBase.slice(0, -1) : apiBase;
+      const fullUrl = `${baseUrl}${endpoint}`;
 
       const response = await fetch(fullUrl, {
         headers: {
@@ -284,7 +288,8 @@ export default function OperatorPortalPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate Passenger Manifest PDF");
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to generate Passenger Manifest PDF");
       }
 
       const blob = await response.blob();

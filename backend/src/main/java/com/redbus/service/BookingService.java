@@ -150,10 +150,18 @@ public class BookingService {
         String initialStatus = isFullyPaidByWallet ? "CONFIRMED" : "PENDING_PAYMENT";
         String pnr = generatePnr();
 
+        Long bookingOperatorId = route.getOperatorId();
+        if (bookingOperatorId == null && route.getBus() != null) {
+            bookingOperatorId = route.getBus().getOperatorId();
+        }
+        if (bookingOperatorId == null) {
+            bookingOperatorId = 1L;
+        }
+
         Booking booking = Booking.builder()
                 .user(user)
                 .route(route)
-                .operatorId(route.getOperatorId())
+                .operatorId(bookingOperatorId)
                 .commissionAmount(baseFareAmount.multiply(new BigDecimal("0.10")))
                 .pnr(pnr)
                 .totalAmount(finalTotalAmount)

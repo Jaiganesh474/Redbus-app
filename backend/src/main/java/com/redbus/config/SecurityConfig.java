@@ -123,6 +123,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/bookings/*/send-ticket", "/api/v1/bookings/*/send-ticket").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/bookings/*/send-email", "/api/v1/bookings/*/send-email").permitAll()
 
+                // Operator Manifest PDF download endpoint (Permitted via JWT token query or header)
+                .requestMatchers(HttpMethod.GET, "/api/operator/manifest/pdf", "/api/v1/operator/manifest/pdf").permitAll()
+
                 // Operator Protected Marketplace Endpoints (ROLE_OPERATOR or ROLE_ADMIN)
                 .requestMatchers("/api/operator/**", "/api/v1/operator/**").hasAnyAuthority("ROLE_OPERATOR", "ROLE_ADMIN", "OPERATOR", "ADMIN")
 

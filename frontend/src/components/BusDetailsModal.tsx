@@ -527,10 +527,25 @@ export default function BusDetailsModal({
     return Array.from(rowsMap.keys()).sort((a, b) => a - b);
   };
 
+  // Automatically cleanse selectedSeats if any seat is booked or locked on server
+  useEffect(() => {
+    if (layoutData?.seats && selectedSeats.length > 0) {
+      const bookedOrLockedIds = new Set(
+        layoutData.seats.filter((s) => s.status === "BOOKED").map((s) => s.seatId)
+      );
+      const invalidSeats = selectedSeats.filter((s) => bookedOrLockedIds.has(s.seatId));
+      if (invalidSeats.length > 0) {
+        invalidSeats.forEach((s) => {
+          dispatch(toggleSeatSelection(s));
+        });
+      }
+    }
+  }, [layoutData?.seats, selectedSeats, dispatch]);
+
   // Render authentic sleeper berth
   const renderSleeperBerth = (seat: SeatItem) => {
-    const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId);
     const isSold = seat.status === "BOOKED" || seat.status === "LOCKED";
+    const isSelected = !isSold && selectedSeats.some((s) => s.seatId === seat.seatId);
     const isFemale = seat.genderRestriction === "FEMALE" || seat.bookedGender === "FEMALE";
 
     let containerStyle =
@@ -539,12 +554,7 @@ export default function BusDetailsModal({
     let priceOrLabel = `₹${Math.round(seat.price || route.basePrice)}`;
     let priceColor = "text-gray-800 dark:text-slate-200 font-extrabold";
 
-    if (isSelected) {
-      containerStyle +=
-        "bg-[#15803d] border-2 border-[#15803d] text-white shadow-md scale-105 ring-2 ring-emerald-400/40 cursor-pointer";
-      pillowStyle += "bg-emerald-300";
-      priceColor = "text-white font-black";
-    } else if (isSold) {
+    if (isSold) {
       if (isFemale) {
         containerStyle +=
           "border border-pink-200 dark:border-pink-900/40 bg-pink-50/75 dark:bg-pink-950/25 cursor-not-allowed";
@@ -556,6 +566,11 @@ export default function BusDetailsModal({
       }
       priceOrLabel = "Sold";
       priceColor = "text-gray-400 dark:text-slate-500 font-medium";
+    } else if (isSelected) {
+      containerStyle +=
+        "bg-[#15803d] border-2 border-[#15803d] text-white shadow-md scale-105 ring-2 ring-emerald-400/40 cursor-pointer";
+      pillowStyle += "bg-emerald-300";
+      priceColor = "text-white font-black";
     } else {
       containerStyle +=
         "bg-white dark:bg-slate-800 border-2 border-emerald-500 hover:border-emerald-600 hover:shadow-md hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 cursor-pointer active:scale-95";
@@ -602,16 +617,16 @@ export default function BusDetailsModal({
 
   // Render authentic seater chair
   const renderSeaterChair = (seat: SeatItem) => {
-    const isSelected = selectedSeats.some((s) => s.seatId === seat.seatId);
     const isSold = seat.status === "BOOKED" || seat.status === "LOCKED";
+    const isSelected = !isSold && selectedSeats.some((s) => s.seatId === seat.seatId);
     const isFemale = seat.genderRestriction === "FEMALE" || seat.bookedGender === "FEMALE";
 
-    const strokeColor = isSelected ? "#15803d" : isSold ? (isFemale ? "#f472b6" : "#cbd5e1") : "#10b981";
-    const fillColor = isSelected ? "#dcfce7" : isSold ? (isFemale ? "#fdf2f8" : "#f8fafc") : "#ffffff";
-    const priceColor = isSelected
-      ? "text-emerald-700 font-extrabold"
-      : isSold
+    const strokeColor = isSold ? (isFemale ? "#f472b6" : "#cbd5e1") : isSelected ? "#15803d" : "#10b981";
+    const fillColor = isSold ? (isFemale ? "#fdf2f8" : "#f8fafc") : isSelected ? "#dcfce7" : "#ffffff";
+    const priceColor = isSold
       ? "text-gray-400 font-medium"
+      : isSelected
+      ? "text-emerald-700 font-extrabold"
       : "text-gray-800 dark:text-slate-200 font-bold";
 
     return (
@@ -632,7 +647,7 @@ export default function BusDetailsModal({
               width="18"
               height="8"
               rx="4"
-              fill={isSelected ? "#86efac" : isSold ? (isFemale ? "#fbcfe8" : "#cbd5e1") : "#bbf7d0"}
+              fill={isSold ? (isFemale ? "#fbcfe8" : "#cbd5e1") : isSelected ? "#86efac" : "#bbf7d0"}
             />
           </svg>
         </button>

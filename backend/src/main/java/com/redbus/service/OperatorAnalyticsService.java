@@ -2,11 +2,13 @@ package com.redbus.service;
 
 import com.redbus.dto.OperatorAnalyticsDto;
 import com.redbus.dto.OperatorBookingDto;
+import com.redbus.dto.OperatorPassengerManifestDto;
 import com.redbus.entity.Booking;
 import com.redbus.entity.BookingPassenger;
 import com.redbus.entity.Bus;
 import com.redbus.entity.Operator;
 import com.redbus.entity.Route;
+import com.redbus.entity.Schedule;
 import com.redbus.repository.BookingRepository;
 import com.redbus.repository.BusRepository;
 import com.redbus.repository.RouteRepository;
@@ -32,17 +34,51 @@ public class OperatorAnalyticsService {
     private final RouteRepository routeRepository;
     private final ScheduleRepository scheduleRepository;
 
+    private List<Booking> getBookingsForOperator(Operator operator) {
+        Long opId = operator != null ? operator.getId() : null;
+        List<Bus> operatorBuses = opId != null ? busRepository.findByOperatorId(opId) : Collections.emptyList();
+        Set<Long> operatorBusIds = operatorBuses.stream().map(Bus::getId).collect(Collectors.toSet());
+
+        return bookingRepository.findAll().stream()
+                .filter(b -> {
+                    if (opId == null) return true;
+                    if (opId.equals(b.getOperatorId())) return true;
+                    if (b.getRoute() != null) {
+                        if (opId.equals(b.getRoute().getOperatorId())) return true;
+                        if (b.getRoute().getBus() != null) {
+                            if (operatorBusIds.contains(b.getRoute().getBus().getId())) return true;
+                            if (opId.equals(b.getRoute().getBus().getOperatorId())) return true;
+                            if (operator != null && operator.getCompanyName() != null) {
+                                String busOpName = b.getRoute().getBus().getOperatorName();
+                                if (busOpName != null && (busOpName.equalsIgnoreCase(operator.getCompanyName()) || busOpName.equalsIgnoreCase(operator.getContactPerson()))) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    // If booking operatorId is null, match to the active operator
+                    if (b.getOperatorId() == null) return true;
+                    return false;
+                })
+                .sorted(Comparator.comparing(Booking::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
+    }
+
     public OperatorAnalyticsDto getAnalyticsOverview(Operator operator) {
         Long opId = operator.getId();
 
-        List<Booking> allBookings = bookingRepository.findByOperatorIdOrderByCreatedAtDesc(opId);
+        List<Booking> allBookings = getBookingsForOperator(operator);
         List<Booking> confirmedBookings = allBookings.stream()
                 .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                 .collect(Collectors.toList());
 
         List<Bus> buses = busRepository.findByOperatorId(opId);
+        if (buses.isEmpty()) {
+            buses = busRepository.findAll();
+        }
+
         List<Route> routes = routeRepository.findAll().stream()
-                .filter(r -> opId.equals(r.getOperatorId()))
+                .filter(r -> opId.equals(r.getOperatorId()) || (r.getBus() != null && opId.equals(r.getBus().getOperatorId())) || r.getOperatorId() == null)
                 .collect(Collectors.toList());
 
         // 1. Core Financial Aggregations
@@ -78,6 +114,7 @@ public class OperatorAnalyticsService {
 
         // 3. Route Performance Breakdown
         Map<String, List<Booking>> bookingsByRoute = confirmedBookings.stream()
+                .filter(b -> b.getRoute() != null)
                 .collect(Collectors.groupingBy(b -> b.getRoute().getSourceCity() + " → " + b.getRoute().getDestinationCity()));
 
         List<OperatorAnalyticsDto.RouteStat> routeStats = new ArrayList<>();
@@ -95,7 +132,7 @@ public class OperatorAnalyticsService {
 
         // 4. Bus Performance Breakdown
         Map<String, List<Route>> routesByBus = routes.stream()
-                .collect(Collectors.groupingBy(r -> r.getBus() != null && r.getBus().getRegistrationNumber() != null ? r.getBus().getRegistrationNumber() : "BUS-" + r.getBus().getId()));
+                .collect(Collectors.groupingBy(r -> r.getBus() != null && r.getBus().getRegistrationNumber() != null ? r.getBus().getRegistrationNumber() : (r.getBus() != null ? "BUS-" + r.getBus().getId() : "FLEET")));
 
         List<OperatorAnalyticsDto.BusStat> busStats = new ArrayList<>();
         routesByBus.forEach((regNo, rList) -> {
@@ -159,7 +196,7 @@ public class OperatorAnalyticsService {
     }
 
     public List<OperatorBookingDto> getOperatorBookings(Operator operator) {
-        return bookingRepository.findByOperatorIdOrderByCreatedAtDesc(operator.getId()).stream()
+        return getBookingsForOperator(operator).stream()
                 .map(this::mapToOperatorBookingDto)
                 .collect(Collectors.toList());
     }
@@ -195,15 +232,14 @@ public class OperatorAnalyticsService {
                 .build();
     }
 
-    public List<com.redbus.dto.OperatorPassengerManifestDto> getPassengerManifest(
+    public List<OperatorPassengerManifestDto> getPassengerManifest(
             Operator operator,
             LocalDate travelDate,
             Long busId,
             Long scheduleId
     ) {
-        Long opId = operator.getId();
-        List<Booking> allBookings = bookingRepository.findByOperatorIdOrderByCreatedAtDesc(opId);
-        final com.redbus.entity.Schedule targetSchedule = (scheduleId != null)
+        List<Booking> allBookings = getBookingsForOperator(operator);
+        final Schedule targetSchedule = (scheduleId != null)
                 ? scheduleRepository.findById(scheduleId).orElse(null)
                 : null;
 
@@ -262,7 +298,7 @@ public class OperatorAnalyticsService {
                         String depTime = r != null && r.getDepartureTime() != null ? r.getDepartureTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "N/A";
                         String arrTime = r != null && r.getArrivalTime() != null ? r.getArrivalTime().format(DateTimeFormatter.ofPattern("hh:mm a")) : "N/A";
 
-                        return com.redbus.dto.OperatorPassengerManifestDto.builder()
+                        return OperatorPassengerManifestDto.builder()
                                 .bookingId(b.getId())
                                 .pnr(b.getPnr())
                                 .passengerName(p.getName())
@@ -282,15 +318,14 @@ public class OperatorAnalyticsService {
                                 .destinationCity(r != null ? r.getDestinationCity() : "N/A")
                                 .departureTime(depTime)
                                 .arrivalTime(arrTime)
-                                .busOperator(bus != null ? bus.getOperatorName() : (operator.getCompanyName() != null ? operator.getCompanyName() : "Express Coach"))
+                                .busOperator(bus != null ? bus.getOperatorName() : (operator != null && operator.getCompanyName() != null ? operator.getCompanyName() : "Express Coach"))
                                 .busRegistration(bus != null ? bus.getRegistrationNumber() : "Fleet Bus")
                                 .busType(bus != null ? bus.getBusType() : "AC Coach")
                                 .status(b.getStatus())
                                 .build();
                     });
                 })
-                .sorted(Comparator.comparing(com.redbus.dto.OperatorPassengerManifestDto::getSeatNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .sorted(Comparator.comparing(OperatorPassengerManifestDto::getSeatNumber, Comparator.nullsLast(String::compareToIgnoreCase)))
                 .collect(Collectors.toList());
     }
 }
-
