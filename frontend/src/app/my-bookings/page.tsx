@@ -696,7 +696,7 @@ export default function MyBookingsPage() {
                       onClick={() => toggleRefundTracker(booking.pnr)}
                       className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shadow-sm cursor-pointer"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 ${expandedRefundTrackerPnrs[booking.pnr] ? "" : "animate-spin"}`} />
+                      <RotateCcw className="w-3.5 h-3.5" />
                       <span>{expandedRefundTrackerPnrs[booking.pnr] ? "Hide Refund Status" : "See Refund Status"}</span>
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedRefundTrackerPnrs[booking.pnr] ? "rotate-180" : ""}`} />
                     </button>
