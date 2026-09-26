@@ -18,8 +18,8 @@ const getTomorrowDate = () => {
 };
 
 const initialState: SearchState = {
-  sourceCity: "Bangalore",
-  destinationCity: "Chennai",
+  sourceCity: "",
+  destinationCity: "",
   travelDate: getTomorrowDate(),
   busType: "",
   departureWindow: "ALL",
