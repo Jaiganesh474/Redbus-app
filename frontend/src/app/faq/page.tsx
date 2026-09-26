@@ -1,26 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAppSelector } from "@/store";
 import {
   HelpCircle,
   ShieldCheck,
-  RefreshCw,
-  Clock,
   Sparkles,
   User,
   Building2,
   Wallet,
-  TrendingUp,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
   ArrowRight,
 } from "lucide-react";
 
 export default function FaqPage() {
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  const isOperator =
+    isAuthenticated &&
+    (user?.role === "ROLE_OPERATOR" || user?.roles?.includes("ROLE_OPERATOR"));
+  const isAdmin =
+    isAuthenticated &&
+    (user?.role === "ROLE_ADMIN" || user?.roles?.includes("ROLE_ADMIN"));
+
+  // Default active tab based strictly on role
   const [activeTab, setActiveTab] = useState<"passenger" | "operator">("passenger");
+
+  useEffect(() => {
+    if (isOperator) {
+      setActiveTab("operator");
+    } else {
+      setActiveTab("passenger");
+    }
+  }, [isOperator]);
 
   const passengerFaqs = [
     {
@@ -100,7 +113,9 @@ export default function FaqPage() {
     },
   ];
 
-  const currentFaqs = activeTab === "passenger" ? passengerFaqs : operatorFaqs;
+  // For unauthenticated visitors or passenger users, strictly lock to passenger FAQs
+  const effectiveTab = isOperator || isAdmin ? activeTab : "passenger";
+  const currentFaqs = effectiveTab === "passenger" ? passengerFaqs : operatorFaqs;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 overflow-hidden">
@@ -115,44 +130,48 @@ export default function FaqPage() {
           <HelpCircle className="w-6 h-6" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-          Help, Policies & FAQs
+          {effectiveTab === "operator" ? "Operator Policies & Guidelines" : "Help, Policies & FAQs"}
         </h1>
         <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-2">
-          Official platform guidelines, refund timelines, and operating rules tailored for Passengers and Bus Operators.
+          {effectiveTab === "operator"
+            ? "Official operating terms, wallet settlements, refund auditing, and AI pricing rules for verified bus operators."
+            : "Official passenger guidelines, cancellation refund slabs, baggage policies, and live GPS tracking terms."}
         </p>
       </motion.div>
 
-      {/* Role Switcher Tabs */}
-      <div className="flex justify-center">
-        <div className="bg-gray-100 dark:bg-slate-800 p-1.5 rounded-2xl inline-flex space-x-2 border border-gray-200 dark:border-slate-700 shadow-inner">
-          <button
-            onClick={() => setActiveTab("passenger")}
-            className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeTab === "passenger"
-                ? "bg-white dark:bg-slate-900 text-[#d84e55] dark:text-red-400 shadow-sm"
-                : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>Passenger FAQs & Policies</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("operator")}
-            className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-              activeTab === "operator"
-                ? "bg-white dark:bg-slate-900 text-[#d84e55] dark:text-red-400 shadow-sm"
-                : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>Operator Policies & Earnings</span>
-          </button>
+      {/* Role Switcher Tabs - ONLY visible to Admin or Operator (Hidden completely for Passengers and Guests) */}
+      {(isAdmin || isOperator) && (
+        <div className="flex justify-center">
+          <div className="bg-gray-100 dark:bg-slate-800 p-1.5 rounded-2xl inline-flex space-x-2 border border-gray-200 dark:border-slate-700 shadow-inner">
+            <button
+              onClick={() => setActiveTab("passenger")}
+              className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                effectiveTab === "passenger"
+                  ? "bg-white dark:bg-slate-900 text-[#d84e55] dark:text-red-400 shadow-sm"
+                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Passenger FAQs & Policies</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("operator")}
+              className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                effectiveTab === "operator"
+                  ? "bg-white dark:bg-slate-900 text-[#d84e55] dark:text-red-400 shadow-sm"
+                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Operator Policies & Earnings</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Role Banner */}
       <AnimatePresence mode="wait">
-        {activeTab === "passenger" ? (
+        {effectiveTab === "passenger" ? (
           <motion.div
             key="passenger-banner"
             initial={{ opacity: 0, y: 15 }}
@@ -169,17 +188,27 @@ export default function FaqPage() {
                   100% Verified Passenger Protection
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-slate-400 mt-0.5">
-                  Real-time refund tracking, instant redBus wallet payouts, and 24/7 AI-guided trip support.
+                  Real-time 4-stage refund tracking, instant redBus wallet payouts, and 24/7 AI-guided trip support.
                 </p>
               </div>
             </div>
-            <Link
-              href="/my-bookings"
-              className="px-4 py-2 bg-[#d84e55] hover:bg-red-600 text-white rounded-xl text-xs font-bold shrink-0 transition-all flex items-center space-x-1.5"
-            >
-              <span>View My Bookings</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {isAuthenticated && !isOperator ? (
+              <Link
+                href="/my-bookings"
+                className="px-4 py-2 bg-[#d84e55] hover:bg-red-600 text-white rounded-xl text-xs font-bold shrink-0 transition-all flex items-center space-x-1.5"
+              >
+                <span>View My Bookings</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <Link
+                href="/"
+                className="px-4 py-2 bg-[#d84e55] hover:bg-red-600 text-white rounded-xl text-xs font-bold shrink-0 transition-all flex items-center space-x-1.5"
+              >
+                <span>Book Bus Tickets</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -217,7 +246,7 @@ export default function FaqPage() {
       <div className="space-y-4">
         {currentFaqs.map((faq, idx) => (
           <motion.div
-            key={`${activeTab}-${idx}`}
+            key={`${effectiveTab}-${idx}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: idx * 0.05 }}
