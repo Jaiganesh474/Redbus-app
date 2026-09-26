@@ -12,11 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,67 +30,93 @@ public class DeviceSessionService {
     public UserDeviceSession recordSession(User user, HttpServletRequest request, String token) {
         if (user == null || request == null) return null;
 
-        String userAgent = request.getHeader("User-Agent");
-        if (userAgent == null) userAgent = "Unknown Browser";
+        try {
+            String userAgent = request.getHeader("User-Agent");
+            if (userAgent == null) userAgent = "Unknown Browser";
 
-        String ip = extractClientIp(request);
-        String browser = detectBrowser(userAgent);
-        String os = detectOs(userAgent);
-        String deviceName = browser + " on " + os;
-        String location = determineLocationFromIp(ip);
-        String sessionToken = token != null ? token : UUID.randomUUID().toString();
+            String ip = extractClientIp(request);
+            String browser = detectBrowser(userAgent);
+            String os = detectOs(userAgent);
+            String deviceName = browser + " on " + os;
+            String location = determineLocationFromIp(ip);
+            String sessionToken = token != null ? token : UUID.randomUUID().toString();
 
-        // Check if session for this user with same IP, browser, and OS already exists
-        Optional<UserDeviceSession> existingSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, ip, browser, os);
-        if (existingSessionOpt.isPresent()) {
-            UserDeviceSession s = existingSessionOpt.get();
-            s.setLastActiveAt(LocalDateTime.now());
-            s.setSessionToken(sessionToken);
-            s.setDeviceName(deviceName);
-            s.setLocation(location);
-            return sessionRepository.save(s);
+            // Check if session for this user with same IP, browser, and OS already exists
+            Optional<UserDeviceSession> existingSessionOpt = sessionRepository.findByUserAndIpAddressAndBrowserAndOs(user, ip, browser, os);
+            if (existingSessionOpt.isPresent()) {
+                UserDeviceSession s = existingSessionOpt.get();
+                s.setLastActiveAt(LocalDateTime.now());
+                s.setSessionToken(sessionToken);
+                s.setDeviceName(deviceName);
+                s.setLocation(location);
+                return sessionRepository.save(s);
+            }
+
+            String deviceType = (os.contains("Android") || os.contains("iOS")) ? "Mobile" : "Desktop";
+
+            UserDeviceSession newSession = UserDeviceSession.builder()
+                    .user(user)
+                    .sessionToken(sessionToken)
+                    .deviceName(deviceName)
+                    .deviceType(deviceType)
+                    .browser(browser)
+                    .os(os)
+                    .ipAddress(ip)
+                    .location(location)
+                    .lastActiveAt(LocalDateTime.now())
+                    .isCurrentSession(true)
+                    .build();
+
+            return sessionRepository.save(newSession);
+        } catch (Exception e) {
+            log.warn("Could not record device session: {}", e.getMessage());
+            return null;
         }
-
-        String deviceType = (os.contains("Android") || os.contains("iOS")) ? "Mobile" : "Desktop";
-
-        UserDeviceSession newSession = UserDeviceSession.builder()
-                .user(user)
-                .sessionToken(sessionToken)
-                .deviceName(deviceName)
-                .deviceType(deviceType)
-                .browser(browser)
-                .os(os)
-                .ipAddress(ip)
-                .location(location)
-                .lastActiveAt(LocalDateTime.now())
-                .isCurrentSession(true)
-                .build();
-
-        return sessionRepository.save(newSession);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserDeviceSessionDto> getUserSessions(String userEmail, HttpServletRequest request) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
+        if (userEmail == null || userEmail.isBlank()) {
+            return List.of();
+        }
 
+        Optional<User> userOpt = userRepository.findByEmail(userEmail.trim());
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findByEmail(userEmail.trim().toLowerCase(Locale.ROOT));
+        }
+        if (userOpt.isEmpty()) {
+            log.warn("User not found for session query: {}", userEmail);
+            return List.of();
+        }
+
+        User user = userOpt.get();
         String currentIp = extractClientIp(request);
         String currentUa = request != null ? request.getHeader("User-Agent") : null;
         String currentBrowser = detectBrowser(currentUa);
         String currentOs = detectOs(currentUa);
 
-        List<UserDeviceSession> sessions = sessionRepository.findByUserOrderByLastActiveAtDesc(user);
+        List<UserDeviceSession> sessions;
+        try {
+            sessions = sessionRepository.findByUserOrderByLastActiveAtDesc(user);
+        } catch (Exception e) {
+            log.warn("Error querying device sessions: {}", e.getMessage());
+            sessions = new ArrayList<>();
+        }
 
         // If no sessions yet (e.g. user created before table), auto seed current session
         if (sessions.isEmpty() && request != null) {
-            UserDeviceSession current = recordSession(user, request, "active-current-session");
-            if (current != null) {
-                sessions = List.of(current);
+            try {
+                UserDeviceSession current = recordSession(user, request, "active-current-session");
+                if (current != null) {
+                    sessions = List.of(current);
+                }
+            } catch (Exception e) {
+                log.warn("Could not auto-seed session: {}", e.getMessage());
             }
         }
 
         boolean currentMarked = false;
-        List<UserDeviceSessionDto> dtoList = new java.util.ArrayList<>();
+        List<UserDeviceSessionDto> dtoList = new ArrayList<>();
 
         for (UserDeviceSession s : sessions) {
             boolean isCurrent = false;
@@ -101,14 +127,14 @@ public class DeviceSessionService {
 
             dtoList.add(UserDeviceSessionDto.builder()
                     .id(s.getId())
-                    .deviceName(s.getDeviceName())
-                    .browser(s.getBrowser())
-                    .operatingSystem(s.getOs())
-                    .ipAddress(s.getIpAddress())
-                    .location(s.getLocation())
+                    .deviceName(s.getDeviceName() != null ? s.getDeviceName() : "Web Browser Session")
+                    .browser(s.getBrowser() != null ? s.getBrowser() : "Browser")
+                    .operatingSystem(s.getOs() != null ? s.getOs() : "OS")
+                    .ipAddress(s.getIpAddress() != null ? s.getIpAddress() : "127.0.0.1")
+                    .location(s.getLocation() != null ? s.getLocation() : "India")
                     .isCurrent(isCurrent)
-                    .lastActive(s.getLastActiveAt())
-                    .createdAt(s.getCreatedAt())
+                    .lastActive(s.getLastActiveAt() != null ? s.getLastActiveAt() : LocalDateTime.now())
+                    .createdAt(s.getCreatedAt() != null ? s.getCreatedAt() : LocalDateTime.now())
                     .build());
         }
 
@@ -122,7 +148,9 @@ public class DeviceSessionService {
 
     @Transactional
     public void revokeSession(String userEmail, Long sessionId) {
-        User user = userRepository.findByEmail(userEmail)
+        if (userEmail == null || sessionId == null) return;
+
+        User user = userRepository.findByEmail(userEmail.trim())
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
         UserDeviceSession session = sessionRepository.findById(sessionId)
@@ -138,7 +166,9 @@ public class DeviceSessionService {
 
     @Transactional
     public void revokeAllOtherSessions(String userEmail, HttpServletRequest request) {
-        User user = userRepository.findByEmail(userEmail)
+        if (userEmail == null) return;
+
+        User user = userRepository.findByEmail(userEmail.trim())
                 .orElseThrow(() -> new RuntimeException("User not found: " + userEmail));
 
         String currentIp = extractClientIp(request);

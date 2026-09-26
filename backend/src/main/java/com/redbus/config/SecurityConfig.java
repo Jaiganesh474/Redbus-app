@@ -95,11 +95,12 @@ public class SecurityConfig {
                     "/api/auth/firebase-login", "/api/v1/auth/firebase-login"
                 ).permitAll()
 
-                // Authenticated User Profile & Travellers
+                // Authenticated User Profile, Travellers & Device Sessions
                 .requestMatchers(
                     "/api/auth/me", "/api/v1/auth/me",
                     "/api/auth/profile", "/api/v1/auth/profile",
-                    "/api/auth/saved-travellers/**", "/api/v1/auth/saved-travellers/**"
+                    "/api/auth/saved-travellers/**", "/api/v1/auth/saved-travellers/**",
+                    "/api/users/**", "/api/v1/users/**"
                 ).authenticated()
 
                 // Public Catalog Search, Discovery, ML & Coupons (Open for Passengers & Operators)
