@@ -124,6 +124,15 @@ export default function OperatorLoginPage() {
                     Click here to register as a Bus Operator →
                   </Link>
                 )}
+                {(errorMessage.toLowerCase().includes("verify your email") ||
+                  errorMessage.toLowerCase().includes("verification code")) && (
+                  <Link
+                    href={`/operator/register?email=${encodeURIComponent(email)}`}
+                    className="block mt-2 font-bold text-amber-400 hover:text-amber-300 underline"
+                  >
+                    Enter 6-digit email verification code now →
+                  </Link>
+                )}
               </div>
             </div>
           )}

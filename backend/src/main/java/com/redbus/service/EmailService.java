@@ -171,6 +171,39 @@ public class EmailService {
     }
 
     /**
+     * Send email verification code for new Bus Operators / Fleet Partners via Brevo
+     */
+    public boolean sendOperatorVerificationEmail(User user, String companyName, String tokenOrOtp) {
+        String recipient = user.getEmail().trim();
+        String subject = "🚍 Verify Your redBus Fleet Partner Account [" + (companyName != null ? companyName : "Operator") + "] - OTP: " + tokenOrOtp;
+        String verificationUrl = frontendUrl.replaceAll("/$", "") + "/operator/register?token=" + tokenOrOtp + "&email=" + recipient;
+
+        String htmlContent = buildOperatorVerificationEmailTemplate(user.getName(), companyName, tokenOrOtp, verificationUrl);
+
+        // 1. Attempt sending through Brevo SMTP relay
+        if (sendViaSmtp(recipient, subject, htmlContent, null, null)) {
+            return true;
+        }
+
+        // 2. Attempt sending through Brevo HTTP REST API
+        if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
+            boolean sent = sendViaBrevoApi(recipient, user.getName(), subject, htmlContent, null, null);
+            if (sent) return true;
+        }
+
+        // Virtual dispatcher for local / sandbox verification
+        log.info("==================== BREVO OPERATOR VERIFICATION EMAIL ====================");
+        log.info("To: {}", recipient);
+        log.info("Company: {}", companyName);
+        log.info("Subject: {}", subject);
+        log.info("Verification Code (OTP): {}", tokenOrOtp);
+        log.info("Activation URL: {}", verificationUrl);
+        log.info("===========================================================================");
+
+        return true;
+    }
+
+    /**
      * Send password reset 6-digit OTP code via Brevo
      */
     public boolean sendPasswordResetOtpEmail(User user, String otp) {
@@ -596,6 +629,139 @@ public class EmailService {
             </body>
             </html>
             """.formatted(name, otp, url);
+    }
+
+    private String buildOperatorVerificationEmailTemplate(String name, String companyName, String otp, String url) {
+        String displayName = (companyName != null && !companyName.isBlank()) ? companyName : name;
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+                * { box-sizing: border-box; }
+                body {
+                  font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  background-color: #0f172a;
+                  padding: 24px 12px;
+                  margin: 0;
+                  -webkit-font-smoothing: antialiased;
+                }
+                .card {
+                  max-width: 500px;
+                  margin: 0 auto;
+                  background: #1e293b;
+                  border-radius: 24px;
+                  padding: 36px 28px;
+                  border: 1px solid #334155;
+                  text-align: center;
+                  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                  color: #f8fafc;
+                }
+                .logo-badge {
+                  display: inline-flex;
+                  align-items: center;
+                  background: rgba(216, 78, 85, 0.15);
+                  border: 1px solid rgba(216, 78, 85, 0.3);
+                  padding: 6px 14px;
+                  border-radius: 9999px;
+                  color: #d84e55;
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-bottom: 16px;
+                }
+                .brand {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-size: 26px;
+                  font-weight: 900;
+                  color: #ffffff;
+                  margin-bottom: 4px;
+                }
+                .brand span {
+                  color: #d84e55;
+                  font-weight: 400;
+                }
+                .heading {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  margin: 12px 0 6px 0;
+                  color: #ffffff;
+                  font-size: 20px;
+                  font-weight: 800;
+                }
+                .subtext {
+                  color: #94a3b8;
+                  font-size: 13px;
+                  font-weight: 400;
+                  line-height: 1.5;
+                  margin: 0 0 20px 0;
+                }
+                .otp-box {
+                  font-size: 36px;
+                  font-weight: 900;
+                  letter-spacing: 10px;
+                  color: #d84e55;
+                  background: #0f172a;
+                  border: 2px dashed #d84e55;
+                  border-radius: 18px;
+                  padding: 18px;
+                  margin: 18px 0;
+                  font-family: 'Plus Jakarta Sans', monospace;
+                  display: inline-block;
+                }
+                .notice {
+                  background: rgba(59, 130, 246, 0.1);
+                  border: 1px solid rgba(59, 130, 246, 0.2);
+                  border-radius: 12px;
+                  padding: 12px;
+                  font-size: 12px;
+                  color: #93c5fd;
+                  margin: 16px 0;
+                  text-align: left;
+                  line-height: 1.4;
+                }
+                .btn {
+                  display: inline-block;
+                  padding: 14px 34px;
+                  background: linear-gradient(135deg, #d84e55 0%%, #b91c1c 100%%);
+                  color: #ffffff !important;
+                  text-decoration: none;
+                  border-radius: 14px;
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-weight: 800;
+                  font-size: 14px;
+                  margin-top: 8px;
+                  box-shadow: 0 6px 20px rgba(216, 78, 85, 0.35);
+                }
+                .footer-text {
+                  color: #64748b;
+                  font-size: 11px;
+                  margin-top: 24px;
+                  border-top: 1px solid #334155;
+                  padding-top: 16px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="logo-badge">🚍 redBus Fleet Partner Console</div>
+                <div class="brand">redBus <span>Partner</span></div>
+                <h2 class="heading">Verify Your Operator Email</h2>
+                <p class="subtext">
+                  Hi <strong>%s</strong>, thank you for registering with redBus. Enter this 6-digit verification code to authenticate your business email:
+                </p>
+                <div class="otp-box">%s</div>
+                <div class="notice">
+                  ℹ️ <strong>Next Step:</strong> Once your email is verified, your fleet registration will be forwarded to the redBus compliance team for administrative approval.
+                </div>
+                <p class="footer-text">Dispatched via Brevo Transactional Email • © redBus India Partner Ecosystem</p>
+              </div>
+            </body>
+            </html>
+            """.formatted(displayName, otp);
     }
 
     private String buildPasswordResetEmailTemplate(String name, String otp, String url) {

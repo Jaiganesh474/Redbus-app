@@ -120,28 +120,55 @@ public class AuthService {
     @Transactional
     public AuthResponse registerOperator(OperatorRegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
+        String otp = String.format("%06d", random.nextInt(900000) + 100000);
         
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
-            User newUser = User.builder()
+        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        User user;
+        boolean needsEmailVerification = true;
+
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            // If user exists and is already verified AND an operator with an existing record
+            if (Boolean.TRUE.equals(user.getEmailVerified()) && user.getRole() != null && user.getRole().contains("OPERATOR")) {
+                Optional<com.redbus.entity.Operator> existingOp = operatorRepository.findByUserId(user.getId());
+                if (existingOp.isPresent()) {
+                    throw new BadRequestException("An operator account with this email is already registered. Please sign in to your Partner Portal.");
+                }
+            }
+            
+            // If existing user, update profile details
+            user.setName(request.getContactPerson().trim());
+            user.setPhone(request.getPhone().trim());
+            user.setRole("ROLE_OPERATOR");
+            if (request.getPassword() != null && !request.getPassword().isBlank()) {
+                user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            }
+            // For security, operators must have their business email verified
+            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+                user.setEmailVerified(false);
+                user.setVerificationToken(otp);
+                user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+                needsEmailVerification = true;
+            } else {
+                needsEmailVerification = false;
+            }
+        } else {
+            user = User.builder()
                     .name(request.getContactPerson().trim())
                     .email(email)
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .phone(request.getPhone().trim())
                     .role("ROLE_OPERATOR")
-                    .emailVerified(true)
+                    .emailVerified(false)
+                    .verificationToken(otp)
+                    .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
                     .build();
-            return userRepository.save(newUser);
-        });
-
-        // Upgrade role to ROLE_OPERATOR if existing
-        user.setRole("ROLE_OPERATOR");
-        user.setEmailVerified(true);
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            needsEmailVerification = true;
         }
+
         User savedUser = userRepository.save(user);
 
-        // Create or update Operator record
+        // Create or update Operator record with PENDING status
         com.redbus.entity.Operator op = operatorRepository.findByUserId(savedUser.getId()).orElseGet(() -> {
             return com.redbus.entity.Operator.builder()
                     .user(savedUser)
@@ -157,6 +184,15 @@ public class AuthService {
         op.setContactPerson(request.getContactPerson().trim());
         op.setPhone(request.getPhone().trim());
         operatorRepository.save(op);
+
+        // Dispatch Operator Email Verification OTP via Brevo
+        if (needsEmailVerification) {
+            try {
+                emailService.sendOperatorVerificationEmail(savedUser, request.getCompanyName(), otp);
+            } catch (Exception e) {
+                log.warn("Failed to dispatch operator verification email: {}", e.getMessage());
+            }
+        }
 
         String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole(), savedUser.getId());
         recordDeviceSessionSafely(savedUser, token);
