@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface SavedTravellerRepository extends JpaRepository<SavedTraveller, Long> {
     List<SavedTraveller> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<SavedTraveller> findByIdAndUserId(Long id, Long userId);
+    void deleteByUserId(Long userId);
 }

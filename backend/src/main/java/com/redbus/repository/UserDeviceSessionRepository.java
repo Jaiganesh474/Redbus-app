@@ -26,6 +26,10 @@ public interface UserDeviceSessionRepository extends JpaRepository<UserDeviceSes
     void deactivateAllByUserExceptCurrent(@Param("user") User user, @Param("currentSessionId") Long currentSessionId);
 
     @Modifying
-    @Query("DELETE FROM UserDeviceSession s WHERE s.user = :user AND s.id <> :currentSessionId")
-    void deleteAllByUserExceptCurrent(@Param("user") User user, @Param("currentSessionId") Long currentSessionId);
+    @Query("UPDATE UserDeviceSession s SET s.isActive = false WHERE s.user = :user")
+    void deactivateAllByUser(@Param("user") User user);
+
+    @Modifying
+    @Query("DELETE FROM UserDeviceSession s WHERE s.user = :user")
+    void deleteAllByUser(@Param("user") User user);
 }

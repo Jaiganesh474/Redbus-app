@@ -59,6 +59,14 @@ public class User {
     @Builder.Default
     private java.math.BigDecimal walletBalance = java.math.BigDecimal.ZERO;
 
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+    @Column(name = "status", length = 30)
+    @Builder.Default
+    private String status = "ACTIVE";
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

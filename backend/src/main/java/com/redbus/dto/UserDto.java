@@ -20,4 +20,6 @@ public class UserDto {
     private String gender;
     private String operatorStatus;
     private java.math.BigDecimal walletBalance;
+    private Boolean isActive;
+    private String status;
 }

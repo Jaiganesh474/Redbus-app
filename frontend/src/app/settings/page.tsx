@@ -12,6 +12,8 @@ import {
   useRevokeDeviceSessionMutation,
   useDeleteDeviceSessionPermanentlyMutation,
   useRevokeAllOtherSessionsMutation,
+  useDeactivateAccountMutation,
+  useDeleteAccountMutation,
 } from "@/store/apiSlice";
 import {
   User as UserIcon,
@@ -39,6 +41,10 @@ import {
   Eye,
   EyeOff,
   History,
+  AlertTriangle,
+  UserMinus,
+  ShieldAlert,
+  X,
 } from "lucide-react";
 import AvatarSelectorModal from "@/components/AvatarSelectorModal";
 
@@ -76,6 +82,15 @@ export default function SettingsPage() {
   const [revokeSessionMutation, { isLoading: isRevokingSession }] = useRevokeDeviceSessionMutation();
   const [deleteSessionPermanentlyMutation, { isLoading: isDeletingPermanent }] = useDeleteDeviceSessionPermanentlyMutation();
   const [revokeAllOtherMutation, { isLoading: isRevokingOthers }] = useRevokeAllOtherSessionsMutation();
+
+  const [deactivateAccountMutation, { isLoading: isDeactivating }] = useDeactivateAccountMutation();
+  const [deleteAccountMutation, { isLoading: isDeletingAccount }] = useDeleteAccountMutation();
+
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [dangerError, setDangerError] = useState("");
 
   const activeSessions = deviceSessions.filter((s) => s.isActive !== false);
   const previousSessions = deviceSessions.filter((s) => s.isActive === false);
@@ -132,6 +147,46 @@ export default function SettingsPage() {
       setTimeout(() => setSessionActionMessage(""), 4000);
     } catch (err: any) {
       setErrorMessage(err?.data?.message || "Failed to log out other sessions.");
+    }
+  };
+
+  const handleDeactivateAccountConfirm = async () => {
+    setDangerError("");
+    try {
+      await deactivateAccountMutation().unwrap();
+      dispatch(logout());
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("redbus_token");
+        localStorage.removeItem("token");
+        sessionStorage.clear();
+      }
+      setIsDeactivateModalOpen(false);
+      alert("Your account has been deactivated successfully. You can contact redBus support if you wish to reactivate it in the future.");
+      router.push("/");
+    } catch (err: any) {
+      setDangerError(err?.data?.message || err?.message || "Failed to deactivate account. Please try again.");
+    }
+  };
+
+  const handleDeleteAccountConfirm = async () => {
+    setDangerError("");
+    if (deleteConfirmationText.trim().toUpperCase() !== "DELETE") {
+      setDangerError("Please type DELETE in all capitals to confirm account removal.");
+      return;
+    }
+    try {
+      await deleteAccountMutation({ password: deletePassword ? deletePassword.trim() : undefined }).unwrap();
+      dispatch(logout());
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("redbus_token");
+        localStorage.removeItem("token");
+        sessionStorage.clear();
+      }
+      setIsDeleteModalOpen(false);
+      alert("Your account, saved preferences, and credentials have been permanently deleted.");
+      router.push("/");
+    } catch (err: any) {
+      setDangerError(err?.data?.message || err?.message || "Failed to delete account. Please verify your password or try again.");
     }
   };
 
@@ -790,6 +845,71 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Danger Zone: Deactivate & Delete Account */}
+        <div className="bg-white rounded-3xl shadow-sm border border-red-100 overflow-hidden">
+          <div className="bg-red-50/70 border-b border-red-100 px-6 sm:px-8 py-4 flex items-center space-x-3">
+            <div className="p-2 bg-red-100 rounded-xl text-[#d84e55]">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Danger Zone</h3>
+              <p className="text-xs text-gray-500">Manage account deactivation and permanent account deletion</p>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6 divide-y divide-gray-100">
+            {/* 1. Deactivate Account Option */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 first:pt-0">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center space-x-2">
+                  <UserMinus className="w-4 h-4 text-amber-600 shrink-0" />
+                  <h4 className="text-sm font-bold text-gray-900">Deactivate Account</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Temporarily pause your redBus account. All your active device sessions will be terminated. Your previous bookings and wallet balances are securely preserved for when you return.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDangerError("");
+                  setIsDeactivateModalOpen(true);
+                }}
+                className="self-start sm:self-center px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center space-x-1.5 shrink-0"
+              >
+                <UserMinus className="w-3.5 h-3.5" />
+                <span>Deactivate Account</span>
+              </button>
+            </div>
+
+            {/* 2. Delete Account Option */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center space-x-2">
+                  <Trash2 className="w-4 h-4 text-[#d84e55] shrink-0" />
+                  <h4 className="text-sm font-bold text-gray-900">Delete Account Permanently</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Permanently erase your redBus account profile, saved passenger details, and active authentication tokens. This action is irreversible.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDangerError("");
+                  setDeleteConfirmationText("");
+                  setDeletePassword("");
+                  setIsDeleteModalOpen(true);
+                }}
+                className="self-start sm:self-center px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 cursor-pointer flex items-center space-x-1.5 shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete My Account</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Avatar Modal */}
@@ -799,6 +919,174 @@ export default function SettingsPage() {
         currentAvatarUrl={avatarUrl}
         onSelect={handleAvatarSelect}
       />
+
+      {/* Deactivate Account Confirmation Modal */}
+      {isDeactivateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Deactivate Your Account?</h3>
+                  <p className="text-xs text-gray-500">You will be signed out from all devices</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDeactivateModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1.5">
+              <p className="font-bold">What happens when you deactivate?</p>
+              <ul className="list-disc pl-4 space-y-1 text-amber-800">
+                <li>Your active sessions and JWT tokens will be terminated immediately.</li>
+                <li>Your booking history, past invoices, and wallet will be safely kept.</li>
+                <li>You will need customer support assistance to reactivate.</li>
+              </ul>
+            </div>
+
+            {dangerError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{dangerError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeactivateModalOpen(false)}
+                disabled={isDeactivating}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeactivateAccountConfirm}
+                disabled={isDeactivating}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/20 cursor-pointer flex items-center space-x-1.5 disabled:opacity-50"
+              >
+                {isDeactivating ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deactivating...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserMinus className="w-3.5 h-3.5" />
+                    <span>Confirm Deactivation</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-100 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-100 text-[#d84e55] flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Delete Account Permanently</h3>
+                  <p className="text-xs text-red-600 font-medium">This action cannot be undone!</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-900 space-y-1.5">
+              <p className="font-bold">Permanent Loss of Access:</p>
+              <ul className="list-disc pl-4 space-y-1 text-red-800">
+                <li>Your profile, credentials, and saved passenger cards will be deleted.</li>
+                <li>All active device sessions and access tokens will be revoked.</li>
+                <li>You will no longer be able to log in with <span className="font-bold">{user?.email}</span>.</li>
+              </ul>
+            </div>
+
+            {dangerError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{dangerError}</span>
+              </div>
+            )}
+
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Enter your account password (optional if signed in via Google)
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-hidden focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Type <span className="font-mono font-bold text-red-600">DELETE</span> below to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmationText}
+                  onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-mono focus:outline-hidden focus:ring-2 focus:ring-red-500 uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeletingAccount}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccountConfirm}
+                disabled={isDeletingAccount || deleteConfirmationText.trim().toUpperCase() !== "DELETE"}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md shadow-red-500/20 cursor-pointer flex items-center space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Forever</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

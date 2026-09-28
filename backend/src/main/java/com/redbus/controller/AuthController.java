@@ -119,5 +119,33 @@ public class AuthController {
         authService.deleteSavedTraveller(currentUser.getId(), id);
         return ResponseEntity.ok(Map.of("message", "Saved traveller removed successfully"));
     }
+
+    @PostMapping("/deactivate")
+    public ResponseEntity<Map<String, String>> deactivateAccount(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        authService.deactivateAccount(authentication.getName());
+        return ResponseEntity.ok(Map.of("message", "Your account has been deactivated successfully"));
+    }
+
+    @PostMapping("/delete-account")
+    public ResponseEntity<Map<String, String>> deleteAccount(
+            Authentication authentication,
+            @RequestBody(required = false) Map<String, String> body) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String password = body != null ? body.get("password") : null;
+        authService.deleteAccount(authentication.getName(), password);
+        return ResponseEntity.ok(Map.of("message", "Your account has been permanently deleted"));
+    }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<Map<String, String>> deleteAccountRest(
+            Authentication authentication,
+            @RequestBody(required = false) Map<String, String> body) {
+        return deleteAccount(authentication, body);
+    }
 }
 

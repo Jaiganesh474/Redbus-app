@@ -10,6 +10,8 @@ export interface User {
   gender?: "MALE" | "FEMALE" | "OTHER";
   operatorStatus?: string;
   walletBalance?: number;
+  isActive?: boolean;
+  status?: string;
 }
 
 export interface OperatorProfile {

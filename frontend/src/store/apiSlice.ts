@@ -146,6 +146,21 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["SavedTraveller"],
     }),
+    deactivateAccount: builder.mutation<{ message: string }, void>({
+      query: () => ({
+        url: "/auth/deactivate",
+        method: "POST",
+      }),
+      invalidatesTags: ["Auth"],
+    }),
+    deleteAccount: builder.mutation<{ message: string }, { password?: string } | void>({
+      query: (body) => ({
+        url: "/auth/delete-account",
+        method: "POST",
+        body: body || {},
+      }),
+      invalidatesTags: ["Auth"],
+    }),
     getMe: builder.query<User, void>({
       query: () => "/auth/me",
       providesTags: ["Auth"],
@@ -768,6 +783,8 @@ export const {
   useRevokeDeviceSessionMutation,
   useDeleteDeviceSessionPermanentlyMutation,
   useRevokeAllOtherSessionsMutation,
+  useDeactivateAccountMutation,
+  useDeleteAccountMutation,
 } = apiSlice;
 
 

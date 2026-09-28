@@ -27,6 +27,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final SavedTravellerRepository savedTravellerRepository;
     private final com.redbus.repository.OperatorRepository operatorRepository;
+    private final com.redbus.repository.UserDeviceSessionRepository userDeviceSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -211,6 +212,14 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new BadRequestException("Invalid email or password");
+        }
+
+        if (Boolean.FALSE.equals(user.getIsActive()) || "DEACTIVATED".equalsIgnoreCase(user.getStatus())) {
+            throw new BadRequestException("Your account has been deactivated. Please contact customer support to reactivate your account.");
+        }
+
+        if ("DELETED".equalsIgnoreCase(user.getStatus())) {
+            throw new BadRequestException("This account has been deleted. Please sign up for a new account to continue.");
         }
 
         // Check if email is verified
@@ -471,6 +480,47 @@ public class AuthService {
         return mapToDto(user);
     }
 
+    @Transactional
+    public void deactivateAccount(String email) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
+
+        user.setIsActive(false);
+        user.setStatus("DEACTIVATED");
+        userRepository.save(user);
+
+        if (userDeviceSessionRepository != null) {
+            userDeviceSessionRepository.deactivateAllByUser(user);
+        }
+        log.info("Account successfully deactivated for user: {}", email);
+    }
+
+    @Transactional
+    public void deleteAccount(String email, String password) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
+
+        if (password != null && !password.isBlank()) {
+            if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+                throw new BadRequestException("Invalid password. Please provide your correct password to confirm account deletion.");
+            }
+        }
+
+        if (userDeviceSessionRepository != null) {
+            userDeviceSessionRepository.deleteAllByUser(user);
+        }
+
+        savedTravellerRepository.deleteByUserId(user.getId());
+
+        user.setIsActive(false);
+        user.setStatus("DELETED");
+        user.setVerificationToken(null);
+        user.setPasswordResetToken(null);
+        user.setAvatarUrl(null);
+        userRepository.save(user);
+        log.info("Account permanently deleted and scrubbed for user: {}", email);
+    }
+
     public UserDto mapToDto(User user) {
         String opStatus = null;
         if (user.getRole() != null && user.getRole().contains("OPERATOR")) {
@@ -490,6 +540,8 @@ public class AuthService {
                 .gender(user.getGender())
                 .operatorStatus(opStatus)
                 .walletBalance(user.getWalletBalance() != null ? user.getWalletBalance() : java.math.BigDecimal.ZERO)
+                .isActive(user.getIsActive() != null ? user.getIsActive() : true)
+                .status(user.getStatus() != null ? user.getStatus() : "ACTIVE")
                 .build();
     }
 }
