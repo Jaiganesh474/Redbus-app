@@ -113,6 +113,11 @@ class SearchProvider with ChangeNotifier {
     _applyFiltersAndSort();
   }
 
+  void toggleSingleSeatsFilter() {
+    _filterSingleSeats = !_filterSingleSeats;
+    _applyFiltersAndSort();
+  }
+
   void setPriceRange(RangeValues values) {
     _priceRange = values;
     _applyFiltersAndSort();

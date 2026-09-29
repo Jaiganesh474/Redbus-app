@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import 'home/home_screen.dart';
 import 'my_bookings/my_bookings_screen.dart';
-import 'ai_assistant/redbus_ai_screen.dart';
 import 'offers/offers_screen.dart';
+import 'profile/help_support_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -37,22 +37,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final pages = [
       HomeScreen(onNavigateTab: _onTabTapped),
       const MyBookingsScreen(),
-      const RedBusAiScreen(),
       const OffersScreen(),
+      const HelpSupportScreen(),
       const ProfileScreen(),
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: KeyedSubtree(
+          key: ValueKey<int>(_currentIndex),
+          child: pages[_currentIndex],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkSurface : Colors.white,
           border: Border(
             top: BorderSide(
-              color: isDark ? const Color(0xFF374151) : AppColors.border,
+              color: isDark ? const Color(0xFF374151) : const Color(0xFFEEEEEE),
               width: 1,
             ),
           ),
@@ -64,38 +69,41 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
           ],
         ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: _onTabTapped,
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _onTabTapped,
+          type: BottomNavigationBarType.fixed,
           backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-          indicatorColor: AppColors.primaryLight,
-          surfaceTintColor: Colors.transparent,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: isDark ? Colors.grey[400] : const Color(0xFF718096),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
           elevation: 0,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.directions_bus_outlined),
-              selectedIcon: Icon(Icons.directions_bus_rounded, color: AppColors.primary),
-              label: 'Bus Tickets',
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.confirmation_number_outlined),
-              selectedIcon: Icon(Icons.confirmation_number_rounded, color: AppColors.primary),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.checklist_rounded),
+              activeIcon: Icon(Icons.checklist_rtl_rounded),
               label: 'Bookings',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined, color: Colors.amber),
-              selectedIcon: Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
-              label: 'redBus AI',
-            ),
-            NavigationDestination(
+            BottomNavigationBarItem(
               icon: Icon(Icons.local_offer_outlined),
-              selectedIcon: Icon(Icons.local_offer_rounded, color: AppColors.primary),
+              activeIcon: Icon(Icons.local_offer_rounded),
               label: 'Offers',
             ),
-            NavigationDestination(
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              activeIcon: Icon(Icons.chat_bubble_rounded),
+              label: 'Help',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded, color: AppColors.primary),
-              label: 'Account',
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'My Account',
             ),
           ],
         ),

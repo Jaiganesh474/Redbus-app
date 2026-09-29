@@ -15,35 +15,53 @@ class BoardingDroppingScreen extends StatefulWidget {
 
 class _BoardingDroppingScreenState extends State<BoardingDroppingScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bookingProvider = Provider.of<BookingProvider>(context);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bus = bookingProvider.selectedBus!;
+
+    final filteredBoardingPoints = bus.boardingPoints.where((p) {
+      if (_searchQuery.isEmpty) return true;
+      return p.name.toLowerCase().contains(_searchQuery) || p.landmark.toLowerCase().contains(_searchQuery);
+    }).toList();
+
+    final filteredDroppingPoints = bus.droppingPoints.where((p) {
+      if (_searchQuery.isEmpty) return true;
+      return p.name.toLowerCase().contains(_searchQuery) || p.landmark.toLowerCase().contains(_searchQuery);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Pickup & Drop Points'),
+        title: const Text('Boarding & Dropping Points'),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textSecondary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           tabs: [
             Tab(
               text: '1. BOARDING (${bookingProvider.selectedBoardingPoint?.name ?? "Select"})',
@@ -54,45 +72,114 @@ class _BoardingDroppingScreenState extends State<BoardingDroppingScreen> with Si
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          // Boarding Points Tab
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: bus.boardingPoints.length,
-            itemBuilder: (context, index) {
-              final point = bus.boardingPoints[index];
-              final isSelected = bookingProvider.selectedBoardingPoint?.id == point.id;
-              return _PointSelectionCard(
-                point: point,
-                isSelected: isSelected,
-                isDark: isDark,
-                onTap: () {
-                  bookingProvider.setBoardingPoint(point);
-                  // Automatically advance to dropping tab
-                  _tabController.animateTo(1);
-                },
-              );
-            },
+          // Search & GPS Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: isDark ? AppColors.darkCard : Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurface : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              hintText: 'Search boarding / dropping location',
+                              hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                        if (_searchQuery.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 16),
+                            onPressed: () => _searchController.clear(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Locating closest stops to your GPS location... 📍')),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.my_location_rounded, color: AppColors.primary, size: 20),
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          // Dropping Points Tab
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: bus.droppingPoints.length,
-            itemBuilder: (context, index) {
-              final point = bus.droppingPoints[index];
-              final isSelected = bookingProvider.selectedDroppingPoint?.id == point.id;
-              return _PointSelectionCard(
-                point: point,
-                isSelected: isSelected,
-                isDark: isDark,
-                onTap: () {
-                  bookingProvider.setDroppingPoint(point);
-                },
-              );
-            },
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Boarding Points Tab
+                filteredBoardingPoints.isEmpty
+                    ? const Center(child: Text('No boarding stops match your search'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredBoardingPoints.length,
+                        itemBuilder: (context, index) {
+                          final point = filteredBoardingPoints[index];
+                          final isSelected = bookingProvider.selectedBoardingPoint?.id == point.id;
+                          return _PointSelectionCard(
+                            point: point,
+                            isSelected: isSelected,
+                            isDark: isDark,
+                            onTap: () {
+                              bookingProvider.setBoardingPoint(point);
+                              // Automatically switch to dropping point tab
+                              _tabController.animateTo(1);
+                            },
+                          );
+                        },
+                      ),
+
+                // Dropping Points Tab
+                filteredDroppingPoints.isEmpty
+                    ? const Center(child: Text('No dropping stops match your search'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredDroppingPoints.length,
+                        itemBuilder: (context, index) {
+                          final point = filteredDroppingPoints[index];
+                          final isSelected = bookingProvider.selectedDroppingPoint?.id == point.id;
+                          return _PointSelectionCard(
+                            point: point,
+                            isSelected: isSelected,
+                            isDark: isDark,
+                            onTap: () {
+                              bookingProvider.setDroppingPoint(point);
+                            },
+                          );
+                        },
+                      ),
+              ],
+            ),
           ),
         ],
       ),
@@ -101,6 +188,13 @@ class _BoardingDroppingScreenState extends State<BoardingDroppingScreen> with Si
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : Colors.white,
           border: Border(top: BorderSide(color: isDark ? const Color(0xFF374151) : AppColors.border)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
         child: SafeArea(
           child: Row(
@@ -162,7 +256,7 @@ class _PointSelectionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: isSelected
-            ? AppColors.primaryLight.withOpacity(0.5)
+            ? AppColors.primaryLight.withOpacity(0.4)
             : (isDark ? AppColors.darkCard : Colors.white),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
@@ -195,12 +289,29 @@ class _PointSelectionCard extends StatelessWidget {
             fontSize: 15,
           ),
         ),
-        subtitle: point.landmark.isNotEmpty
-            ? Text(
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (point.landmark.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
                 'Landmark: ${point.landmark}',
                 style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              )
-            : null,
+              ),
+            ],
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.directions_subway_rounded, size: 12, color: Color(0xFF2563EB)),
+                const SizedBox(width: 4),
+                Text(
+                  'Metro & Local Bus Hub Nearby',
+                  style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ],
+        ),
         trailing: Icon(
           isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
           color: isSelected ? AppColors.primary : AppColors.textMuted,

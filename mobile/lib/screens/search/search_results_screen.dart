@@ -6,12 +6,21 @@ import '../../models/bus_model.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/bus_card.dart';
+import '../../widgets/loading_shimmer.dart';
 import 'filter_sort_bottom_sheet.dart';
 import '../bus_details/bus_details_screen.dart';
 import '../bus_details/seat_selection_screen.dart';
+import '../ai_assistant/redbus_ai_screen.dart';
 
-class SearchResultsScreen extends StatelessWidget {
+class SearchResultsScreen extends StatefulWidget {
   const SearchResultsScreen({super.key});
+
+  @override
+  State<SearchResultsScreen> createState() => _SearchResultsScreenState();
+}
+
+class _SearchResultsScreenState extends State<SearchResultsScreen> {
+  String? _selectedBoardingArea;
 
   void _openFilters(BuildContext context) {
     showModalBottomSheet(
@@ -79,6 +88,19 @@ class SearchResultsScreen extends StatelessWidget {
             onPressed: () => _openFilters(context),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'ask_ray_fab',
+        backgroundColor: const Color(0xFF7C3AED),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+        label: const Text('Ask Ray AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RedBusAiScreen()),
+          );
+        },
       ),
       body: Column(
         children: [
@@ -201,25 +223,71 @@ class SearchResultsScreen extends StatelessWidget {
                   isActive: searchProvider.filterSleeperOnly,
                   onTap: () => searchProvider.toggleSleeperFilter(),
                 ),
+                const SizedBox(width: 6),
+                _FilterPill(
+                  label: 'Single Seats',
+                  isActive: searchProvider.filterSingleSeats,
+                  onTap: () => searchProvider.toggleSingleSeatsFilter(),
+                ),
               ],
             ),
           ),
 
-          // Buses List or Empty State
+          // Boarding Areas Quick Filter Bar (from prototype)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  const Text('Boarding:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                  const SizedBox(width: 6),
+                  ...['All', 'Egmore', 'SIPCOT', 'Medavakkam', 'Koyambedu', 'Tambaram', 'Guindy'].map((area) {
+                    final isSelected = (_selectedBoardingArea == null && area == 'All') || (_selectedBoardingArea == area);
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedBoardingArea = (area == 'All') ? null : area;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected ? (isDark ? Colors.white24 : const Color(0xFF1E293B)) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? Colors.transparent : (isDark ? const Color(0xFF374151) : AppColors.border),
+                            ),
+                          ),
+                          child: Text(
+                            area,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.textPrimary),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // Buses List with Skeleton Shimmer or Empty State
           Expanded(
             child: searchProvider.isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: AppColors.primary),
-                        SizedBox(height: 16),
-                        Text(
-                          'Finding best routes & prices...',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
+                ? ListView.builder(
+                    itemCount: 4,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemBuilder: (_, __) => const BusCardSkeleton(),
                   )
                 : searchProvider.buses.isEmpty
                     ? Center(
@@ -252,17 +320,21 @@ class SearchResultsScreen extends StatelessWidget {
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 4, bottom: 20),
-                        itemCount: searchProvider.buses.length,
-                        itemBuilder: (context, index) {
-                          final bus = searchProvider.buses[index];
-                          return BusCard(
-                            bus: bus,
-                            onSelectSeats: () => _onBusSelected(context, bus, true),
-                            onViewDetails: () => _onBusSelected(context, bus, false),
-                          );
-                        },
+                    : RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: () => searchProvider.searchBuses(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                          itemCount: searchProvider.buses.length,
+                          itemBuilder: (context, index) {
+                            final bus = searchProvider.buses[index];
+                            return BusCard(
+                              bus: bus,
+                              onSelectSeats: () => _onBusSelected(context, bus, true),
+                              onViewDetails: () => _onBusSelected(context, bus, false),
+                            );
+                          },
+                        ),
                       ),
           ),
         ],
@@ -291,24 +363,28 @@ class _FilterPill extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary
+              ? (isDark ? AppColors.primary.withOpacity(0.3) : AppColors.primaryLight)
               : (isDark ? AppColors.darkCard : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive
-                ? AppColors.primary
-                : (isDark ? const Color(0xFF374151) : AppColors.border),
+            color: isActive ? AppColors.primary : (isDark ? const Color(0xFF374151) : AppColors.border),
+            width: isActive ? 1.5 : 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 14, color: isActive ? Colors.white : AppColors.textSecondary),
+              Icon(
+                icon,
+                size: 14,
+                color: isActive ? AppColors.primary : (isDark ? Colors.white70 : AppColors.textSecondary),
+              ),
               const SizedBox(width: 4),
             ],
             Text(
@@ -316,9 +392,7 @@ class _FilterPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive
-                    ? Colors.white
-                    : (isDark ? Colors.white : AppColors.textPrimary),
+                color: isActive ? AppColors.primary : (isDark ? Colors.white : AppColors.textPrimary),
               ),
             ),
           ],

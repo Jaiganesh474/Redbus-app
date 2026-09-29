@@ -4,8 +4,10 @@ import '../../config/theme.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/ticket_card.dart';
+import '../../widgets/custom_button.dart';
 import 'live_tracker_screen.dart';
 import 'booking_detail_screen.dart';
+import '../main_navigation.dart';
 
 class MyBookingsScreen extends StatelessWidget {
   const MyBookingsScreen({super.key});
@@ -35,7 +37,10 @@ class MyBookingsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Refund percentage:'),
-                Text('90% (₹${(booking.totalAmount * 0.9).toStringAsFixed(1)})', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
+                Text(
+                  '90% (₹${(booking.totalAmount * 0.9).toStringAsFixed(1)})',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success),
+                ),
               ],
             ),
             const SizedBox(height: 2),
@@ -107,9 +112,28 @@ class MyBookingsScreen extends StatelessWidget {
           color: AppColors.primary,
           child: TabBarView(
             children: [
-              _buildBookingsList(context, upcomingBookings, bookingProvider, 'No upcoming trips found'),
-              _buildBookingsList(context, completedBookings, bookingProvider, 'No completed trips found'),
-              _buildBookingsList(context, cancelledBookings, bookingProvider, 'No cancelled bookings'),
+              _buildBookingsList(
+                context,
+                upcomingBookings,
+                bookingProvider,
+                'No upcoming trips',
+                'Looks like you haven\'t booked any bus trips yet. Plan your next adventure now!',
+                showBookNow: true,
+              ),
+              _buildBookingsList(
+                context,
+                completedBookings,
+                bookingProvider,
+                'No completed trips',
+                'Your completed past journeys will be listed here.',
+              ),
+              _buildBookingsList(
+                context,
+                cancelledBookings,
+                bookingProvider,
+                'No cancelled trips',
+                'Your cancelled bookings and instant refund history appear here.',
+              ),
             ],
           ),
         ),
@@ -121,20 +145,60 @@ class MyBookingsScreen extends StatelessWidget {
     BuildContext context,
     List<Booking> list,
     BookingProvider bookingProvider,
-    String emptyMessage,
-  ) {
+    String title,
+    String subtitle, {
+    bool showBookNow = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (list.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.confirmation_number_outlined, size: 54, color: AppColors.textMuted),
-            const SizedBox(height: 12),
-            Text(
-              emptyMessage,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.luggage_rounded,
+                    size: 46,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+              ),
+              if (showBookNow) ...[
+                const SizedBox(height: 24),
+                CustomButton(
+                  width: 160,
+                  text: 'BOOK NOW',
+                  onPressed: () {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const MainNavigationScreen(initialIndex: 0)),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }
