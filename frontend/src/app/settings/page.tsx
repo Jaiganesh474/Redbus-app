@@ -277,7 +277,7 @@ export default function SettingsPage() {
       if (name.trim()) payload.name = name.trim();
       if (phone !== undefined) payload.phone = phone.trim();
       if (gender) payload.gender = gender;
-      if (avatarUrl) payload.avatarUrl = avatarUrl;
+      if (avatarUrl !== undefined) payload.avatarUrl = avatarUrl;
       if (newPassword) {
         payload.currentPassword = currentPassword;
         payload.newPassword = newPassword;
@@ -358,7 +358,9 @@ export default function SettingsPage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={avatarUrl} alt="Avatar preview" className="w-full h-full object-cover" />
                   ) : (
-                    <UserIcon className="w-10 h-10 text-gray-300" />
+                    <div className="w-full h-full bg-gradient-to-tr from-[#d84e55] to-orange-400 text-white flex items-center justify-center font-black text-xl">
+                      {user?.name ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2) : <UserIcon className="w-8 h-8 text-white" />}
+                    </div>
                   )}
                 </div>
                 <button

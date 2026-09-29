@@ -82,11 +82,11 @@ export default function ProfilePage() {
   const handleAvatarSelect = async (avatarUrl: string, gender: "MALE" | "FEMALE") => {
     try {
       const updated = await updateProfileMutation({
-        avatarUrl,
+        avatarUrl: avatarUrl || "",
         gender: user?.gender || gender,
       }).unwrap();
       dispatch(updateUser(updated));
-      setActionSuccess("Profile avatar updated!");
+      setActionSuccess(avatarUrl ? "Profile avatar updated successfully!" : "Profile photo removed. Default icon restored.");
       setTimeout(() => setActionSuccess(""), 3000);
     } catch (err: any) {
       console.error("Failed to update avatar:", err);
@@ -233,22 +233,35 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
                   className="absolute bottom-1 right-1 p-2 rounded-xl bg-gray-900 dark:bg-slate-800 text-white shadow-lg hover:bg-[#d84e55] transition-all cursor-pointer border-2 border-white dark:border-slate-900"
-                  title="Change 3D Avatar"
+                  title="Change Photo / Avatar"
                 >
                   <Camera className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Action Buttons on the right side */}
-              <div className="flex items-center gap-2.5 pt-2 sm:pt-0">
+              <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
                   className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer border border-gray-200/80 dark:border-slate-700"
                 >
                   <Camera className="w-3.5 h-3.5 text-[#d84e55]" />
-                  <span>Change Photo / Avatar</span>
+                  <span>{user.avatarUrl ? "Change Photo / Avatar" : "Add Photo / Avatar"}</span>
                 </button>
+
+                {user.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => handleAvatarSelect("", (user.gender as any) || "MALE")}
+                    disabled={isUpdatingProfile}
+                    className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-600 dark:text-red-300 rounded-xl text-xs font-bold transition-all cursor-pointer border border-red-200/80 dark:border-red-900/50"
+                    title="Remove custom photo and use default icon"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove Photo</span>
+                  </button>
+                )}
 
                 <Link
                   href="/settings"

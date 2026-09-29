@@ -401,7 +401,8 @@ public class AuthService {
         }
 
         if (request.getAvatarUrl() != null) {
-            user.setAvatarUrl(request.getAvatarUrl().trim());
+            String url = request.getAvatarUrl().trim();
+            user.setAvatarUrl(url.isBlank() || "REMOVE".equalsIgnoreCase(url) ? null : url);
         }
 
         if (request.getGender() != null) {
