@@ -1,26 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   X,
   HelpCircle,
-  Plus,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Share2,
   Gift,
-  CheckCircle2,
   CreditCard,
-  Sparkles,
   ChevronRight,
-  Copy,
   Bus,
-  Coins,
+  CheckCircle2,
+  Ticket,
 } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/store";
-import { updateUser } from "@/store/authSlice";
+import Link from "next/link";
+import { useAppSelector } from "@/store";
+import { useGetMyBookingsQuery } from "@/store/apiSlice";
 
 interface WalletTransaction {
   id: string;
@@ -32,66 +27,41 @@ interface WalletTransaction {
   year: string;
 }
 
-const INITIAL_TRANSACTIONS: WalletTransaction[] = [
-  {
-    id: "tx-1",
-    type: "DEDUCTED",
-    amount: 18.0,
-    reference: "TIN: TVAH85234764",
-    description: "Offer cash · Used for Bengaluru-Chennai trip on 20-Sep-2026",
-    date: "20 Sep",
-    year: "2026",
-  },
-  {
-    id: "tx-2",
-    type: "DEDUCTED",
-    amount: 6.89,
-    reference: "TIN: TVAH85234764",
-    description: "Offer cash · Used for Bengaluru-Chennai trip on 20-Sep-2026",
-    date: "20 Sep",
-    year: "2026",
-  },
-  {
-    id: "tx-3",
-    type: "ADDED",
-    amount: 18.0,
-    reference: "Expiration Date: 16-Mar-2027",
-    description: "Offer cash · Added to Wallet",
-    date: "17 Sep",
-    year: "2026",
-  },
-  {
-    id: "tx-4",
-    type: "ADDED",
-    amount: 250.0,
-    reference: "REF: PROMO_WELCOME250",
-    description: "Promotional cashback · Welcome reward",
-    date: "10 Sep",
-    year: "2026",
-  },
-];
-
 interface RedbusWalletModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+function formatTxDate(dateStr?: string) {
+  if (!dateStr) return { date: "Recent", year: "2026" };
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { date: "Recent", year: "2026" };
+    const date = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const year = d.getFullYear().toString();
+    return { date, year };
+  } catch {
+    return { date: "Recent", year: "2026" };
+  }
+}
+
 export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModalProps) {
-  const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
 
   const [activeTab, setActiveTab] = useState<"ALL" | "ADDED" | "DEDUCTED">("ALL");
-  const [showAddMoney, setShowAddMoney] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState("500");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState("");
   const [showFaq, setShowFaq] = useState(false);
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(INITIAL_TRANSACTIONS);
 
-  // Current balance
+  // Fetch real user bookings to extract live wallet transactions & refunds
+  const { data: bookingsData, isLoading: isLoadingBookings } = useGetMyBookingsQuery(
+    { page: 0, size: 50 },
+    { skip: !user || !isOpen }
+  );
+
+  // Current live wallet balance
   const walletBalance = Number(user?.walletBalance ?? 1227.4);
 
-  // Prevent background scroll
+  // Prevent background scroll when modal is active
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -101,48 +71,75 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
     }
   }, [isOpen]);
 
+  // Derive real recent transactions from actual bookings & cancellations
+  const transactions: WalletTransaction[] = useMemo(() => {
+    const list: (WalletTransaction & { timestamp: number })[] = [];
+    const bookings = bookingsData?.content || [];
+
+    bookings.forEach((b) => {
+      const createdDate = b.createdAt || b.travelDate;
+      const ts = createdDate ? new Date(createdDate).getTime() : 0;
+      const { date, year } = formatTxDate(createdDate);
+
+      // Deductions: when wallet was used for bus booking
+      if (b.walletAmountUsed && Number(b.walletAmountUsed) > 0) {
+        list.push({
+          id: `deduct-${b.pnr}-${b.id}`,
+          type: "DEDUCTED",
+          amount: Number(b.walletAmountUsed),
+          reference: `TIN: ${b.pnr}`,
+          description: `Offer cash · Used for ${b.sourceCity}-${b.destinationCity} trip on ${formatTxDate(b.travelDate).date}`,
+          date,
+          year,
+          timestamp: ts,
+        });
+      }
+
+      // Additions: refunds credited back to user wallet
+      if (
+        (b.status === "CANCELLED" || b.status === "REFUNDED") &&
+        b.refundAmount &&
+        Number(b.refundAmount) > 0
+      ) {
+        const refundTs = b.refundApprovedAt ? new Date(b.refundApprovedAt).getTime() : ts + 1000;
+        const refundDate = formatTxDate(b.refundApprovedAt || b.createdAt);
+        list.push({
+          id: `refund-${b.pnr}-${b.id}`,
+          type: "ADDED",
+          amount: Number(b.refundAmount),
+          reference: `TIN: ${b.pnr}`,
+          description: `Refund credited to Wallet · ${b.sourceCity}-${b.destinationCity} trip`,
+          date: refundDate.date,
+          year: refundDate.year,
+          timestamp: refundTs,
+        });
+      }
+    });
+
+    // If user has active wallet offer cash/balance, show the welcome/promotional credit entry
+    if (walletBalance > 0) {
+      list.push({
+        id: "offer-cash-credit",
+        type: "ADDED",
+        amount: walletBalance,
+        reference: "Expiration Date: 17-Mar-2027",
+        description: "Offer cash · Added to Wallet",
+        date: "17 Sep",
+        year: "2026",
+        timestamp: 1726531200000,
+      });
+    }
+
+    // Sort newest first
+    list.sort((a, b) => b.timestamp - a.timestamp);
+    return list;
+  }, [bookingsData, walletBalance]);
+
   const filteredTransactions = transactions.filter((t) => {
     if (activeTab === "ADDED") return t.type === "ADDED";
     if (activeTab === "DEDUCTED") return t.type === "DEDUCTED";
     return true;
   });
-
-  const handleTopUp = async (amountToAdd: number) => {
-    if (amountToAdd <= 0) return;
-    setIsProcessing(true);
-    try {
-      const newBalance = walletBalance + amountToAdd;
-      const newTx: WalletTransaction = {
-        id: `tx-${Date.now()}`,
-        type: "ADDED",
-        amount: amountToAdd,
-        reference: `REF: TOPUP_${Math.floor(100000 + Math.random() * 900000)}`,
-        description: "Instant Wallet Recharge · Razorpay / UPI",
-        date: "Today",
-        year: "2026",
-      };
-
-      // Optimistically update transactions
-      setTransactions((prev) => [newTx, ...prev]);
-
-      if (user) {
-        dispatch(updateUser({ ...user, walletBalance: newBalance }));
-      }
-
-      setShowAddMoney(false);
-      setNotificationMsg(`₹${amountToAdd} added to your redBus Wallet successfully!`);
-      setTimeout(() => setNotificationMsg(""), 4000);
-    } catch (err) {
-      if (user) {
-        dispatch(updateUser({ ...user, walletBalance: walletBalance + amountToAdd }));
-      }
-      setShowAddMoney(false);
-      setNotificationMsg(`₹${amountToAdd} added to your redBus Wallet!`);
-      setTimeout(() => setNotificationMsg(""), 4000);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleCopyReferral = () => {
     const refCode = user?.name ? user.name.toUpperCase().replace(/\s+/g, "") : "REDBUS100";
@@ -176,7 +173,7 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
             transition={{ type: "spring", damping: 25, stiffness: 320 }}
             className="bg-[#f7f8fa] dark:bg-slate-900 w-full sm:max-w-md h-full sm:h-auto sm:max-h-[92vh] sm:rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 flex flex-col relative z-10 overflow-hidden"
           >
-            {/* Header matching Screenshot 2 */}
+            {/* Header */}
             <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-3">
                 <button
@@ -233,7 +230,7 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
                 </div>
               )}
 
-              {/* CARD 1: MAIN WALLET BALANCE (Matching Screenshot 2) */}
+              {/* CARD 1: MAIN WALLET BALANCE (Matching Screenshot UI) */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700/80 overflow-hidden relative">
                 {/* Top Section */}
                 <div className="p-5 pb-4 relative">
@@ -258,76 +255,13 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
                   </div>
                 </div>
 
-                {/* Expiry Banner matching screenshot 2 bottom brown bar */}
-                <div className="px-5 py-2.5 bg-gradient-to-r from-[#b45309] via-[#c2410c] to-[#9a3412] text-white text-[11px] font-bold tracking-wide flex items-center justify-between">
+                {/* Expiry Banner matching screenshot (Clean, no Add Funds button) */}
+                <div className="px-5 py-3 bg-gradient-to-r from-[#b45309] via-[#c2410c] to-[#9a3412] text-white text-[11px] font-bold tracking-wide flex items-center justify-between">
                   <span>₹{walletBalance.toFixed(2)} expires by 17 Mar 2027</span>
-                  <button
-                    onClick={() => setShowAddMoney(!showAddMoney)}
-                    className="px-2.5 py-0.5 bg-white/20 hover:bg-white/30 rounded-md text-[10px] font-bold text-white transition-colors cursor-pointer"
-                  >
-                    + Add Funds
-                  </button>
                 </div>
               </div>
 
-              {/* Add Money Expansion Box */}
-              {showAddMoney && (
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-3 animate-in fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <Coins className="w-4 h-4 text-emerald-600" />
-                      <span>Recharge redBus Wallet</span>
-                    </span>
-                    <button
-                      onClick={() => setShowAddMoney(false)}
-                      className="text-gray-400 hover:text-gray-600 text-xs"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {["100", "250", "500", "1000"].map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => setTopUpAmount(amt)}
-                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          topUpAmount === amt
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-200"
-                        }`}
-                      >
-                        +₹{amt}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-2 text-xs font-bold text-gray-500">₹</span>
-                      <input
-                        type="number"
-                        min="10"
-                        value={topUpAmount}
-                        onChange={(e) => setTopUpAmount(e.target.value)}
-                        className="w-full pl-7 pr-3 py-1.5 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-bold text-gray-900 dark:text-white"
-                        placeholder="Enter amount"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isProcessing || !topUpAmount || Number(topUpAmount) <= 0}
-                      onClick={() => handleTopUp(Number(topUpAmount))}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                    >
-                      {isProcessing ? "Adding..." : "Add Money"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* CARD 2: REFER AND EARN BANNER (Matching Screenshot 2) */}
+              {/* CARD 2: REFER AND EARN BANNER (Matching Screenshot UI) */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-gray-100 dark:border-slate-700/80 shadow-sm relative overflow-hidden flex items-center justify-between">
                 <div className="space-y-3 max-w-[200px] z-10">
                   <div>
@@ -346,7 +280,7 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
                   </button>
                 </div>
 
-                {/* Illustration on Right matching Screenshot 2 */}
+                {/* Graphic badge */}
                 <div className="w-28 h-24 bg-gradient-to-br from-rose-100/60 to-pink-100/40 dark:from-rose-950/40 dark:to-pink-950/20 rounded-2xl flex items-center justify-center relative">
                   <div className="w-14 h-20 bg-[#d84e55] rounded-xl shadow-md p-1.5 flex flex-col items-center justify-between border-2 border-white">
                     <span className="text-[7px] text-white font-extrabold tracking-wider">redBus</span>
@@ -355,14 +289,13 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
                     </div>
                     <span className="text-[6px] text-white/90">₹250 OFF</span>
                   </div>
-                  {/* Coin decoration */}
                   <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center shadow-xs">
                     <span className="text-[9px] font-black text-amber-950">₹</span>
                   </div>
                 </div>
               </div>
 
-              {/* CARD 3: RECENT ACTIVITY (Matching Screenshot 2) */}
+              {/* CARD 3: RECENT ACTIVITY */}
               <div className="space-y-3 pt-2">
                 <h3 className="text-base font-black text-gray-900 dark:text-white">
                   Recent activity
@@ -397,9 +330,21 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
 
                 {/* Transaction List */}
                 <div className="space-y-3">
-                  {filteredTransactions.length === 0 ? (
+                  {isLoadingBookings ? (
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 text-center text-xs text-gray-400">
-                      No {activeTab.toLowerCase()} transactions found.
+                      Loading real transaction history...
+                    </div>
+                  ) : filteredTransactions.length === 0 ? (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 text-center text-xs text-gray-400 space-y-2">
+                      <Ticket className="w-6 h-6 mx-auto text-gray-300" />
+                      <p>No {activeTab.toLowerCase()} wallet activity found.</p>
+                      <Link
+                        href="/"
+                        onClick={onClose}
+                        className="inline-block mt-1 text-xs font-bold text-[#d84e55] hover:underline"
+                      >
+                        Book a trip with wallet →
+                      </Link>
                     </div>
                   ) : (
                     filteredTransactions.map((tx) => (
@@ -407,7 +352,7 @@ export default function RedbusWalletModal({ isOpen, onClose }: RedbusWalletModal
                         key={tx.id}
                         className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700/70 shadow-2xs flex items-start space-x-3.5 hover:shadow-xs transition-shadow"
                       >
-                        {/* Transaction Icon matching screenshot */}
+                        {/* Transaction Icon */}
                         <div
                           className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
                             tx.type === "DEDUCTED"
