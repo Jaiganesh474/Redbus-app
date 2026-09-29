@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppDispatch } from "@/store";
 import { setSelectedRoute } from "@/store/bookingSlice";
+import { API_BASE_URL } from "@/store/apiSlice";
 import type { RouteItem } from "@/types";
 import {
   Star,
@@ -60,7 +61,11 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
                 {route.busPhotoUrl ? (
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
                     <img
-                      src={route.busPhotoUrl.startsWith("http") ? route.busPhotoUrl : `http://localhost:8080${route.busPhotoUrl}`}
+                      src={
+                        route.busPhotoUrl.startsWith("http")
+                          ? route.busPhotoUrl
+                          : `${API_BASE_URL.replace(/\/api\/v1\/?$/, "")}${route.busPhotoUrl}`
+                      }
                       alt={route.operatorName}
                       className="w-full h-full object-cover"
                       onError={(e) => {

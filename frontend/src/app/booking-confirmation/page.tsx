@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
-import { useGetBookingByPnrQuery, useSendTicketEmailMutation } from "@/store/apiSlice";
+import { useGetBookingByPnrQuery, useSendTicketEmailMutation, API_BASE_URL } from "@/store/apiSlice";
 import { getRealtimeTripStatus } from "@/lib/dateUtils";
 import {
   CheckCircle2,
@@ -69,7 +69,7 @@ function ConfirmationContent() {
     );
   }
 
-  const pdfDownloadUrl = `http://localhost:8080/api/bookings/${booking.pnr}/ticket-pdf`;
+  const pdfDownloadUrl = `${API_BASE_URL}/bookings/${booking.pnr}/ticket-pdf`;
   const tripStatus = getRealtimeTripStatus(booking.travelDate, booking.departureTime, booking.arrivalTime, booking.status);
 
   return (

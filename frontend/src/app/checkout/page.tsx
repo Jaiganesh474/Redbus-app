@@ -22,6 +22,7 @@ import {
   useValidateCouponMutation,
   useUnlockSeatsMutation,
   useGetMeQuery,
+  API_BASE_URL,
 } from "@/store/apiSlice";
 import { useSeatLockTimer } from "@/hooks/useSeatLockTimer";
 import type { CouponValidationResponse, SeatItem } from "@/types";
@@ -175,9 +176,9 @@ function CheckoutContent() {
         try {
           const payload = JSON.stringify({ routeId: currentRouteId, seatIds, userId: currentUserId });
           if (navigator.sendBeacon) {
-            navigator.sendBeacon("http://localhost:8080/api/v1/seats/unlock", new Blob([payload], { type: "application/json" }));
+            navigator.sendBeacon(`${API_BASE_URL}/seats/unlock`, new Blob([payload], { type: "application/json" }));
           } else {
-            fetch("http://localhost:8080/api/v1/seats/unlock", {
+            fetch(`${API_BASE_URL}/seats/unlock`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: payload,

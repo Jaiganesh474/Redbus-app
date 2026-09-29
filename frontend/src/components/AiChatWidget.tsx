@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleChat, addMessage, setTyping, clearChat } from "@/store/chatSlice";
-import { useChatWithAiMutation } from "@/store/apiSlice";
+import { useChatWithAiMutation, API_BASE_URL } from "@/store/apiSlice";
 import type { RouteItem } from "@/types";
 import {
   Sparkles,
@@ -491,7 +491,7 @@ export default function AiChatWidget() {
                               </button>
                               {pnrMatch && (
                                 <a
-                                  href={`http://localhost:8080/api/bookings/${pnrMatch}/ticket-pdf`}
+                                  href={`${API_BASE_URL}/bookings/${pnrMatch}/ticket-pdf`}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#d84e55] dark:bg-red-950/60 dark:text-red-300 rounded-md font-bold text-[10px] flex items-center space-x-1 transition-colors"
@@ -517,7 +517,7 @@ export default function AiChatWidget() {
                           const pnrMatch = msg.content.match(/RB-[0-9]{4}-[A-Z0-9]{6}/)?.[0] || "";
                           return pnrMatch ? (
                             <a
-                              href={`http://localhost:8080/api/bookings/${pnrMatch}/ticket-pdf`}
+                              href={`${API_BASE_URL}/bookings/${pnrMatch}/ticket-pdf`}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#d84e55] dark:bg-red-950/60 dark:text-red-300 rounded-md font-bold text-[10px] flex items-center space-x-1 transition-colors"

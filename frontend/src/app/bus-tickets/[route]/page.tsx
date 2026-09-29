@@ -43,9 +43,10 @@ export default async function ProgrammaticRoutePage({ params }: RoutePageProps) 
 
   // Fetch live route data from backend server-side
   let routes: any[] = [];
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://redbus-api.duckdns.org/api/v1";
   try {
     const res = await fetch(
-      `http://localhost:8080/api/routes/search?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}`,
+      `${apiBase.replace(/\/api\/v1\/?$/, "")}/api/routes/search?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}`,
       { next: { revalidate: 60 } }
     );
     if (res.ok) {

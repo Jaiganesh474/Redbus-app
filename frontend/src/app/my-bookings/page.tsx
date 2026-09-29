@@ -12,6 +12,7 @@ import {
   useCancelBookingMutation,
   useSendTicketEmailMutation,
   useGetMeQuery,
+  API_BASE_URL,
 } from "@/store/apiSlice";
 import type { BookingDetails } from "@/types";
 import {
@@ -674,7 +675,7 @@ export default function MyBookingsPage() {
                     {booking.status === "CONFIRMED" ? (
                       <>
                         <a
-                          href={`http://localhost:8080/api/bookings/${booking.pnr}/ticket-pdf`}
+                          href={`${API_BASE_URL}/bookings/${booking.pnr}/ticket-pdf`}
                           target="_blank"
                           rel="noreferrer"
                           className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"

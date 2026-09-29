@@ -335,7 +335,7 @@ export default function OperatorPortalPage() {
         endpoint += `&token=${encodeURIComponent(token)}`;
       }
 
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://redbus-api.duckdns.org/api/v1";
       const baseUrl = apiBase.endsWith("/") ? apiBase.slice(0, -1) : apiBase;
       const fullUrl = `${baseUrl}${endpoint}`;
 
