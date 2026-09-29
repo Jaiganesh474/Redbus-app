@@ -16,8 +16,10 @@ class SearchProvider with ChangeNotifier {
 
   String _sourceCity = 'Bangalore';
   String _destinationCity = 'Hyderabad';
-  DateTime _travelDate = DateTime.now().add(const Duration(days: 1));
+  DateTime _travelDate = DateTime.now();
 
+  List<String> _availableCities = [];
+  List<Map<String, dynamic>> _popularRoutes = [];
   List<Bus> _allBuses = [];
   List<Bus> _filteredBuses = [];
   bool _isLoading = false;
@@ -32,10 +34,24 @@ class SearchProvider with ChangeNotifier {
   String? _selectedOperator;
   SortOption _currentSort = SortOption.highestRated;
 
+  SearchProvider() {
+    fetchMetadata();
+  }
+
+  Future<void> fetchMetadata() async {
+    try {
+      _availableCities = await _apiService.getAvailableCities();
+      _popularRoutes = await _apiService.getPopularRoutes();
+      notifyListeners();
+    } catch (_) {}
+  }
+
   // Getters
   String get sourceCity => _sourceCity;
   String get destinationCity => _destinationCity;
   DateTime get travelDate => _travelDate;
+  List<String> get availableCities => _availableCities;
+  List<Map<String, dynamic>> get popularRoutes => _popularRoutes;
   String get formattedTravelDate => DateFormat('EEE, d MMM').format(_travelDate);
   String get apiDateString => DateFormat('yyyy-MM-dd').format(_travelDate);
   List<Bus> get buses => _filteredBuses;

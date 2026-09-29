@@ -6,6 +6,7 @@ import '../../providers/booking_provider.dart';
 import '../../widgets/rating_badge.dart';
 import '../../widgets/custom_button.dart';
 import 'seat_selection_screen.dart';
+import 'bus_reviews_screen.dart';
 
 class BusDetailsScreen extends StatelessWidget {
   final Bus bus;
@@ -254,10 +255,36 @@ class BusDetailsScreen extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          const Text('Passenger Reviews & Ratings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Passenger Reviews & Ratings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => BusReviewsScreen(bus: bus)),
+                  );
+                },
+                child: const Text('View All', style: TextStyle(color: AppColors.primary)),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           if (bus.reviews.isEmpty)
-            const Text('No reviews yet. Be the first to review!', style: TextStyle(color: AppColors.textSecondary))
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.star_outline_rounded, size: 18),
+                  label: const Text('Read Verified Passenger Reviews'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => BusReviewsScreen(bus: bus)),
+                    );
+                  },
+                ),
+              ),
+            )
           else
             ...bus.reviews.map((r) => _ReviewCard(review: r, isDark: isDark)),
         ],

@@ -119,35 +119,40 @@ class Booking {
       }
     }
 
+    final rawDep = json['departureTime']?.toString() ?? '21:30';
+    final rawArr = json['arrivalTime']?.toString() ?? '06:30';
+    final depTime = rawDep.length >= 5 ? rawDep.substring(0, 5) : rawDep;
+    final arrTime = rawArr.length >= 5 ? rawArr.substring(0, 5) : rawArr;
+
     return Booking(
       id: json['id']?.toString() ?? '',
       pnr: json['pnr'] ?? 'RB${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-      tripInstanceId: json['tripInstanceId']?.toString() ?? '',
+      tripInstanceId: json['routeId']?.toString() ?? json['tripInstanceId']?.toString() ?? '',
       busId: json['busId']?.toString() ?? '',
-      operatorName: json['operatorName'] ?? 'Premium Line',
+      operatorName: json['operatorName'] ?? 'IntrCity SmartBus',
       busType: json['busType'] ?? 'AC Sleeper (2+1)',
-      busNumber: json['busNumber'] ?? 'KA-01-E-7722',
+      busNumber: json['busNumber'] ?? 'KA-51-E-7722',
       sourceCity: json['sourceCity'] ?? 'Source',
       destinationCity: json['destinationCity'] ?? 'Destination',
-      travelDate: json['travelDate'] ?? '2026-09-22',
-      departureTime: json['departureTime'] ?? '21:30',
-      arrivalTime: json['arrivalTime'] ?? '06:30',
-      boardingPoint: BoardingDroppingPoint.fromJson(json['boardingPoint'] ?? {}),
-      droppingPoint: BoardingDroppingPoint.fromJson(json['droppingPoint'] ?? {}),
+      travelDate: json['travelDate']?.toString() ?? DateTime.now().toString().split(' ').first,
+      departureTime: depTime,
+      arrivalTime: arrTime,
+      boardingPoint: BoardingDroppingPoint.fromJson(json['boardingPoint'] ?? 'Main Bus Station'),
+      droppingPoint: BoardingDroppingPoint.fromJson(json['droppingPoint'] ?? 'City Terminal'),
       passengers: (json['passengers'] as List?)
               ?.map((p) => PassengerInfo.fromJson(p))
               .toList() ??
           [],
-      baseFare: (json['baseFare'] ?? 0).toDouble(),
-      taxAndGst: (json['taxAndGst'] ?? 0).toDouble(),
+      baseFare: (json['baseFare'] ?? json['totalAmount'] ?? 0).toDouble(),
+      taxAndGst: (json['serviceFee'] ?? json['taxAndGst'] ?? 0).toDouble(),
       discountAmount: (json['discountAmount'] ?? 0).toDouble(),
-      insuranceFee: (json['insuranceFee'] ?? 0).toDouble(),
+      insuranceFee: (json['tripGuaranteeFee'] ?? json['insuranceFee'] ?? 0).toDouble(),
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
-      paymentId: json['paymentId'] ?? '',
+      paymentId: json['paymentId'] ?? 'pay_${json['pnr'] ?? "sim"}',
       paymentMethod: json['paymentMethod'] ?? 'UPI',
       status: parseStatus(json['status']),
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
       qrData: json['qrData'] ?? 'REDBUS:PNR=${json['pnr']}',
     );

@@ -131,7 +131,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (val) => (val == null || val.length < 6) ? 'Password must be at least 6 characters' : null,
               ),
 
-              const SizedBox(height: 24),
+              if (authProvider.errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  authProvider.errorMessage!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+              ],
+
+              const SizedBox(height: 20),
 
               CustomButton(
                 text: 'CREATE ACCOUNT & EARN ₹200',

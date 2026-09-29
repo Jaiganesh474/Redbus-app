@@ -48,32 +48,31 @@ class Seat {
   bool get isFemale => status == SeatStatus.femaleOnly;
 
   factory Seat.fromJson(Map<String, dynamic> json) {
-    SeatStatus parseStatus(String? s) {
-      switch (s?.toUpperCase()) {
-        case 'AVAILABLE':
-          return SeatStatus.available;
-        case 'BOOKED':
-          return SeatStatus.booked;
-        case 'LOCKED':
-          return SeatStatus.locked;
-        case 'FEMALE_ONLY':
-          return SeatStatus.femaleOnly;
-        default:
-          return SeatStatus.available;
+    SeatStatus parseStatus(String? s, String? genderRes) {
+      if (s?.toUpperCase() == 'BOOKED') return SeatStatus.booked;
+      if (s?.toUpperCase() == 'LOCKED') return SeatStatus.locked;
+      if (genderRes?.toUpperCase() == 'FEMALE' || s?.toUpperCase() == 'FEMALE_ONLY') {
+        return SeatStatus.femaleOnly;
       }
+      return SeatStatus.available;
     }
 
+    final rawRow = json['rowNum'] ?? json['row'] ?? 1;
+    final rawCol = json['colNum'] ?? json['column'] ?? 1;
+    final rawType = json['seatType'] ?? json['type'] ?? 'SEATER';
+    final rawDeck = json['deck'] ?? 'LOWER';
+
     return Seat(
-      id: json['id']?.toString() ?? '',
+      id: json['id']?.toString() ?? json['seatId']?.toString() ?? '',
       seatNumber: json['seatNumber'] ?? json['seat_number'] ?? '',
-      row: json['row'] ?? 0,
-      column: json['column'] ?? 0,
-      deck: (json['deck']?.toString().toLowerCase() == 'upper') ? DeckType.upper : DeckType.lower,
-      type: (json['type']?.toString().toLowerCase() == 'sleeper') ? SeatType.sleeper : SeatType.seater,
-      price: (json['price'] ?? 0).toDouble(),
-      status: parseStatus(json['status']),
-      isWindow: json['isWindow'] ?? false,
-      isAisle: json['isAisle'] ?? false,
+      row: rawRow is int ? rawRow : int.tryParse(rawRow.toString()) ?? 1,
+      column: rawCol is int ? rawCol : int.tryParse(rawCol.toString()) ?? 1,
+      deck: rawDeck.toString().toUpperCase() == 'UPPER' ? DeckType.upper : DeckType.lower,
+      type: rawType.toString().toUpperCase() == 'SLEEPER' ? SeatType.sleeper : SeatType.seater,
+      price: (json['price'] ?? json['basePrice'] ?? 0).toDouble(),
+      status: parseStatus(json['status'], json['genderRestriction']),
+      isWindow: rawCol == 1 || rawCol == 3,
+      isAisle: rawCol == 2,
     );
   }
 

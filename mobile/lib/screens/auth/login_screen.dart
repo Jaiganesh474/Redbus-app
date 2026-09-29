@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import '../main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -139,8 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Password reset link sent to your registered email!')),
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
                           );
                         },
                         child: const Text('Forgot Password?', style: TextStyle(fontSize: 12, color: AppColors.primary)),

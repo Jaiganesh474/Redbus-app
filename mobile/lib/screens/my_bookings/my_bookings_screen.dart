@@ -5,6 +5,7 @@ import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/ticket_card.dart';
 import 'live_tracker_screen.dart';
+import 'booking_detail_screen.dart';
 
 class MyBookingsScreen extends StatelessWidget {
   const MyBookingsScreen({super.key});
@@ -34,12 +35,12 @@ class MyBookingsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Refund percentage:'),
-                const Text('90% (₹1,408.5)', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
+                Text('90% (₹${(booking.totalAmount * 0.9).toStringAsFixed(1)})', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
               ],
             ),
             const SizedBox(height: 2),
             const Text(
-              'Amount will be credited back in 2-4 hours to original payment mode.',
+              'Amount will be credited back instantly to your RedBus Wallet.',
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ],
@@ -50,13 +51,13 @@ class MyBookingsScreen extends StatelessWidget {
             child: const Text('Keep Ticket'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
             onPressed: () {
-              bookingProvider.cancelBooking(booking.id);
+              bookingProvider.cancelBookingByPnr(booking.pnr);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Booking cancelled. Instant refund initiated!'),
+                  content: Text('Booking cancelled. Instant refund credited to Wallet!'),
                   backgroundColor: AppColors.dark,
                 ),
               );
@@ -82,6 +83,13 @@ class MyBookingsScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Bookings'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Refresh',
+              onPressed: () => bookingProvider.fetchMyBookings(),
+            ),
+          ],
           bottom: const TabBar(
             indicatorColor: AppColors.primary,
             labelColor: AppColors.primary,
@@ -94,15 +102,16 @@ class MyBookingsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Upcoming
-            _buildBookingsList(context, upcomingBookings, bookingProvider, 'No upcoming trips found'),
-            // Completed
-            _buildBookingsList(context, completedBookings, bookingProvider, 'No completed trips found'),
-            // Cancelled
-            _buildBookingsList(context, cancelledBookings, bookingProvider, 'No cancelled bookings'),
-          ],
+        body: RefreshIndicator(
+          onRefresh: () => bookingProvider.fetchMyBookings(),
+          color: AppColors.primary,
+          child: TabBarView(
+            children: [
+              _buildBookingsList(context, upcomingBookings, bookingProvider, 'No upcoming trips found'),
+              _buildBookingsList(context, completedBookings, bookingProvider, 'No completed trips found'),
+              _buildBookingsList(context, cancelledBookings, bookingProvider, 'No cancelled bookings'),
+            ],
+          ),
         ),
       ),
     );
@@ -137,6 +146,11 @@ class MyBookingsScreen extends StatelessWidget {
         final b = list[index];
         return TicketCard(
           booking: b,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => BookingDetailScreen(booking: b)),
+            );
+          },
           onLiveTrack: b.isUpcoming
               ? () {
                   Navigator.of(context).push(

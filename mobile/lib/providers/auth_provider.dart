@@ -6,10 +6,12 @@ class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
   User? _user;
+  List<SavedTraveller> _savedTravellers = [];
   bool _isLoading = false;
   String? _errorMessage;
 
   User? get user => _user;
+  List<SavedTraveller> get savedTravellers => _savedTravellers;
   bool get isAuthenticated => _user != null;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -23,6 +25,9 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       _user = await _authService.getCurrentUser();
+      if (_user != null) {
+        _savedTravellers = await _authService.getSavedTravellers();
+      }
     } catch (e) {
       debugPrint('Failed to load user: $e');
     } finally {
@@ -37,11 +42,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       _user = await _authService.login(emailOrPhone: emailOrPhone, password: password);
+      _savedTravellers = await _authService.getSavedTravellers();
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
       _isLoading = false;
       notifyListeners();
       return false;
@@ -64,6 +70,25 @@ class AuthProvider with ChangeNotifier {
         phone: phone,
         password: password,
       );
+      _savedTravellers = await _authService.getSavedTravellers();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({required String name, required String phone, String? password}) async {
+    if (_user == null) return false;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final updated = _user!.copyWith(name: name, phone: phone);
+      _user = await _authService.updateUser(updated, password: password);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -75,37 +100,32 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProfile({String? name, String? phone, String? avatarUrl, String? gender}) async {
-    if (_user == null) return;
-    _user = _user!.copyWith(
-      name: name ?? _user!.name,
-      phone: phone ?? _user!.phone,
-      avatarUrl: avatarUrl ?? _user!.avatarUrl,
-      gender: gender ?? _user!.gender,
-    );
-    await _authService.updateUser(_user!);
-    notifyListeners();
-  }
-
   Future<void> addSavedTraveller(SavedTraveller traveller) async {
-    if (_user == null) return;
-    final updatedList = List<SavedTraveller>.from(_user!.savedTravellers)..add(traveller);
-    _user = _user!.copyWith(savedTravellers: updatedList);
-    await _authService.updateUser(_user!);
-    notifyListeners();
+    try {
+      final result = await _authService.addSavedTraveller(traveller);
+      if (result != null) {
+        _savedTravellers.add(result);
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   Future<void> removeSavedTraveller(String id) async {
-    if (_user == null) return;
-    final updatedList = _user!.savedTravellers.where((t) => t.id != id).toList();
-    _user = _user!.copyWith(savedTravellers: updatedList);
-    await _authService.updateUser(_user!);
-    notifyListeners();
+    try {
+      await _authService.deleteSavedTraveller(id);
+      _savedTravellers.removeWhere((t) => t.id == id);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _authService.forgotPassword(email);
   }
 
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
+    _savedTravellers.clear();
     notifyListeners();
   }
 }

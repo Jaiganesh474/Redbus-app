@@ -3,7 +3,6 @@ import '../models/bus_model.dart';
 import '../models/seat_model.dart';
 import '../models/booking_model.dart';
 import '../models/coupon_model.dart';
-import '../services/mock_data_service.dart';
 import '../services/api_service.dart';
 
 class BookingProvider with ChangeNotifier {
@@ -25,10 +24,10 @@ class BookingProvider with ChangeNotifier {
   Coupon? _appliedCoupon;
   String _selectedPaymentMethod = 'UPI';
 
-  // Booking history
   List<Booking> _myBookings = [];
   Booking? _lastConfirmedBooking;
   bool _isLoading = false;
+  bool _isSeatsLoading = false;
 
   // Getters
   Bus? get selectedBus => _selectedBus;
@@ -46,9 +45,20 @@ class BookingProvider with ChangeNotifier {
   List<Booking> get myBookings => _myBookings;
   Booking? get lastConfirmedBooking => _lastConfirmedBooking;
   bool get isLoading => _isLoading;
+  bool get isSeatsLoading => _isSeatsLoading;
 
   BookingProvider() {
-    _myBookings = MockDataService.getMockBookings();
+    fetchMyBookings();
+  }
+
+  Future<void> fetchMyBookings() async {
+    try {
+      final list = await _apiService.getMyBookings();
+      if (list.isNotEmpty) {
+        _myBookings = list;
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   // Fare calculations
@@ -74,15 +84,24 @@ class BookingProvider with ChangeNotifier {
     return total > 0 ? total : 0;
   }
 
-  void selectBus(Bus bus) {
+  void selectBus(Bus bus) async {
     _selectedBus = bus;
-    _busSeats = bus.seats.isNotEmpty ? bus.seats : MockDataService.generateSeatLayout(bus.basePrice);
     _selectedSeats.clear();
     _passengers.clear();
     _selectedBoardingPoint = bus.boardingPoints.isNotEmpty ? bus.boardingPoints.first : null;
     _selectedDroppingPoint = bus.droppingPoints.isNotEmpty ? bus.droppingPoints.first : null;
     _appliedCoupon = null;
+    _isSeatsLoading = true;
     notifyListeners();
+
+    try {
+      _busSeats = await _apiService.getSeatLayout(bus.id, bus.basePrice);
+    } catch (_) {
+      _busSeats = [];
+    } finally {
+      _isSeatsLoading = false;
+      notifyListeners();
+    }
   }
 
   void setActiveDeck(DeckType deck) {
@@ -169,29 +188,34 @@ class BookingProvider with ChangeNotifier {
       }
     }
 
+    final routeIdNum = int.tryParse(_selectedBus!.id) ?? 1;
     final bookingPayload = {
-      'busId': _selectedBus!.id,
-      'tripInstanceId': _selectedBus!.tripInstanceId,
-      'sourceCity': _selectedBus!.sourceCity,
-      'destinationCity': _selectedBus!.destinationCity,
-      'travelDate': DateTime.now().add(const Duration(days: 1)).toString().split(' ')[0],
-      'boardingPoint': _selectedBoardingPoint?.toJson(),
-      'droppingPoint': _selectedDroppingPoint?.toJson(),
-      'seats': _selectedSeats.map((s) => s.toJson()).toList(),
-      'passengers': _passengers.map((p) => p.toJson()).toList(),
-      'baseFare': baseFare,
-      'taxAndGst': gstAndTaxes,
-      'discountAmount': discountAmount,
-      'insuranceFee': insuranceFee,
+      'routeId': routeIdNum,
+      'boardingPoint': _selectedBoardingPoint?.name ?? 'Main Terminal',
+      'droppingPoint': _selectedDroppingPoint?.name ?? 'City Drop',
+      'contactEmail': _contactEmail,
+      'contactPhone': _contactPhone,
+      'passengers': _passengers.map((p) => {
+        'name': p.name,
+        'age': p.age,
+        'gender': p.gender.toUpperCase(),
+        'seatNumber': p.seatNumber,
+        'price': p.seatPrice,
+      }).toList(),
+      'couponCode': _appliedCoupon?.code,
+      'hasTripGuarantee': _optedInsurance,
+      'serviceFee': gstAndTaxes,
       'totalAmount': totalPayableAmount,
-      'paymentMethod': _selectedPaymentMethod,
     };
 
     final result = await _apiService.createBooking(bookingPayload);
     final pnr = result['pnr'] ?? 'RB${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
 
+    // Trigger confirmation email
+    _apiService.sendTicketEmail(pnr, email: _contactEmail);
+
     final confirmedBooking = Booking(
-      id: result['id'] ?? 'bk_${DateTime.now().millisecondsSinceEpoch}',
+      id: result['id']?.toString() ?? 'bk_${DateTime.now().millisecondsSinceEpoch}',
       pnr: pnr,
       tripInstanceId: _selectedBus!.tripInstanceId,
       busId: _selectedBus!.id,
@@ -200,7 +224,7 @@ class BookingProvider with ChangeNotifier {
       busNumber: _selectedBus!.busNumber,
       sourceCity: _selectedBus!.sourceCity,
       destinationCity: _selectedBus!.destinationCity,
-      travelDate: 'Tomorrow, ${DateTime.now().add(const Duration(days: 1)).day}',
+      travelDate: result['travelDate']?.toString() ?? DateTime.now().toString().split(' ').first,
       departureTime: _selectedBus!.departureTime,
       arrivalTime: _selectedBus!.arrivalTime,
       boardingPoint: _selectedBoardingPoint ?? _selectedBus!.boardingPoints.first,
@@ -212,11 +236,11 @@ class BookingProvider with ChangeNotifier {
       discountAmount: discountAmount,
       insuranceFee: insuranceFee,
       totalAmount: totalPayableAmount,
-      paymentId: result['paymentId'] ?? 'pay_mock_${DateTime.now().millisecondsSinceEpoch}',
+      paymentId: result['paymentId'] ?? 'pay_${DateTime.now().millisecondsSinceEpoch}',
       paymentMethod: _selectedPaymentMethod,
       status: BookingStatus.confirmed,
       createdAt: DateTime.now(),
-      qrData: 'REDBUS:PNR=$pnr&PASSENGERS=${_selectedSeats.length}',
+      qrData: result['qrData'] ?? 'REDBUS:PNR=$pnr&PASSENGERS=${_selectedSeats.length}',
     );
 
     _myBookings.insert(0, confirmedBooking);
@@ -226,39 +250,46 @@ class BookingProvider with ChangeNotifier {
     return confirmedBooking;
   }
 
-  void cancelBooking(String bookingId) {
-    final index = _myBookings.indexWhere((b) => b.id == bookingId);
-    if (index >= 0) {
-      final old = _myBookings[index];
-      _myBookings[index] = Booking(
-        id: old.id,
-        pnr: old.pnr,
-        tripInstanceId: old.tripInstanceId,
-        busId: old.busId,
-        operatorName: old.operatorName,
-        busType: old.busType,
-        busNumber: old.busNumber,
-        sourceCity: old.sourceCity,
-        destinationCity: old.destinationCity,
-        travelDate: old.travelDate,
-        departureTime: old.departureTime,
-        arrivalTime: old.arrivalTime,
-        boardingPoint: old.boardingPoint,
-        droppingPoint: old.droppingPoint,
-        passengers: old.passengers,
-        selectedSeats: old.selectedSeats,
-        baseFare: old.baseFare,
-        taxAndGst: old.taxAndGst,
-        discountAmount: old.discountAmount,
-        insuranceFee: old.insuranceFee,
-        totalAmount: old.totalAmount,
-        paymentId: old.paymentId,
-        paymentMethod: old.paymentMethod,
-        status: BookingStatus.cancelled,
-        createdAt: old.createdAt,
-        qrData: old.qrData,
-      );
-      notifyListeners();
-    }
+  Future<void> cancelBookingByPnr(String pnr, {String reason = 'Customer cancellation'}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _apiService.cancelBooking(pnr, reason: reason);
+      final index = _myBookings.indexWhere((b) => b.pnr == pnr);
+      if (index >= 0) {
+        final old = _myBookings[index];
+        _myBookings[index] = Booking(
+          id: old.id,
+          pnr: old.pnr,
+          tripInstanceId: old.tripInstanceId,
+          busId: old.busId,
+          operatorName: old.operatorName,
+          busType: old.busType,
+          busNumber: old.busNumber,
+          sourceCity: old.sourceCity,
+          destinationCity: old.destinationCity,
+          travelDate: old.travelDate,
+          departureTime: old.departureTime,
+          arrivalTime: old.arrivalTime,
+          boardingPoint: old.boardingPoint,
+          droppingPoint: old.droppingPoint,
+          passengers: old.passengers,
+          selectedSeats: old.selectedSeats,
+          baseFare: old.baseFare,
+          taxAndGst: old.taxAndGst,
+          discountAmount: old.discountAmount,
+          insuranceFee: old.insuranceFee,
+          totalAmount: old.totalAmount,
+          paymentId: old.paymentId,
+          paymentMethod: old.paymentMethod,
+          status: BookingStatus.cancelled,
+          createdAt: old.createdAt,
+          qrData: old.qrData,
+        );
+      }
+    } catch (_) {}
+    _isLoading = false;
+    notifyListeners();
   }
 }
