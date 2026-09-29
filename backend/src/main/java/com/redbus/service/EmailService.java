@@ -37,7 +37,7 @@ public class EmailService {
     @Value("${app.brevo.sender-name:redBus India}")
     private String senderName;
 
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${app.frontend.url:https://redbusai.app}")
     private String frontendUrl;
 
     private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";

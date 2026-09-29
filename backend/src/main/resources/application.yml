@@ -61,8 +61,8 @@ app:
     sender-email: ${BREVO_SENDER_EMAIL:noreply@redbus.example.com}
     sender-name: ${BREVO_SENDER_NAME:redBus India}
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+    allowed-origins: ${ALLOWED_ORIGINS:https://redbusai.app,https://www.redbusai.app,https://redbusai.onrender.com,http://localhost:3000,http://127.0.0.1:3000}
   frontend:
-    url: ${FRONTEND_URL:http://localhost:3000}
+    url: ${FRONTEND_URL:https://redbusai.app}
   seat-lock:
     ttl-minutes: 5
