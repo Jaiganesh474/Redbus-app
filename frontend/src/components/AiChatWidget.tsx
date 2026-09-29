@@ -243,7 +243,7 @@ export default function AiChatWidget() {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ type: "spring", damping: 20, stiffness: 300 }}
-          className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-50 cursor-grab active:cursor-grabbing touch-none select-none"
+          className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-30 cursor-grab active:cursor-grabbing touch-none select-none"
         >
           <button
             type="button"

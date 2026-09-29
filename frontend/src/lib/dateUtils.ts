@@ -26,6 +26,23 @@ export function getOffsetDateStr(offsetDays: number = 0): string {
   return formatLocalDate(d);
 }
 
+export function formatShortDateDisplay(dateStr: string): string {
+  if (!dateStr) return "";
+  try {
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const weekday = days[d.getDay()];
+      const day = d.getDate();
+      const month = months[d.getMonth()];
+      return `${weekday} ${day}-${month}`;
+    }
+  } catch {}
+  return dateStr;
+}
+
 export function formatJourneyDisplayDate(dateStr: string): string {
   if (!dateStr) return "";
   try {
