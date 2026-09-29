@@ -3,9 +3,12 @@ class AppConstants {
   static const String appTagline = 'India\'s No. 1 Online Bus Ticket Booking Site';
   
   // API Config
-  static const String baseUrl = 'http://localhost:8080/api/v1';
-  static const int connectTimeout = 10000;
-  static const int receiveTimeout = 10000;
+  static const String localAndroidUrl = 'http://10.0.2.2:8080/api/v1';
+  static const String localDesktopUrl = 'http://localhost:8080/api/v1';
+  static const String cloudBackendUrl = 'https://redbusai.onrender.com/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
+  static const int connectTimeout = 6000;
+  static const int receiveTimeout = 6000;
   
   // Popular Indian Cities for Bus Travel
   static const List<String> popularCities = [
