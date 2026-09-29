@@ -18,6 +18,7 @@ import {
   X,
   Settings,
   ChevronDown,
+  ChevronRight,
   CheckCircle2,
   AlertCircle,
   Sun,
@@ -55,6 +56,34 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu on pathname change & Escape key
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setUserDropdownOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -399,142 +428,299 @@ export default function Navbar() {
               <NotificationDropdown onOpenAuthModal={() => setShowAuthModal(true)} />
               <button
                 type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white"
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 text-gray-700 dark:text-slate-200 hover:text-[#d84e55] dark:hover:text-red-400 rounded-lg cursor-pointer transition-colors"
+                aria-label="Open Navigation Menu"
               >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                <Menu className="w-6 h-6" />
               </button>
             </div>
           </div>
+        </div>
+      </header>
 
-          {/* Mobile dropdown */}
-          {mobileMenuOpen && (
-            <div className="md:hidden py-3 border-t border-gray-100 dark:border-slate-800 space-y-1 bg-white dark:bg-[#0b0f19]">
-              <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-              >
-                Bus Tickets
-              </Link>
-              {activeUser?.role !== "ROLE_OPERATOR" && (
-                <Link
-                  href="/my-bookings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                >
-                  My Bookings
-                </Link>
-              )}
-              <Link
-                href="/faq"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-              >
-                Help & FAQs
-              </Link>
-              {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
-                <Link
-                  href="/operator"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-semibold text-[#d84e55] dark:text-red-400 hover:bg-gray-50 dark:hover:bg-slate-800"
-                >
-                  🚍 Operator Hub
-                </Link>
-              )}
-              {activeUser?.role === "ROLE_ADMIN" && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                >
-                  Admin Dashboard
-                </Link>
-              )}
+      {/* Mobile Sidebar Drawer (Croma-Style Slide-over) */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
 
-              {/* Theme toggle mobile */}
-              <button
-                onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-              >
-                <span>Theme Mode</span>
-                <span className="flex items-center gap-1.5 text-xs text-[#d84e55] dark:text-amber-400 font-bold">
-                  {mounted && theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-                  {mounted && theme === "dark" ? "Dark Theme" : "Light Theme"}
-                </span>
-              </button>
-              <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
-                {mounted && isAuthenticated && activeUser ? (
-                  <div className="space-y-1">
-                    <div className="px-3 py-2 bg-gray-50 dark:bg-slate-800/80 rounded-lg mb-1">
-                      <p className="text-sm font-semibold text-gray-800 dark:text-slate-100">{activeUser.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">{activeUser.email}</p>
-                    </div>
-
-                    {/* redBus Wallet Mobile */}
-                    <Link
-                      href="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="px-3 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200/70 dark:border-emerald-800/50 rounded-lg flex items-center justify-between mb-1"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-bold text-gray-700 dark:text-slate-200">redBus Wallet</span>
-                      </div>
-                      <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
-                        ₹{walletBalance.toFixed(2)}
-                      </span>
-                    </Link>
-
-                    <Link
-                      href="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                    >
-                      My Profile
-                    </Link>
-                    {activeUser?.role !== "ROLE_OPERATOR" && (
-                      <Link
-                        href="/my-bookings"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                      >
-                        My Bookings
-                      </Link>
+          {/* Slide-in Drawer */}
+          <div
+            className="relative w-[85%] max-w-[330px] sm:max-w-[360px] h-full bg-[#121824] text-slate-100 flex flex-col shadow-2xl z-10 border-r border-slate-800 animate-drawer-slide"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile Navigation"
+          >
+            {/* Drawer Header (Sign In or User Profile) */}
+            <div className="p-4 bg-[#192132] border-b border-slate-800/80 flex items-center justify-between">
+              {mounted && isAuthenticated && activeUser ? (
+                <div className="flex items-center space-x-3 min-w-0 pr-2">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#d84e55] to-orange-500 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-slate-700 shadow-sm">
+                    {activeUser.avatarUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={activeUser.avatarUrl} alt={activeUser.name} className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(activeUser.name)
                     )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">{activeUser.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{activeUser.email}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded">
+                        {activeUser.role === "ROLE_ADMIN" ? "Admin" : activeUser.role === "ROLE_OPERATOR" ? "Operator" : "Passenger"}
+                      </span>
+                      {activeUser.emailVerified && (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-400 bg-emerald-950/60 px-1 rounded">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Verified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setShowAuthModal(true);
+                  }}
+                  className="flex items-center space-x-2 text-sm font-bold text-white hover:text-red-400 transition-colors cursor-pointer py-1"
+                >
+                  <UserIcon className="w-4 h-4 text-[#d84e55]" />
+                  <span>Sign In | Create Account</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer ml-auto shrink-0"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Drawer Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60">
+              {/* Wallet Section (If Logged In) */}
+              {mounted && isAuthenticated && (
+                <div className="p-3">
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-3 bg-gradient-to-r from-emerald-950/50 to-teal-950/40 border border-emerald-800/60 rounded-xl flex items-center justify-between hover:border-emerald-700 transition-all block"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-600/90 text-white flex items-center justify-center shadow-xs">
+                        <Wallet className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">redBus Wallet</span>
+                        <span className="text-sm font-bold text-emerald-400">
+                          ₹{walletBalance.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/60 px-2 py-0.5 rounded-md">
+                      View →
+                    </span>
+                  </Link>
+                </div>
+              )}
+
+              {/* Primary Services Group */}
+              <div className="py-2">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Bus className="w-4 h-4 text-[#d84e55]" />
+                    <span>Bus Tickets</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                {activeUser?.role !== "ROLE_OPERATOR" && (
+                  <Link
+                    href="/my-bookings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                      pathname === "/my-bookings" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Ticket className="w-4 h-4 text-amber-400" />
+                      <span>My Bookings</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </Link>
+                )}
+
+                <Link
+                  href="/faq"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/faq" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <HelpCircle className="w-4 h-4 text-sky-400" />
+                    <span>Help & FAQs</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
+                  <Link
+                    href="/operator"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
+                      pathname === "/operator" ? "text-red-400 bg-red-950/20" : "text-rose-300 hover:bg-slate-800/60 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Bus className="w-4 h-4 text-[#d84e55]" />
+                      <span>Operator Hub</span>
+                    </div>
+                    <span className="text-[10px] bg-red-950/80 border border-red-800/60 text-red-300 px-1.5 py-0.5 rounded font-bold">PORTAL</span>
+                  </Link>
+                )}
+
+                {activeUser?.role === "ROLE_ADMIN" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                      pathname === "/admin" ? "text-red-400 bg-red-950/20" : "text-purple-300 hover:bg-slate-800/60 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Shield className="w-4 h-4 text-purple-400" />
+                      <span>Admin Dashboard</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </Link>
+                )}
+              </div>
+
+              {/* Account Management Group */}
+              <div className="py-2">
+                <div className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  Account & Settings
+                </div>
+
+                {mounted && isAuthenticated ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors ${
+                        pathname === "/profile" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <UserIcon className="w-4 h-4 text-slate-400" />
+                        <span>My Profile</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500" />
+                    </Link>
+
                     <Link
                       href="/settings"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors ${
+                        pathname === "/settings" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                      }`}
                     >
-                      Account Settings
+                      <div className="flex items-center space-x-3">
+                        <Settings className="w-4 h-4 text-slate-400" />
+                        <span>Account Settings</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500" />
                     </Link>
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setShowLogoutModal(true);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md font-medium"
-                    >
-                      Log Out
-                    </button>
-                  </div>
+                  </>
                 ) : (
                   <button
                     onClick={() => {
-                      setShowAuthModal(true);
                       setMobileMenuOpen(false);
+                      setShowAuthModal(true);
                     }}
-                    className="w-full text-left px-3 py-2 text-base font-medium text-[#d84e55] dark:text-red-400"
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800/60 hover:text-white transition-colors cursor-pointer text-left"
                   >
-                    Login / Sign Up
+                    <div className="flex items-center space-x-3">
+                      <UserIcon className="w-4 h-4 text-slate-400" />
+                      <span>Login to Manage Account</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+                )}
+
+                {/* Theme Mode Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800/60 hover:text-white transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center space-x-3">
+                    {mounted && theme === "dark" ? (
+                      <Sun className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Moon className="w-4 h-4 text-indigo-400" />
+                    )}
+                    <span>Theme Mode</span>
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
+                    {mounted && theme === "dark" ? "Dark" : "Light"}
+                  </span>
+                </button>
+              </div>
+
+              {/* Action / Logout */}
+              <div className="p-4">
+                {mounted && isAuthenticated ? (
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowLogoutModal(true);
+                    }}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-900/50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-sm font-bold shadow-md shadow-red-900/30 transition-colors cursor-pointer"
+                  >
+                    <UserIcon className="w-4 h-4" />
+                    <span>Sign In / Register</span>
                   </button>
                 )}
               </div>
             </div>
-          )}
+
+            {/* Sidebar Footer Branding */}
+            <div className="p-3 bg-[#0d121c] border-t border-slate-800 text-center">
+              <p className="text-[11px] font-medium text-slate-500">
+                redBus AI Edition • India&apos;s AI Bus Network
+              </p>
+            </div>
+          </div>
         </div>
-      </header>
+      )}
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       <LogoutModal
