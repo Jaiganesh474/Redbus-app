@@ -681,23 +681,55 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Theme Mode Toggle */}
-            <button
+            {/* Theme Mode Toggle Switch */}
+            <div
               onClick={toggleTheme}
-              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer text-left"
+              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer select-none"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleTheme();
+                }
+              }}
+              aria-label="Toggle Theme Mode"
             >
               <div className="flex items-center space-x-3">
-                {mounted && theme === "dark" ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
-                ) : (
-                  <Moon className="w-4 h-4 text-slate-700" />
-                )}
-                <span>Theme Mode</span>
+                <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-600 dark:text-amber-400 border border-gray-200 dark:border-slate-700 transition-colors">
+                  {mounted && theme === "dark" ? (
+                    <Moon className="w-4 h-4 text-indigo-400" />
+                  ) : (
+                    <Sun className="w-4 h-4 text-amber-500" />
+                  )}
+                </div>
+                <div>
+                  <span className="block leading-tight font-semibold">Theme Mode</span>
+                  <span className="text-[11px] text-gray-400 dark:text-slate-400">
+                    {mounted && theme === "dark" ? "Dark Theme" : "Light Theme"}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded border border-gray-200 dark:border-slate-700">
-                {mounted && theme === "dark" ? "Dark Mode" : "Light Mode"}
-              </span>
-            </button>
+
+              {/* Animated Sliding Toggle Switch */}
+              <div
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-300 ease-in-out ${
+                  mounted && theme === "dark" ? "bg-[#d84e55]" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out flex items-center justify-center ${
+                    mounted && theme === "dark" ? "translate-x-5" : "translate-x-0"
+                  }`}
+                >
+                  {mounted && theme === "dark" ? (
+                    <Moon className="w-2.5 h-2.5 text-[#d84e55]" />
+                  ) : (
+                    <Sun className="w-2.5 h-2.5 text-amber-500" />
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Action / Logout */}
