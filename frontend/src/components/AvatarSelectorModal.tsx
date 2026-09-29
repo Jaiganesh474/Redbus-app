@@ -124,17 +124,21 @@ export default function AvatarSelectorModal({
                     : "border-gray-100 bg-gray-50 hover:border-gray-300 hover:bg-white"
                 }`}
               >
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-inner flex items-center justify-center border border-gray-100">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-inner flex items-center justify-center border border-gray-100 shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={opt.url}
                     alt={opt.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     loading="lazy"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${opt.id}&backgroundColor=ffd5dc`;
+                    }}
                   />
                 </div>
-                <span className="text-[11px] font-semibold text-gray-700 mt-2 text-center truncate max-w-full">
-                  {opt.name.split(" ")[0]}
+                <span className="text-[11px] font-bold text-gray-800 mt-2 text-center truncate max-w-full">
+                  {opt.name}
                 </span>
                 <span className="text-[9px] text-gray-400 capitalize">
                   {opt.gender.toLowerCase()}

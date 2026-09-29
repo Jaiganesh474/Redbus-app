@@ -32,6 +32,7 @@ import {
   Wallet,
 } from "lucide-react";
 import AvatarSelectorModal from "@/components/AvatarSelectorModal";
+import RedbusWalletModal from "@/components/RedbusWalletModal";
 
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
@@ -39,6 +40,8 @@ export default function ProfilePage() {
   const { data: latestUser } = useGetMeQuery(undefined, { skip: !isAuthenticated });
   const activeUser = latestUser || user;
   const walletBalance = Number(activeUser?.walletBalance || 0);
+
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (latestUser) {
@@ -539,10 +542,25 @@ export default function ProfilePage() {
                     </span>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsWalletModalOpen(true)}
+                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  View Details
+                </button>
               </div>
 
-              <div className="p-4 bg-white/90 rounded-2xl border border-emerald-100/80 shadow-2xs">
-                <span className="text-xs font-semibold text-gray-500 block">Available Balance</span>
+              <div
+                onClick={() => setIsWalletModalOpen(true)}
+                className="p-4 bg-white/90 rounded-2xl border border-emerald-100/80 shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors"
+                title="Click to open redBus Wallet"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500 block">Available Balance</span>
+                  <span className="text-[11px] font-bold text-emerald-600 hover:underline">History & Top-Up →</span>
+                </div>
                 <span className="text-2xl font-black text-emerald-700 block mt-0.5">
                   ₹{walletBalance.toFixed(2)}
                 </span>
@@ -551,13 +569,23 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              <Link
-                href="/"
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-between group shadow-sm shadow-emerald-600/20 cursor-pointer"
-              >
-                <span>Book a Trip with Wallet</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsWalletModalOpen(true)}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-sm shadow-emerald-600/20 cursor-pointer"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>Open Wallet</span>
+                </button>
+                <Link
+                  href="/"
+                  className="py-2.5 px-3 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center space-x-1 cursor-pointer"
+                >
+                  <span>Book Bus</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </motion.div>
 
             <motion.div
@@ -631,6 +659,12 @@ export default function ProfilePage() {
         onClose={() => setIsAvatarModalOpen(false)}
         currentAvatarUrl={user.avatarUrl}
         onSelect={handleAvatarSelect}
+      />
+
+      {/* redBus Wallet Modal */}
+      <RedbusWalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
       />
     </div>
   );

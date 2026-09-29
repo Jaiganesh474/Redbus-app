@@ -34,6 +34,7 @@ import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import AuthModal from "@/components/AuthModal";
 import LogoutModal from "@/components/LogoutModal";
+import RedbusWalletModal from "@/components/RedbusWalletModal";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -49,6 +50,7 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -310,10 +312,13 @@ export default function Navbar() {
 
                       {/* redBus Wallet Highlights Box */}
                       <div className="px-3 pt-2">
-                        <Link
-                          href="/profile"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="p-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl flex items-center justify-between hover:shadow-xs transition-all group"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowWalletModal(true);
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full p-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl flex items-center justify-between hover:shadow-xs transition-all group cursor-pointer text-left"
                         >
                           <div className="flex items-center space-x-2.5">
                             <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
@@ -329,7 +334,7 @@ export default function Navbar() {
                           <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md group-hover:bg-emerald-200 transition-colors">
                             Use on Trips →
                           </span>
-                        </Link>
+                        </button>
                       </div>
 
                       {/* Menu Links */}
@@ -523,10 +528,13 @@ export default function Navbar() {
                 {/* Wallet Section (If Logged In) */}
                 {mounted && isAuthenticated && (
                   <div className="p-3">
-                    <Link
-                      href="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between hover:border-emerald-400 dark:hover:border-emerald-700 transition-all block shadow-2xs"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowWalletModal(true);
+                      }}
+                      className="w-full p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between hover:border-emerald-400 dark:hover:border-emerald-700 transition-all text-left shadow-2xs cursor-pointer"
                     >
                       <div className="flex items-center space-x-2.5">
                         <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
@@ -540,9 +548,9 @@ export default function Navbar() {
                         </div>
                       </div>
                       <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">
-                        View →
+                        Use on Trips →
                       </span>
-                    </Link>
+                    </button>
                   </div>
                 )}
 
@@ -787,6 +795,10 @@ export default function Navbar() {
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogoutConfirm}
         userName={user?.name}
+      />
+      <RedbusWalletModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
       />
     </>
   );
