@@ -199,11 +199,42 @@ export default function HeroSearch() {
               />
             </div>
 
-            {/* Travel Date Box matching Screenshot 1 */}
+            {/* Travel Date Box */}
             <div className="md:col-span-3 relative">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center space-x-1">
+                  <Calendar className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-[#d84e55]" />
+                  <span>Date</span>
+                </label>
+                <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => setQuickDate(0)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                      date === getTodayDateStr()
+                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
+                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuickDate(1)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                      date === getTomorrowDateStr()
+                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
+                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+                    }`}
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+              </div>
+
               <div
                 onClick={() => setShowDateModal(true)}
-                className="w-full px-3 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/90 dark:hover:bg-slate-700/90 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-[#d84e55] dark:hover:border-red-500 transition-all cursor-pointer flex items-center justify-between group shadow-2xs"
+                className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-[#d84e55] dark:hover:border-red-500 transition-all cursor-pointer flex items-center justify-between group shadow-2xs"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -214,44 +245,14 @@ export default function HeroSearch() {
                 }}
               >
                 <div className="flex items-center space-x-2 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-[#d84e55] dark:text-red-400 shrink-0">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider leading-none mb-0.5">
-                      Date of Journey
-                    </span>
-                    <span className="block text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white truncate">
-                      {formatShortDateDisplay(date)}
-                    </span>
-                  </div>
+                  <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#d84e55] shrink-0" />
+                  <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
+                    {formatShortDateDisplay(date)}
+                  </span>
                 </div>
-
-                {/* Quick Date Action Pills: Today & Tomorrow */}
-                <div className="flex items-center space-x-1 shrink-0 pl-1" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={() => setQuickDate(0)}
-                    className={`px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all cursor-pointer active:scale-95 ${
-                      date === getTodayDateStr()
-                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
-                        : "bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600"
-                    }`}
-                  >
-                    Today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickDate(1)}
-                    className={`px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all cursor-pointer active:scale-95 ${
-                      date === getTomorrowDateStr()
-                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
-                        : "bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600"
-                    }`}
-                  >
-                    Tomorrow
-                  </button>
-                </div>
+                <span className="text-[10px] font-bold text-[#d84e55] group-hover:underline shrink-0">
+                  Change
+                </span>
               </div>
             </div>
 
