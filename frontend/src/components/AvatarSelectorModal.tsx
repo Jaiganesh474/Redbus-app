@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Sparkles, Upload, Camera, Image as ImageIcon, Trash2 } from "lucide-react";
+import { X, Check, Sparkles, Upload, Camera, Loader2 } from "lucide-react";
 import { MALE_AVATARS, FEMALE_AVATARS, ALL_AVATARS, AvatarOption } from "@/lib/avatars";
+import { useUploadAvatarMutation, API_BASE_URL } from "@/store/apiSlice";
 
 interface AvatarSelectorModalProps {
   isOpen: boolean;
@@ -22,8 +23,11 @@ export default function AvatarSelectorModal({
   const [selectedUrl, setSelectedUrl] = useState<string>(currentAvatarUrl || "");
   const [selectedGender, setSelectedGender] = useState<"MALE" | "FEMALE">("MALE");
   const [customImage, setCustomImage] = useState<string | null>(null);
-  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [uploadAvatarMutation] = useUploadAvatarMutation();
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -31,6 +35,7 @@ export default function AvatarSelectorModal({
       if (currentAvatarUrl && !ALL_AVATARS.some((a) => a.url === currentAvatarUrl)) {
         setCustomImage(currentAvatarUrl);
       }
+      setUploadError("");
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
@@ -51,42 +56,96 @@ export default function AvatarSelectorModal({
     setSelectedGender(opt.gender);
   };
 
-  const handleCustomImageSelect = (dataUrl: string) => {
-    setSelectedUrl(dataUrl);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsProcessingFile(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const size = 320;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          // Center-crop to square
-          const minDim = Math.min(img.width, img.height);
-          const startX = (img.width - minDim) / 2;
-          const startY = (img.height - minDim) / 2;
-          ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-          setCustomImage(dataUrl);
-          setSelectedUrl(dataUrl);
-          setActiveTab("CUSTOM");
+    setIsUploading(true);
+    setUploadError("");
+
+    try {
+      // 1. Client-side Square Crop & Canvas Optimization
+      const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const size = 320;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              reject(new Error("Canvas error"));
+              return;
+            }
+            const minDim = Math.min(img.width, img.height);
+            const startX = (img.width - minDim) / 2;
+            const startY = (img.height - minDim) / 2;
+            ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+            canvas.toBlob(
+              (blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Blob generation failed"));
+              },
+              "image/jpeg",
+              0.88
+            );
+          };
+          img.onerror = () => reject(new Error("Failed to load image"));
+          img.src = event.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error("File reading failed"));
+        reader.readAsDataURL(file);
+      });
+
+      // 2. Try Cloudinary direct upload if configured, else upload via Backend
+      let uploadedUrl = "";
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default";
+
+      if (cloudName) {
+        try {
+          const cloudFormData = new FormData();
+          cloudFormData.append("file", croppedBlob, "avatar.jpg");
+          cloudFormData.append("upload_preset", uploadPreset);
+          const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: "POST",
+            body: cloudFormData,
+          });
+          if (cloudRes.ok) {
+            const cloudJson = await cloudRes.json();
+            if (cloudJson.secure_url) {
+              uploadedUrl = cloudJson.secure_url;
+            }
+          }
+        } catch (cloudErr) {
+          console.warn("Cloudinary upload failed, using backend storage:", cloudErr);
         }
-        setIsProcessingFile(false);
-      };
-      img.onerror = () => setIsProcessingFile(false);
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => setIsProcessingFile(false);
-    reader.readAsDataURL(file);
+      }
+
+      // 3. Backend Storage Fallback
+      if (!uploadedUrl) {
+        const formData = new FormData();
+        formData.append("file", croppedBlob, "avatar.jpg");
+        const res = await uploadAvatarMutation(formData).unwrap();
+        const backendHost = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+        uploadedUrl = res.avatarUrl.startsWith("http") ? res.avatarUrl : `${backendHost}${res.avatarUrl}`;
+      }
+
+      setCustomImage(uploadedUrl);
+      setSelectedUrl(uploadedUrl);
+      setActiveTab("CUSTOM");
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      setUploadError(err?.data?.message || err?.message || "Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      // Reset input value so user can reselect the same file if desired
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleSave = () => {
@@ -176,27 +235,38 @@ export default function AvatarSelectorModal({
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              {uploadError && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-600 dark:text-red-300 font-medium">
+                  {uploadError}
+                </div>
+              )}
+
               {/* Device Upload Section */}
               {activeTab === "CUSTOM" ? (
                 <div className="space-y-4">
                   <div
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
                     className="p-8 border-2 border-dashed border-red-200 dark:border-slate-700 hover:border-[#d84e55] dark:hover:border-red-500 rounded-3xl bg-red-50/40 dark:bg-slate-800/50 flex flex-col items-center justify-center text-center cursor-pointer transition-all group"
                   >
                     <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-700 shadow-md flex items-center justify-center text-[#d84e55] mb-3 group-hover:scale-110 transition-transform">
-                      <Upload className="w-6 h-6" />
+                      {isUploading ? (
+                        <Loader2 className="w-6 h-6 animate-spin text-[#d84e55]" />
+                      ) : (
+                        <Upload className="w-6 h-6" />
+                      )}
                     </div>
                     <h4 className="text-sm font-bold text-gray-900 dark:text-white">
-                      {isProcessingFile ? "Processing image..." : "Upload from your Device"}
+                      {isUploading ? "Uploading & Processing..." : "Upload from your Device"}
                     </h4>
                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 max-w-xs">
                       Tap to browse files or take a photo with your camera. Supports JPG, PNG, WEBP.
                     </p>
                     <button
                       type="button"
-                      className="mt-4 px-4 py-2 bg-[#d84e55] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#b83e44] transition-colors"
+                      disabled={isUploading}
+                      className="mt-4 px-4 py-2 bg-[#d84e55] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#b83e44] transition-colors disabled:opacity-50"
                     >
-                      Choose Photo
+                      {isUploading ? "Uploading..." : "Choose Photo"}
                     </button>
                   </div>
 
@@ -204,7 +274,7 @@ export default function AvatarSelectorModal({
                   {customImage && (
                     <div className="p-4 bg-gray-50 dark:bg-slate-800/80 rounded-2xl border border-gray-200 dark:border-slate-700 flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-[#d84e55] shadow-sm shrink-0">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-[#d84e55] shadow-sm shrink-0 bg-white">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={customImage}
@@ -226,7 +296,8 @@ export default function AvatarSelectorModal({
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-xs font-bold text-gray-700 dark:text-slate-200 hover:bg-gray-50"
+                          disabled={isUploading}
+                          className="px-3 py-1.5 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl text-xs font-bold text-gray-700 dark:text-slate-200 hover:bg-gray-50 cursor-pointer disabled:opacity-50"
                         >
                           Change
                         </button>
@@ -244,7 +315,11 @@ export default function AvatarSelectorModal({
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-700 text-[#d84e55] flex items-center justify-center shadow-xs shrink-0">
-                        <Camera className="w-5 h-5" />
+                        {isUploading ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-[#d84e55]" />
+                        ) : (
+                          <Camera className="w-5 h-5" />
+                        )}
                       </div>
                       <div>
                         <span className="text-xs font-bold text-gray-900 dark:text-white block">
@@ -256,7 +331,7 @@ export default function AvatarSelectorModal({
                       </div>
                     </div>
                     <span className="px-3 py-1.5 bg-[#d84e55] text-white text-xs font-bold rounded-xl shadow-2xs shrink-0">
-                      Upload
+                      {isUploading ? "Uploading..." : "Upload"}
                     </span>
                   </div>
 
@@ -311,11 +386,11 @@ export default function AvatarSelectorModal({
             <div className="p-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
               {selectedUrl ? (
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0 bg-white">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={selectedUrl} alt="Selected preview" className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-xs font-semibold text-gray-600 dark:text-slate-300">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-slate-300 truncate max-w-[120px]">
                     Selected
                   </span>
                 </div>
@@ -327,14 +402,14 @@ export default function AvatarSelectorModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={!selectedUrl}
+                  disabled={!selectedUrl || isUploading}
                   className="px-6 py-2 rounded-xl text-xs font-bold bg-[#d84e55] hover:bg-[#b83e44] text-white shadow-md shadow-red-500/20 disabled:opacity-50 transition-all cursor-pointer"
                 >
                   Save Photo

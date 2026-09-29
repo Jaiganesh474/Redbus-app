@@ -1,17 +1,27 @@
 package com.redbus.controller;
 
 import com.redbus.dto.*;
+import com.redbus.exception.BadRequestException;
 import com.redbus.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping({"/api/auth", "/api/v1/auth"})
 @RequiredArgsConstructor
@@ -74,6 +84,47 @@ public class AuthController {
         UserDto currentUser = authService.getCurrentUser(authentication.getName());
         UserDto updated = authService.updateProfile(currentUser.getId(), request);
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping(value = {"/profile/upload-avatar", "/upload-avatar"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new BadRequestException("Please select an image file to upload");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.startsWith("image/"))) {
+            throw new BadRequestException("Only image files (JPEG, PNG, WEBP, GIF) are allowed");
+        }
+
+        try {
+            Path uploadDir = Paths.get("uploads", "avatars");
+            File dir = uploadDir.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            String extension = ".jpg";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+
+            String cleanFileName = "avatar_" + UUID.randomUUID().toString().substring(0, 12) + extension;
+            Path targetPath = uploadDir.resolve(cleanFileName);
+            Files.copy(file.getInputStream(), targetPath);
+
+            String fileUrl = "/uploads/avatars/" + cleanFileName;
+            log.info("Successfully uploaded profile avatar: {}", fileUrl);
+
+            return ResponseEntity.ok(Map.of(
+                    "avatarUrl", fileUrl,
+                    "fileName", cleanFileName,
+                    "message", "Avatar image uploaded successfully"
+            ));
+        } catch (Exception e) {
+            log.error("Failed to upload avatar image: {}", e.getMessage());
+            throw new BadRequestException("Failed to upload avatar image: " + e.getMessage());
+        }
     }
 
     @PostMapping("/forgot-password")

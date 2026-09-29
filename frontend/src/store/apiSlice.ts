@@ -127,6 +127,13 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
+    uploadAvatar: builder.mutation<{ avatarUrl: string; fileName: string; message: string }, FormData>({
+      query: (formData) => ({
+        url: "/auth/profile/upload-avatar",
+        method: "POST",
+        body: formData,
+      }),
+    }),
     getSavedTravellers: builder.query<SavedTraveller[], void>({
       query: () => "/auth/saved-travellers",
       providesTags: ["SavedTraveller"],
@@ -704,6 +711,7 @@ export const {
   useResetPasswordMutation,
   useFirebaseLoginMutation,
   useUpdateProfileMutation,
+  useUploadAvatarMutation,
   useGetSavedTravellersQuery,
   useAddSavedTravellerMutation,
   useDeleteSavedTravellerMutation,
