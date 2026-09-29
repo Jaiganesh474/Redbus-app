@@ -275,6 +275,20 @@ public class AuthService {
         user.setVerificationTokenExpiry(null);
         User saved = userRepository.save(user);
 
+        // Dispatch Welcome & Verification Confirmation Email via Brevo
+        try {
+            if (saved.getRole() != null && saved.getRole().contains("OPERATOR")) {
+                String opCompany = operatorRepository.findByUserId(saved.getId())
+                        .map(com.redbus.entity.Operator::getCompanyName)
+                        .orElse(saved.getName());
+                emailService.sendOperatorVerificationConfirmationEmail(saved, opCompany);
+            } else {
+                emailService.sendWelcomeAndVerificationEmail(saved);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch welcome / verification confirmation email: {}", e.getMessage());
+        }
+
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
         recordDeviceSessionSafely(saved, token);
 
@@ -308,6 +322,7 @@ public class AuthService {
     @Transactional
     public AuthResponse firebaseLogin(FirebaseLoginRequest request) {
         String email = request.getEmail().trim().toLowerCase();
+        boolean isNewUser = userRepository.findByEmail(email).isEmpty();
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             String defaultName = (request.getName() != null && !request.getName().isBlank())
@@ -328,6 +343,15 @@ public class AuthService {
         if (Boolean.FALSE.equals(user.getEmailVerified())) {
             user.setEmailVerified(true);
             user = userRepository.save(user);
+        }
+
+        // Send welcome email if brand new passenger verified via Google
+        if (isNewUser) {
+            try {
+                emailService.sendWelcomeAndVerificationEmail(user);
+            } catch (Exception e) {
+                log.warn("Failed to dispatch welcome email for Google user: {}", e.getMessage());
+            }
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId());
@@ -377,6 +401,13 @@ public class AuthService {
         user.setPasswordResetExpiry(null);
         User saved = userRepository.save(user);
 
+        // Dispatch security confirmation email via Brevo
+        try {
+            emailService.sendPasswordResetSuccessEmail(saved);
+        } catch (Exception e) {
+            log.warn("Failed to dispatch password reset confirmation email: {}", e.getMessage());
+        }
+
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
         recordDeviceSessionSafely(saved, token);
 
@@ -409,6 +440,7 @@ public class AuthService {
             user.setGender(request.getGender().trim().toUpperCase());
         }
 
+        boolean passwordModified = false;
         if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
             if (request.getCurrentPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
                 throw new BadRequestException("Current password does not match");
@@ -417,9 +449,19 @@ public class AuthService {
                 throw new BadRequestException("New password must be at least 6 characters long");
             }
             user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            passwordModified = true;
         }
 
         User updated = userRepository.save(user);
+
+        if (passwordModified) {
+            try {
+                emailService.sendPasswordResetSuccessEmail(updated);
+            } catch (Exception e) {
+                log.warn("Failed to dispatch password change confirmation email: {}", e.getMessage());
+            }
+        }
+
         return mapToDto(updated);
     }
 

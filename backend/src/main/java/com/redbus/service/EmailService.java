@@ -171,6 +171,37 @@ public class EmailService {
     }
 
     /**
+     * Send Welcome & Account Verified confirmation email with Book Bus ad & booking link via Brevo
+     */
+    public boolean sendWelcomeAndVerificationEmail(User user) {
+        String recipient = user.getEmail().trim();
+        String subject = "🎉 Welcome to redBus AI! Your Account is Verified — Book Your First Bus Trip";
+        String bookingUrl = frontendUrl.replaceAll("/$", "") + "/";
+
+        String htmlContent = buildWelcomeAndVerifiedEmailTemplate(user.getName(), user.getEmail(), bookingUrl);
+
+        // 1. Attempt sending through Brevo SMTP relay
+        if (sendViaSmtp(recipient, subject, htmlContent, null, null)) {
+            return true;
+        }
+
+        // 2. Attempt sending through Brevo HTTP REST API
+        if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
+            boolean sent = sendViaBrevoApi(recipient, user.getName(), subject, htmlContent, null, null);
+            if (sent) return true;
+        }
+
+        // Virtual dispatcher for local / sandbox logging
+        log.info("==================== BREVO WELCOME & VERIFIED EMAIL DISPATCHED ====================");
+        log.info("To: {}", recipient);
+        log.info("Subject: {}", subject);
+        log.info("Booking URL: {}", bookingUrl);
+        log.info("===================================================================================");
+
+        return true;
+    }
+
+    /**
      * Send email verification code for new Bus Operators / Fleet Partners via Brevo
      */
     public boolean sendOperatorVerificationEmail(User user, String companyName, String tokenOrOtp) {
@@ -204,6 +235,37 @@ public class EmailService {
     }
 
     /**
+     * Send Operator Verification Confirmation email via Brevo
+     */
+    public boolean sendOperatorVerificationConfirmationEmail(User user, String companyName) {
+        String recipient = user.getEmail().trim();
+        String displayName = (companyName != null && !companyName.isBlank()) ? companyName : user.getName();
+        String subject = "🚍 Account Verified — Welcome to redBus Partner Console [" + displayName + "]";
+        String consoleUrl = frontendUrl.replaceAll("/$", "") + "/operator/login";
+
+        String htmlContent = buildOperatorVerifiedConfirmationEmailTemplate(user.getName(), displayName, consoleUrl);
+
+        // 1. Attempt sending through Brevo SMTP relay
+        if (sendViaSmtp(recipient, subject, htmlContent, null, null)) {
+            return true;
+        }
+
+        // 2. Attempt sending through Brevo HTTP REST API
+        if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
+            boolean sent = sendViaBrevoApi(recipient, user.getName(), subject, htmlContent, null, null);
+            if (sent) return true;
+        }
+
+        log.info("==================== BREVO OPERATOR VERIFIED CONFIRMATION ====================");
+        log.info("To: {}", recipient);
+        log.info("Company: {}", displayName);
+        log.info("Console URL: {}", consoleUrl);
+        log.info("==============================================================================");
+
+        return true;
+    }
+
+    /**
      * Send password reset 6-digit OTP code via Brevo
      */
     public boolean sendPasswordResetOtpEmail(User user, String otp) {
@@ -231,6 +293,39 @@ public class EmailService {
         log.info("Password Reset OTP: {}", otp);
         log.info("Reset URL: {}", resetUrl);
         log.info("==================================================================");
+
+        return true;
+    }
+
+    /**
+     * Send password changed / reset confirmation security notification email via Brevo
+     */
+    public boolean sendPasswordResetSuccessEmail(User user) {
+        String recipient = user.getEmail().trim();
+        String subject = "🛡️ Security Alert: Your redBus Password Has Been Changed Successfully";
+        String loginUrl = frontendUrl.replaceAll("/$", "") + "/";
+
+        String formattedTime = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
+
+        String htmlContent = buildPasswordResetSuccessEmailTemplate(user.getName(), user.getEmail(), formattedTime, loginUrl);
+
+        // 1. Attempt sending through Brevo SMTP relay
+        if (sendViaSmtp(recipient, subject, htmlContent, null, null)) {
+            return true;
+        }
+
+        // 2. Attempt sending through Brevo HTTP REST API
+        if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
+            boolean sent = sendViaBrevoApi(recipient, user.getName(), subject, htmlContent, null, null);
+            if (sent) return true;
+        }
+
+        log.info("==================== BREVO PASSWORD CHANGE CONFIRMATION ====================");
+        log.info("To: {}", recipient);
+        log.info("Subject: {}", subject);
+        log.info("Time: {}", formattedTime);
+        log.info("============================================================================");
 
         return true;
     }
@@ -1074,5 +1169,563 @@ public class EmailService {
                 booking.getCancellationReason() != null ? booking.getCancellationReason() : "Customer Request",
                 freeCancelNote
         );
+    }
+
+    private String buildWelcomeAndVerifiedEmailTemplate(String name, String email, String bookingUrl) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+                * { box-sizing: border-box; }
+                body {
+                  font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  margin: 0;
+                  padding: 24px 12px;
+                  background-color: #f4f6f8;
+                  color: #1c1c1c;
+                  -webkit-font-smoothing: antialiased;
+                }
+                .container {
+                  max-width: 580px;
+                  margin: 0 auto;
+                  background: #ffffff;
+                  border-radius: 24px;
+                  overflow: hidden;
+                  border: 1px solid #eaeaea;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+                }
+                .header {
+                  background: linear-gradient(135deg, #e23744 0%%, #cb202d 100%%);
+                  padding: 32px 24px;
+                  color: #ffffff;
+                  text-align: center;
+                }
+                .header h1 {
+                  margin: 0;
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-size: 32px;
+                  font-weight: 900;
+                  letter-spacing: -0.8px;
+                }
+                .header p {
+                  margin: 6px 0 0;
+                  font-size: 13px;
+                  font-weight: 600;
+                  letter-spacing: 0.3px;
+                  opacity: 0.95;
+                }
+                .body {
+                  padding: 28px 24px;
+                }
+                .verified-badge {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 6px;
+                  background: #ecfdf5;
+                  border: 1px solid #a7f3d0;
+                  color: #065f46;
+                  padding: 6px 14px;
+                  border-radius: 9999px;
+                  font-weight: 800;
+                  font-size: 12px;
+                  margin-bottom: 16px;
+                }
+                .greeting {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-size: 22px;
+                  font-weight: 800;
+                  color: #111827;
+                  margin: 0 0 8px 0;
+                }
+                .welcome-text {
+                  font-size: 14px;
+                  color: #4b5563;
+                  line-height: 1.6;
+                  margin: 0 0 24px 0;
+                }
+                .ad-card {
+                  background: linear-gradient(135deg, #fff5f5 0%%, #fff1f2 50%%, #fed7aa 100%%);
+                  border: 1.5px solid #fecaca;
+                  border-radius: 20px;
+                  padding: 24px;
+                  margin-bottom: 24px;
+                  text-align: center;
+                  box-shadow: 0 4px 15px rgba(226, 55, 68, 0.08);
+                }
+                .ad-badge {
+                  display: inline-block;
+                  background: #e23744;
+                  color: #ffffff;
+                  font-size: 10px;
+                  font-weight: 900;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  padding: 4px 10px;
+                  border-radius: 9999px;
+                  margin-bottom: 10px;
+                }
+                .ad-title {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-size: 20px;
+                  font-weight: 900;
+                  color: #991b1b;
+                  margin: 0 0 6px 0;
+                }
+                .ad-desc {
+                  font-size: 13px;
+                  color: #7f1d1d;
+                  line-height: 1.5;
+                  margin: 0 0 16px 0;
+                }
+                .coupon-box {
+                  background: #ffffff;
+                  border: 2px dashed #e23744;
+                  border-radius: 12px;
+                  padding: 10px 18px;
+                  display: inline-block;
+                  margin-bottom: 18px;
+                }
+                .coupon-code {
+                  font-family: 'Plus Jakarta Sans', monospace;
+                  font-size: 18px;
+                  font-weight: 900;
+                  color: #e23744;
+                  letter-spacing: 2px;
+                }
+                .btn-cta {
+                  display: inline-block;
+                  padding: 15px 36px;
+                  background: linear-gradient(135deg, #e23744 0%%, #cb202d 100%%);
+                  color: #ffffff !important;
+                  text-decoration: none;
+                  border-radius: 14px;
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-weight: 800;
+                  font-size: 15px;
+                  box-shadow: 0 6px 20px rgba(226, 55, 68, 0.35);
+                  letter-spacing: 0.2px;
+                }
+                .perks-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 12px;
+                  margin: 24px 0;
+                  text-align: left;
+                }
+                .perk-item {
+                  background: #f9fafb;
+                  border: 1px solid #f3f4f6;
+                  border-radius: 14px;
+                  padding: 12px 14px;
+                }
+                .perk-title {
+                  font-size: 12px;
+                  font-weight: 800;
+                  color: #111827;
+                  margin-bottom: 2px;
+                }
+                .perk-sub {
+                  font-size: 11px;
+                  color: #6b7280;
+                  line-height: 1.4;
+                }
+                .popular-routes {
+                  background: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 16px;
+                  padding: 16px;
+                  margin-top: 20px;
+                }
+                .popular-title {
+                  font-size: 12px;
+                  font-weight: 800;
+                  color: #334155;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  margin-bottom: 10px;
+                }
+                .route-pills {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px;
+                }
+                .route-pill {
+                  background: #ffffff;
+                  border: 1px solid #cbd5e1;
+                  padding: 6px 12px;
+                  border-radius: 20px;
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #1e293b;
+                  text-decoration: none;
+                }
+                .footer {
+                  background: #fafafa;
+                  padding: 20px 24px;
+                  text-align: center;
+                  font-size: 11px;
+                  color: #9ca3af;
+                  font-weight: 500;
+                  border-top: 1px solid #f0f0f0;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>redBus</h1>
+                  <p>India's #1 AI-Powered Bus Network</p>
+                </div>
+                <div class="body">
+                  <div class="verified-badge">
+                    ✓ Email Verified: %s
+                  </div>
+                  <h2 class="greeting">Welcome Aboard, %s! 🚌</h2>
+                  <p class="welcome-text">
+                    Your redBus profile is verified and active. You now have access to 10,000+ daily bus routes, real-time GPS tracking, instant 1-click redBus Wallet checkout, and 24/7 AI Smart Concierge support.
+                  </p>
+
+                  <!-- Promotional Book Bus Ad Banner -->
+                  <div class="ad-card">
+                    <span class="ad-badge">🌟 Special Welcome Offer</span>
+                    <h3 class="ad-title">Get 20%% OFF on Your First Trip</h3>
+                    <p class="ad-desc">
+                      Book any luxury AC Sleeper, Volvo Multi-Axle, or express seater bus today. Apply the coupon code below at checkout:
+                    </p>
+                    <div class="coupon-box">
+                      <span style="font-size:11px;font-weight:800;color:#991b1b;display:block;">COUPON CODE</span>
+                      <span class="coupon-code">FIRSTTRIP</span>
+                    </div>
+                    <div>
+                      <a href="%s" class="btn-cta">Book Bus Tickets Now ➔</a>
+                    </div>
+                  </div>
+
+                  <!-- Highlights Grid -->
+                  <div class="perks-grid">
+                    <div class="perk-item">
+                      <div class="perk-title">📍 Live Bus Tracking</div>
+                      <div class="perk-sub">Real-time GPS tracking & boarding point directions.</div>
+                    </div>
+                    <div class="perk-item">
+                      <div class="perk-title">👛 redBus Wallet</div>
+                      <div class="perk-sub">1-click payments & instant automatic refund credits.</div>
+                    </div>
+                    <div class="perk-item">
+                      <div class="perk-title">🛡️ 100%% Free Cancellation</div>
+                      <div class="perk-sub">Full refunds on cancellations with zero penalty.</div>
+                    </div>
+                    <div class="perk-item">
+                      <div class="perk-title">🤖 AI Smart Concierge</div>
+                      <div class="perk-sub">Ask questions, reschedule, or find the best seats.</div>
+                    </div>
+                  </div>
+
+                  <!-- Popular Bus Routes -->
+                  <div class="popular-routes">
+                    <div class="popular-title">🔥 Trending Bus Routes Today</div>
+                    <div class="route-pills">
+                      <span class="route-pill">Bengaluru ⇄ Chennai</span>
+                      <span class="route-pill">Mumbai ⇄ Pune</span>
+                      <span class="route-pill">Delhi ⇄ Jaipur</span>
+                      <span class="route-pill">Hyderabad ⇄ Vijayawada</span>
+                      <span class="route-pill">Coimbatore ⇄ Bangalore</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="footer">
+                  Sent with care via Brevo Transactional Email • © %d redBus India • 24x7 Support: help@redbus.in
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(email, name, bookingUrl, java.time.Year.now().getValue());
+    }
+
+    private String buildOperatorVerifiedConfirmationEmailTemplate(String name, String companyName, String consoleUrl) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+                * { box-sizing: border-box; }
+                body {
+                  font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  background-color: #0f172a;
+                  padding: 24px 12px;
+                  margin: 0;
+                  -webkit-font-smoothing: antialiased;
+                }
+                .card {
+                  max-width: 520px;
+                  margin: 0 auto;
+                  background: #1e293b;
+                  border-radius: 24px;
+                  padding: 36px 28px;
+                  border: 1px solid #334155;
+                  text-align: center;
+                  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                  color: #f8fafc;
+                }
+                .logo-badge {
+                  display: inline-flex;
+                  align-items: center;
+                  background: rgba(216, 78, 85, 0.15);
+                  border: 1px solid rgba(216, 78, 85, 0.3);
+                  padding: 6px 14px;
+                  border-radius: 9999px;
+                  color: #d84e55;
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+                  margin-bottom: 16px;
+                }
+                .brand {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-size: 26px;
+                  font-weight: 900;
+                  color: #ffffff;
+                  margin-bottom: 4px;
+                }
+                .heading {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  margin: 12px 0 6px 0;
+                  color: #ffffff;
+                  font-size: 21px;
+                  font-weight: 800;
+                }
+                .subtext {
+                  color: #94a3b8;
+                  font-size: 13px;
+                  line-height: 1.6;
+                  margin: 0 0 20px 0;
+                }
+                .verified-box {
+                  background: rgba(16, 185, 129, 0.1);
+                  border: 1.5px solid rgba(16, 185, 129, 0.3);
+                  border-radius: 16px;
+                  padding: 16px;
+                  margin-bottom: 20px;
+                  text-align: left;
+                }
+                .verified-box h4 {
+                  margin: 0 0 4px 0;
+                  color: #34d399;
+                  font-size: 13px;
+                  font-weight: 800;
+                }
+                .verified-box p {
+                  margin: 0;
+                  color: #a7f3d0;
+                  font-size: 12px;
+                  line-height: 1.5;
+                }
+                .btn {
+                  display: inline-block;
+                  padding: 14px 34px;
+                  background: linear-gradient(135deg, #d84e55 0%%, #b91c1c 100%%);
+                  color: #ffffff !important;
+                  text-decoration: none;
+                  border-radius: 14px;
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-weight: 800;
+                  font-size: 14px;
+                  box-shadow: 0 6px 20px rgba(216, 78, 85, 0.35);
+                }
+                .footer-text {
+                  color: #64748b;
+                  font-size: 11px;
+                  margin-top: 24px;
+                  border-top: 1px solid #334155;
+                  padding-top: 16px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="logo-badge">🚍 Partner Account Verified</div>
+                <div class="brand">redBus Fleet Console</div>
+                <h2 class="heading">Business Email Confirmed</h2>
+                <p class="subtext">
+                  Hi <strong>%s</strong>, your operator account for <strong>%s</strong> is verified. You can now access the partner console to manage routes, buses, and live seat reservations.
+                </p>
+
+                <div class="verified-box">
+                  <h4>✓ Fleet Console Privileges Activated</h4>
+                  <p>
+                    • Add & manage bus fleets (AC Sleeper, Seater, Volvo)<br>
+                    • Create route schedules, boarding & dropping points<br>
+                    • Real-time ticket booking management and revenue reports
+                  </p>
+                </div>
+
+                <div>
+                  <a href="%s" class="btn">Open Operator Console ➔</a>
+                </div>
+
+                <p class="footer-text">Dispatched via Brevo Transactional Email • © redBus India Partner Network</p>
+              </div>
+            </body>
+            </html>
+            """.formatted(name, companyName, consoleUrl);
+    }
+
+    private String buildPasswordResetSuccessEmailTemplate(String name, String email, String formattedTime, String loginUrl) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+                * { box-sizing: border-box; }
+                body {
+                  font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  background-color: #f4f6f8;
+                  padding: 24px 12px;
+                  margin: 0;
+                  -webkit-font-smoothing: antialiased;
+                }
+                .card {
+                  max-width: 480px;
+                  margin: 0 auto;
+                  background: #ffffff;
+                  border-radius: 24px;
+                  padding: 36px 28px;
+                  border: 1px solid #eaeaea;
+                  text-align: center;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+                }
+                .logo {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  color: #e23744;
+                  font-size: 30px;
+                  font-weight: 900;
+                  margin-bottom: 12px;
+                  letter-spacing: -0.8px;
+                }
+                .shield-icon {
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 56px;
+                  height: 56px;
+                  border-radius: 20px;
+                  background: #ecfdf5;
+                  color: #059669;
+                  font-size: 26px;
+                  margin-bottom: 16px;
+                }
+                .heading {
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  margin: 0 0 8px 0;
+                  color: #111827;
+                  font-size: 20px;
+                  font-weight: 800;
+                }
+                .subtext {
+                  color: #4b5563;
+                  font-size: 13px;
+                  line-height: 1.5;
+                  margin: 0 0 20px 0;
+                }
+                .security-box {
+                  background: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 14px;
+                  padding: 14px;
+                  margin-bottom: 20px;
+                  text-align: left;
+                  font-size: 12px;
+                }
+                .security-row {
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 4px 0;
+                  color: #475569;
+                }
+                .security-val {
+                  font-weight: 700;
+                  color: #0f172a;
+                }
+                .alert-warn {
+                  background: #fffbeb;
+                  border: 1px solid #fef3c7;
+                  border-radius: 12px;
+                  padding: 12px;
+                  color: #92400e;
+                  font-size: 12px;
+                  text-align: left;
+                  line-height: 1.4;
+                  margin-bottom: 20px;
+                }
+                .btn {
+                  display: inline-block;
+                  padding: 14px 32px;
+                  background: linear-gradient(135deg, #e23744 0%%, #cb202d 100%%);
+                  color: #ffffff !important;
+                  text-decoration: none;
+                  border-radius: 14px;
+                  font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+                  font-weight: 800;
+                  font-size: 14px;
+                  box-shadow: 0 4px 14px rgba(226, 55, 68, 0.35);
+                }
+                .footer-text {
+                  color: #9ca3af;
+                  font-size: 11px;
+                  margin-top: 24px;
+                  border-top: 1px solid #f0f0f0;
+                  padding-top: 16px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="logo">redBus</div>
+                <div class="shield-icon">🛡️</div>
+                <h2 class="heading">Password Changed Successfully</h2>
+                <p class="subtext">
+                  Hi %s, your redBus account password was recently updated.
+                </p>
+
+                <div class="security-box">
+                  <div class="security-row">
+                    <span>Account Email:</span>
+                    <span class="security-val">%s</span>
+                  </div>
+                  <div class="security-row">
+                    <span>Time of Change:</span>
+                    <span class="security-val">%s</span>
+                  </div>
+                  <div class="security-row">
+                    <span>Status:</span>
+                    <span class="security-val" style="color:#059669;">Protected & Active</span>
+                  </div>
+                </div>
+
+                <div class="alert-warn">
+                  ⚠️ <strong>Security Notice:</strong> If you did NOT perform this action, please reset your password immediately or contact our security team at <strong>support@redbusai.app</strong>.
+                </div>
+
+                <div>
+                  <a href="%s" class="btn">Sign In to Your Account</a>
+                </div>
+
+                <p class="footer-text">Sent via Brevo Security Engine • © redBus India Security Team</p>
+              </div>
+            </body>
+            </html>
+            """.formatted(name, email, formattedTime, loginUrl);
     }
 }
