@@ -451,16 +451,16 @@ export default function Navbar() {
 
           {/* Slide-in Drawer */}
           <div
-            className="relative w-[85%] max-w-[330px] sm:max-w-[360px] h-full bg-[#121824] text-slate-100 flex flex-col shadow-2xl z-10 border-r border-slate-800 animate-drawer-slide"
+            className="relative w-[85%] max-w-[330px] sm:max-w-[360px] h-full bg-white dark:bg-[#121824] text-gray-900 dark:text-slate-100 flex flex-col shadow-2xl z-10 border-r border-gray-200 dark:border-slate-800 animate-drawer-slide"
             role="dialog"
             aria-modal="true"
             aria-label="Mobile Navigation"
           >
             {/* Drawer Header (Sign In or User Profile) */}
-            <div className="p-4 bg-[#192132] border-b border-slate-800/80 flex items-center justify-between">
+            <div className="p-4 bg-gray-50 dark:bg-[#192132] border-b border-gray-200 dark:border-slate-800/80 flex items-center justify-between">
               {mounted && isAuthenticated && activeUser ? (
                 <div className="flex items-center space-x-3 min-w-0 pr-2">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#d84e55] to-orange-500 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-slate-700 shadow-sm">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-[#d84e55] to-orange-500 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-gray-200 dark:border-slate-700 shadow-xs">
                     {activeUser.avatarUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={activeUser.avatarUrl} alt={activeUser.name} className="w-full h-full object-cover" />
@@ -469,14 +469,14 @@ export default function Navbar() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white truncate">{activeUser.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{activeUser.email}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{activeUser.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{activeUser.email}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-gray-200 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded">
                         {activeUser.role === "ROLE_ADMIN" ? "Admin" : activeUser.role === "ROLE_OPERATOR" ? "Operator" : "Passenger"}
                       </span>
                       {activeUser.emailVerified && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-400 bg-emerald-950/60 px-1 rounded">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-1 rounded">
                           <CheckCircle2 className="w-2.5 h-2.5" /> Verified
                         </span>
                       )}
@@ -489,7 +489,7 @@ export default function Navbar() {
                     setMobileMenuOpen(false);
                     setShowAuthModal(true);
                   }}
-                  className="flex items-center space-x-2 text-sm font-bold text-white hover:text-red-400 transition-colors cursor-pointer py-1"
+                  className="flex items-center space-x-2 text-sm font-bold text-gray-900 dark:text-white hover:text-[#d84e55] dark:hover:text-red-400 transition-colors cursor-pointer py-1"
                 >
                   <UserIcon className="w-4 h-4 text-[#d84e55]" />
                   <span>Sign In | Create Account</span>
@@ -499,7 +499,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer ml-auto shrink-0"
+                className="p-1.5 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer ml-auto shrink-0"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
@@ -507,27 +507,27 @@ export default function Navbar() {
             </div>
 
             {/* Drawer Body - Scrollable */}
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800/60">
               {/* Wallet Section (If Logged In) */}
               {mounted && isAuthenticated && (
                 <div className="p-3">
                   <Link
                     href="/profile"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-3 bg-gradient-to-r from-emerald-950/50 to-teal-950/40 border border-emerald-800/60 rounded-xl flex items-center justify-between hover:border-emerald-700 transition-all block"
+                    className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between hover:border-emerald-400 dark:hover:border-emerald-700 transition-all block shadow-2xs"
                   >
                     <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-600/90 text-white flex items-center justify-center shadow-xs">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                         <Wallet className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-wider">redBus Wallet</span>
-                        <span className="text-sm font-bold text-emerald-400">
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-slate-400 block uppercase tracking-wider">redBus Wallet</span>
+                        <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
                           ₹{walletBalance.toFixed(2)}
                         </span>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-900/60 px-2 py-0.5 rounded-md">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">
                       View →
                     </span>
                   </Link>
@@ -540,14 +540,16 @@ export default function Navbar() {
                   href="/"
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                    pathname === "/" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                    pathname === "/"
+                      ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                      : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <Bus className="w-4 h-4 text-[#d84e55]" />
                     <span>Bus Tickets</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                 </Link>
 
                 {activeUser?.role !== "ROLE_OPERATOR" && (
@@ -555,14 +557,16 @@ export default function Navbar() {
                     href="/my-bookings"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                      pathname === "/my-bookings" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                      pathname === "/my-bookings"
+                        ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                        : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <Ticket className="w-4 h-4 text-amber-400" />
+                      <Ticket className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                       <span>My Bookings</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                   </Link>
                 )}
 
@@ -570,14 +574,16 @@ export default function Navbar() {
                   href="/faq"
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                    pathname === "/faq" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                    pathname === "/faq"
+                      ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                      : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <HelpCircle className="w-4 h-4 text-sky-400" />
+                    <HelpCircle className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                     <span>Help & FAQs</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                 </Link>
 
                 {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
@@ -585,14 +591,16 @@ export default function Navbar() {
                     href="/operator"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
-                      pathname === "/operator" ? "text-red-400 bg-red-950/20" : "text-rose-300 hover:bg-slate-800/60 hover:text-white"
+                      pathname === "/operator"
+                        ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30"
+                        : "text-gray-800 dark:text-rose-300 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="flex items-center space-x-3">
                       <Bus className="w-4 h-4 text-[#d84e55]" />
                       <span>Operator Hub</span>
                     </div>
-                    <span className="text-[10px] bg-red-950/80 border border-red-800/60 text-red-300 px-1.5 py-0.5 rounded font-bold">PORTAL</span>
+                    <span className="text-[10px] bg-red-100 dark:bg-red-950/80 border border-red-200 dark:border-red-800/60 text-[#d84e55] dark:text-red-300 px-1.5 py-0.5 rounded font-bold">PORTAL</span>
                   </Link>
                 )}
 
@@ -601,21 +609,23 @@ export default function Navbar() {
                     href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                      pathname === "/admin" ? "text-red-400 bg-red-950/20" : "text-purple-300 hover:bg-slate-800/60 hover:text-white"
+                      pathname === "/admin"
+                        ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                        : "text-gray-700 dark:text-purple-300 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <Shield className="w-4 h-4 text-purple-400" />
+                      <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       <span>Admin Dashboard</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                   </Link>
                 )}
               </div>
 
               {/* Account Management Group */}
               <div className="py-2">
-                <div className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="px-4 py-1.5 text-[11px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
                   Account & Settings
                 </div>
 
@@ -625,28 +635,32 @@ export default function Navbar() {
                       href="/profile"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors ${
-                        pathname === "/profile" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                        pathname === "/profile"
+                          ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                          : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <UserIcon className="w-4 h-4 text-slate-400" />
+                        <UserIcon className="w-4 h-4 text-gray-400 dark:text-slate-400" />
                         <span>My Profile</span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-500" />
+                      <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                     </Link>
 
                     <Link
                       href="/settings"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium transition-colors ${
-                        pathname === "/settings" ? "text-red-400 bg-red-950/20" : "text-slate-200 hover:bg-slate-800/60 hover:text-white"
+                        pathname === "/settings"
+                          ? "text-[#d84e55] bg-red-50 dark:text-red-400 dark:bg-red-950/30 font-semibold"
+                          : "text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white"
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <Settings className="w-4 h-4 text-slate-400" />
+                        <Settings className="w-4 h-4 text-gray-400 dark:text-slate-400" />
                         <span>Account Settings</span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-500" />
+                      <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                     </Link>
                   </>
                 ) : (
@@ -655,31 +669,31 @@ export default function Navbar() {
                       setMobileMenuOpen(false);
                       setShowAuthModal(true);
                     }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800/60 hover:text-white transition-colors cursor-pointer text-left"
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer text-left"
                   >
                     <div className="flex items-center space-x-3">
-                      <UserIcon className="w-4 h-4 text-slate-400" />
+                      <UserIcon className="w-4 h-4 text-gray-400 dark:text-slate-400" />
                       <span>Login to Manage Account</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                   </button>
                 )}
 
                 {/* Theme Mode Toggle */}
                 <button
                   onClick={toggleTheme}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800/60 hover:text-white transition-colors cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800/60 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer text-left"
                 >
                   <div className="flex items-center space-x-3">
                     {mounted && theme === "dark" ? (
                       <Sun className="w-4 h-4 text-amber-400" />
                     ) : (
-                      <Moon className="w-4 h-4 text-indigo-400" />
+                      <Moon className="w-4 h-4 text-slate-700" />
                     )}
                     <span>Theme Mode</span>
                   </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">
-                    {mounted && theme === "dark" ? "Dark" : "Light"}
+                  <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded border border-gray-200 dark:border-slate-700">
+                    {mounted && theme === "dark" ? "Dark Mode" : "Light Mode"}
                   </span>
                 </button>
               </div>
@@ -692,7 +706,7 @@ export default function Navbar() {
                       setMobileMenuOpen(false);
                       setShowLogoutModal(true);
                     }}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-900/50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-[#d84e55] dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Log Out</span>
@@ -703,7 +717,7 @@ export default function Navbar() {
                       setMobileMenuOpen(false);
                       setShowAuthModal(true);
                     }}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-sm font-bold shadow-md shadow-red-900/30 transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-sm font-bold shadow-md shadow-red-500/20 transition-colors cursor-pointer"
                   >
                     <UserIcon className="w-4 h-4" />
                     <span>Sign In / Register</span>
@@ -713,8 +727,8 @@ export default function Navbar() {
             </div>
 
             {/* Sidebar Footer Branding */}
-            <div className="p-3 bg-[#0d121c] border-t border-slate-800 text-center">
-              <p className="text-[11px] font-medium text-slate-500">
+            <div className="p-3 bg-gray-50 dark:bg-[#0d121c] border-t border-gray-200 dark:border-slate-800 text-center">
+              <p className="text-[11px] font-medium text-gray-500 dark:text-slate-500">
                 redBus AI Edition • India&apos;s AI Bus Network
               </p>
             </div>
