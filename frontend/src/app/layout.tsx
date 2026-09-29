@@ -33,10 +33,17 @@ export const metadata: Metadata = {
   description:
     "Book bus tickets online with redBus. AI-powered search, live seat tracking, instant refunds, and 30,000+ routes across India.",
   keywords: "bus tickets, redbus, online bus booking, sleeper bus, volvo bus, ticket booking, razorpay",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/apple-icon",
+  },
   openGraph: {
     title: "redBus - India's No. 1 Online Bus Ticketing Platform",
     description: "Book bus tickets online with redBus. AI-powered search, live seat tracking, and instant refunds.",
-    url: "https://www.redbus.in",
+    url: "https://redbusai.app",
     siteName: "redBus",
     type: "website",
   },
