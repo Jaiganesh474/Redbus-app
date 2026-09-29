@@ -61,7 +61,7 @@ function SearchResultsContent() {
   // Search parameters from URL or Redux
   const source = searchParams.get("source") || filters.sourceCity || "Bengaluru";
   const destination = searchParams.get("destination") || filters.destinationCity || "Chennai";
-  const date = searchParams.get("date") || filters.travelDate || getTomorrowDateStr();
+  const date = searchParams.get("date") || filters.travelDate || getTodayDateStr();
   const busType = searchParams.get("busType") || filters.busType;
   const maxPriceParam = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : filters.maxPrice;
   const selectRouteParam = searchParams.get("selectRoute");

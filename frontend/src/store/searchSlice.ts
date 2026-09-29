@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { getTomorrowDateStr } from "@/lib/dateUtils";
+import { getTodayDateStr } from "@/lib/dateUtils";
 
 interface SearchState {
   sourceCity: string;
@@ -15,7 +15,7 @@ interface SearchState {
 const initialState: SearchState = {
   sourceCity: "",
   destinationCity: "",
-  travelDate: getTomorrowDateStr(),
+  travelDate: getTodayDateStr(),
   busType: "",
   departureWindow: "ALL",
   minPrice: undefined,

@@ -25,7 +25,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-import { getTomorrowDateStr } from "@/lib/dateUtils";
+import { getTodayDateStr } from "@/lib/dateUtils";
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function HomePage() {
   const { data: faqs = [] } = useGetPublicFaqsQuery();
 
   const handleQuickRouteSearch = (from: string, to: string) => {
-    const dateStr = getTomorrowDateStr();
+    const dateStr = getTodayDateStr();
 
     dispatch(
       setSearchParams({
