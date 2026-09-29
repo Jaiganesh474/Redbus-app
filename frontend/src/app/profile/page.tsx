@@ -247,7 +247,7 @@ export default function ProfilePage() {
                   className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer border border-gray-200/80 dark:border-slate-700"
                 >
                   <Camera className="w-3.5 h-3.5 text-[#d84e55]" />
-                  <span>Choose 3D Avatar</span>
+                  <span>Change Photo / Avatar</span>
                 </button>
 
                 <Link

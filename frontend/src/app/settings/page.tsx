@@ -378,20 +378,20 @@ export default function SettingsPage() {
                     onClick={() => setIsAvatarModalOpen(true)}
                     className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Change 3D Avatar
+                    Change Photo / Avatar
                   </button>
                   {avatarUrl && (
                     <button
                       type="button"
                       onClick={() => setAvatarUrl("")}
-                      className="px-3 py-2 text-gray-400 hover:text-red-500 rounded-xl text-xs font-semibold"
+                      className="px-3 py-2 text-gray-400 hover:text-red-500 rounded-xl text-xs font-semibold cursor-pointer"
                     >
                       Remove
                     </button>
                   )}
                 </div>
                 <p className="text-xs text-gray-400">
-                  Select a male or female 3D character logo to represent your profile on tickets & reviews.
+                  Select a 3D character avatar or upload your custom profile photo from your device storage.
                 </p>
               </div>
             </div>
