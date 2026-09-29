@@ -106,10 +106,11 @@ export default function AiChatWidget() {
   const [chatMutation] = useChatWithAiMutation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Active context from search or default
-  const sourceCity = searchState.sourceCity || "Madiwala";
-  const destinationCity = searchState.destinationCity || "Chennai";
-  const travelDate = searchState.travelDate || "20 Sep";
+  // Active context from search (only if user actually selected cities)
+  const hasActiveSearch = Boolean(searchState.sourceCity && searchState.destinationCity);
+  const sourceCity = searchState.sourceCity || "";
+  const destinationCity = searchState.destinationCity || "";
+  const travelDate = searchState.travelDate || "";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -142,9 +143,9 @@ export default function AiChatWidget() {
         sessionId,
         message,
         userId: user?.id,
-        sourceCity,
-        destinationCity,
-        travelDate: searchState.travelDate,
+        sourceCity: sourceCity || undefined,
+        destinationCity: destinationCity || undefined,
+        travelDate: travelDate || undefined,
       }).unwrap();
 
       dispatch(
@@ -317,12 +318,14 @@ export default function AiChatWidget() {
             </div>
           </div>
 
-          {/* Context pill banner: "Helping you choose a bus from Madiwala to Chennai on 20 Sep" */}
-          <div className="px-4 pt-3 pb-1 bg-white dark:bg-[#0f172a]">
-            <div className="mx-auto text-center px-4 py-2 bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl text-xs font-medium text-gray-600 dark:text-slate-300 max-w-[90%] shadow-2xs">
-              Helping you choose a bus from <span className="font-bold text-gray-900 dark:text-white">{sourceCity}</span> to <span className="font-bold text-gray-900 dark:text-white">{destinationCity}</span> on {travelDate}
+          {/* Context pill banner: only show when user has actively selected source & destination */}
+          {hasActiveSearch && (
+            <div className="px-4 pt-3 pb-1 bg-white dark:bg-[#0f172a]">
+              <div className="mx-auto text-center px-4 py-2 bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 rounded-xl text-xs font-medium text-gray-600 dark:text-slate-300 max-w-[90%] shadow-2xs">
+                Helping you choose a bus from <span className="font-bold text-gray-900 dark:text-white">{sourceCity}</span> to <span className="font-bold text-gray-900 dark:text-white">{destinationCity}</span>{travelDate ? ` on ${travelDate}` : ""}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Message History */}
           <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-white dark:bg-[#0f172a]">
@@ -332,12 +335,20 @@ export default function AiChatWidget() {
                 Tell us how we can help you today!
               </p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "Show ac buses",
-                  "Show buses with tracking link",
-                  "Show sleeper buses",
-                  "Buses under ₹1000",
-                ].map((chip, idx) => (
+                {(hasActiveSearch
+                  ? [
+                      "Show AC buses",
+                      "Show sleeper buses",
+                      "Buses with live tracking",
+                      "Buses under ₹1000",
+                    ]
+                  : [
+                      "Bangalore to Chennai tomorrow",
+                      "Mumbai to Pune this Friday",
+                      "Check PNR status",
+                      "Cancellation policy",
+                    ]
+                ).map((chip, idx) => (
                   <button
                     key={idx}
                     type="button"

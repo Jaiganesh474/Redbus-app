@@ -622,64 +622,93 @@ public class AiService {
         else if (lower.contains("bus") || lower.contains("to") || lower.contains("from") || lower.contains("ticket") || lower.contains("find") || lower.contains("search") || lower.contains("go") || lower.contains("travel") || lower.contains("route") || lower.contains("tracking") || lower.contains("ac") || lower.contains("sleeper") || lower.contains("seater") || lower.contains("option") || lower.contains("cheap")) {
             NlpParseResponse parsed = parseNaturalQuery(message);
             String src = parsed.getSourceCity();
-            if (src == null || src.isBlank()) {
-                src = (request.getSourceCity() != null && !request.getSourceCity().isBlank()) ? request.getSourceCity() : "Bangalore";
+            if ((src == null || src.isBlank()) && request.getSourceCity() != null && !request.getSourceCity().isBlank()) {
+                src = request.getSourceCity();
             }
             String dst = parsed.getDestinationCity();
-            if (dst == null || dst.isBlank()) {
-                dst = (request.getDestinationCity() != null && !request.getDestinationCity().isBlank()) ? request.getDestinationCity() : "Chennai";
-            }
-            LocalDate travelDate = parsed.getTravelDate();
-            if (travelDate == null && request.getTravelDate() != null && !request.getTravelDate().isBlank()) {
-                try {
-                    travelDate = LocalDate.parse(request.getTravelDate());
-                } catch (Exception ignored) {}
-            }
-            if (travelDate == null) {
-                travelDate = LocalDate.now();
+            if ((dst == null || dst.isBlank()) && request.getDestinationCity() != null && !request.getDestinationCity().isBlank()) {
+                dst = request.getDestinationCity();
             }
 
-            String busType = parsed.getBusType();
-            if (busType == null) {
-                if (lower.contains("ac") || lower.contains("a/c")) busType = "AC";
-                else if (lower.contains("sleeper")) busType = "Sleeper";
-                else if (lower.contains("seater")) busType = "Seater";
+            // Case A: Neither source nor destination provided
+            if ((src == null || src.isBlank()) && (dst == null || dst.isBlank())) {
+                reply = "🚌 **Where would you like to travel?**\n\n" +
+                        "Please tell me your **boarding point / departure city**, **drop / destination city**, and your **travel date**.\n\n" +
+                        "For example: *'AC Sleeper from Bangalore to Chennai tomorrow'* or *'Mumbai to Pune this Friday'*.";
+                suggestedPrompts.add("Bangalore to Chennai tomorrow");
+                suggestedPrompts.add("Mumbai to Pune this Friday");
+                suggestedPrompts.add("Hyderabad to Bangalore");
+                suggestedPrompts.add("Delhi to Jaipur AC Sleeper");
             }
-
-            List<RouteResponseDto> routes = busRouteService.searchRoutes(
-                    src, dst, travelDate,
-                    busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc"
-            );
-
-            // If empty for exact date, fallback to available schedule dates
-            if (routes.isEmpty()) {
-                routes = busRouteService.searchRoutes(src, dst, null, busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc");
+            // Case B: Source provided, but destination missing
+            else if (dst == null || dst.isBlank()) {
+                reply = String.format("Where would you like to travel to from **%s**, and on which date?\n\n(For example: *'%s to Chennai tomorrow'* or *'%s to Hyderabad on Friday'*)", src, src, src);
+                suggestedPrompts.add(src + " to Chennai tomorrow");
+                suggestedPrompts.add(src + " to Hyderabad");
+                suggestedPrompts.add(src + " to Bangalore");
             }
-            if (routes.isEmpty()) {
-                // If query was "between A and B", also check reverse direction!
-                routes = busRouteService.searchRoutes(dst, src, null, busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc");
+            // Case C: Destination provided, but source missing
+            else if (src == null || src.isBlank()) {
+                reply = String.format("Where will you be boarding your bus to **%s**, and on which date?\n\n(For example: *'Bangalore to %s tomorrow'* or *'Hyderabad to %s'*)", dst, dst, dst);
+                suggestedPrompts.add("Bangalore to " + dst + " tomorrow");
+                suggestedPrompts.add("Hyderabad to " + dst);
+                suggestedPrompts.add("Chennai to " + dst);
+            }
+            // Case D: Both source and destination are available
+            else {
+                LocalDate travelDate = parsed.getTravelDate();
+                if (travelDate == null && request.getTravelDate() != null && !request.getTravelDate().isBlank()) {
+                    try {
+                        travelDate = LocalDate.parse(request.getTravelDate());
+                    } catch (Exception ignored) {}
+                }
+                if (travelDate == null) {
+                    travelDate = LocalDate.now().plusDays(1);
+                }
+
+                String busType = parsed.getBusType();
+                if (busType == null) {
+                    if (lower.contains("ac") || lower.contains("a/c")) busType = "AC";
+                    else if (lower.contains("sleeper")) busType = "Sleeper";
+                    else if (lower.contains("seater")) busType = "Seater";
+                }
+
+                List<RouteResponseDto> routes = busRouteService.searchRoutes(
+                        src, dst, travelDate,
+                        busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc"
+                );
+
+                // If empty for exact date, fallback to available schedule dates
+                if (routes.isEmpty()) {
+                    routes = busRouteService.searchRoutes(src, dst, null, busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc");
+                }
+                if (routes.isEmpty()) {
+                    // If query was "between A and B", also check reverse direction!
+                    routes = busRouteService.searchRoutes(dst, src, null, busType, null, parsed.getMaxPrice(), parsed.getTimePreference(), "price_asc");
+                    if (!routes.isEmpty()) {
+                        String temp = src;
+                        src = dst;
+                        dst = temp;
+                    }
+                }
+
+                toolExecuted = "searchRoutes";
+                toolData = routes;
+
                 if (!routes.isEmpty()) {
-                    String temp = src;
-                    src = dst;
-                    dst = temp;
+                    reply = String.format("Found %d buses connecting **%s** and **%s** on **%s**. Take a look at the buses below and tap to pick your seats!",
+                            routes.size(), src, dst, travelDate);
+                    suggestedPrompts.add("Show ac buses");
+                    suggestedPrompts.add("Show buses with tracking link");
+                    suggestedPrompts.add("Show sleeper buses");
+                    suggestedPrompts.add("Buses under ₹1000");
+                } else {
+                    reply = String.format("I searched for buses from **%s** to **%s** on **%s**, but no active schedules were found. Would you like to check nearby boarding points or alternate dates?",
+                            src, dst, travelDate);
+                    suggestedPrompts.add(src + " to " + dst + " tomorrow");
+                    suggestedPrompts.add("Search different route");
                 }
             }
-
-            toolExecuted = "searchRoutes";
-            toolData = routes;
-
-            if (!routes.isEmpty()) {
-                reply = String.format("Found %d buses connecting **%s** and **%s**. Take a look at the buses below and tap to pick your seats!",
-                        routes.size(), src, dst);
-            } else {
-                reply = String.format("I searched for buses between **%s** and **%s**. Would you like to check nearby boarding points or alternate dates?",
-                        src, dst);
-            }
-
-            suggestedPrompts.add("Show ac buses");
-            suggestedPrompts.add("Show buses with tracking link");
-            suggestedPrompts.add("Show sleeper buses");
-            suggestedPrompts.add("Buses under ₹1000");
         }
         // Intent 10: RAG Policy & Knowledge Base Query
         else {
