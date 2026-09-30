@@ -214,9 +214,11 @@ public class SmsService {
                 headers.set("api-key", brevoApiKey.trim());
                 headers.setContentType(MediaType.APPLICATION_JSON);
 
+                String brevoPhone = digitsOnly.startsWith("91") && digitsOnly.length() >= 12 ? digitsOnly : ("91" + indianNumber);
+
                 Map<String, Object> body = Map.of(
                         "sender", "redBus",
-                        "recipient", phone,
+                        "recipient", brevoPhone,
                         "content", message
                 );
 
@@ -225,7 +227,7 @@ public class SmsService {
                         "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
 
                 if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("✅ Brevo SMS (Text Message) dispatched successfully to {}", phone);
+                    log.info("✅ Brevo SMS dispatched successfully to {} | Response: {}", brevoPhone, response.getBody());
                     return true;
                 } else {
                     log.warn("Brevo SMS response: {}", response.getBody());
