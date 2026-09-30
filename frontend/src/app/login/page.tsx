@@ -111,10 +111,12 @@ function LoginContent() {
           return;
         } catch (fbErr: any) {
           console.warn("Firebase Phone Auth fallback to server:", fbErr?.message || fbErr);
+          setConfirmationResult(null);
         }
       }
     } catch (fbInitErr) {
       console.warn("Firebase Phone Auth init note:", fbInitErr);
+      setConfirmationResult(null);
     }
 
     // Fallback to Server Multi-Gateway SMS Dispatch
@@ -145,20 +147,24 @@ function LoginContent() {
     try {
       // If Firebase OTP was used
       if (confirmationResult) {
-        const userCredential = await confirmationResult.confirm(otp.trim());
-        const idToken = await userCredential.user.getIdToken();
-        const res = await firebaseLoginMutation({
-          idToken,
-          phone: fullNumber,
-          name: name.trim() || userCredential.user.displayName || undefined,
-        }).unwrap();
+        try {
+          const userCredential = await confirmationResult.confirm(otp.trim());
+          const idToken = await userCredential.user.getIdToken();
+          const res = await firebaseLoginMutation({
+            idToken,
+            phone: fullNumber,
+            name: name.trim() || userCredential.user.displayName || undefined,
+          }).unwrap();
 
-        dispatch(setCredentials(res));
-        setSuccessMessage("Logged in successfully! Redirecting...");
-        setTimeout(() => {
-          router.push(redirectUrl);
-        }, 500);
-        return;
+          dispatch(setCredentials(res));
+          setSuccessMessage("Logged in successfully! Redirecting...");
+          setTimeout(() => {
+            router.push(redirectUrl);
+          }, 500);
+          return;
+        } catch (fbConfirmErr: any) {
+          console.warn("Firebase OTP confirmation error, falling back to server verification:", fbConfirmErr?.message);
+        }
       }
 
       // Backend Database OTP verification
