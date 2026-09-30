@@ -219,18 +219,19 @@ public class SmsService {
         // 1. Try 2Factor.in (Specialized Indian OTP SMS Gateway - Priority #1)
         if (twoFactorApiKey != null && !twoFactorApiKey.isBlank() && !twoFactorApiKey.startsWith("your_")) {
             try {
-                // 2Factor primary endpoint for custom OTP dispatch
-                String twoFactorUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
+                // Correct official 2Factor endpoint: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
+                String formattedPhone = (indianNumber.length() == 10) ? "+91" + indianNumber : phone;
+                String twoFactorUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + formattedPhone + "/" + otp;
                 ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().toUpperCase().contains("SUCCESS")) {
                     log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, response.getBody());
                     return true;
                 } else {
-                    log.warn("2Factor.in primary dispatch response: {} (trying AUTOGEN format)", response.getBody());
-                    String autogenUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp + "/AUTOGEN";
-                    ResponseEntity<String> autoResponse = restTemplate.getForEntity(autogenUrl, String.class);
-                    if (autoResponse.getStatusCode().is2xxSuccessful() && autoResponse.getBody() != null && autoResponse.getBody().toUpperCase().contains("SUCCESS")) {
-                        log.info("✅ 2Factor.in (AUTOGEN) OTP SMS successfully delivered to {}", phone);
+                    log.warn("2Factor.in primary dispatch response: {} (trying without +91 format)", response.getBody());
+                    String rawUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
+                    ResponseEntity<String> rawResponse = restTemplate.getForEntity(rawUrl, String.class);
+                    if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null && rawResponse.getBody().toUpperCase().contains("SUCCESS")) {
+                        log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, rawResponse.getBody());
                         return true;
                     }
                 }
