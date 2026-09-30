@@ -21,6 +21,7 @@ import {
 import type { RouteItem, SeatItem } from "@/types";
 import WriteReviewModal from "./WriteReviewModal";
 import BusImageSlider from "./BusImageSlider";
+import AuthModal from "./AuthModal";
 import { getTodayDateStr } from "@/lib/dateUtils";
 import {
   X,
@@ -347,7 +348,8 @@ export default function BusDetailsModal({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const tabsRef = useRef<HTMLDivElement>(null);
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, token } = useAppSelector((state) => state.auth);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const searchState = useAppSelector((state) => state.search);
   const { selectedSeats, boardingPoint, droppingPoint } = useAppSelector(
     (state) => state.booking
@@ -482,9 +484,24 @@ export default function BusDetailsModal({
         droppingPoint: currentDropping,
       })
     );
+
+    if (!token || !user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     onClose();
     router.push(`/checkout?routeId=${route.id}`);
   };
+
+  // Auto proceed to checkout once user logs in via AuthModal
+  useEffect(() => {
+    if (showAuthModal && token && user) {
+      setShowAuthModal(false);
+      onClose();
+      router.push(`/checkout?routeId=${route.id}`);
+    }
+  }, [showAuthModal, token, user, onClose, router, route.id]);
 
   // Structured City-Specific Boarding & Dropping Stops
   const boardingStops = useMemo(() => {
@@ -1557,6 +1574,13 @@ export default function BusDetailsModal({
         onClose={() => setShowWriteReview(false)}
         onReviewSubmitted={() => refetchReviews()}
       />
+
+      {/* Auth Modal for Unauthenticated Users */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
     </>
   );
 }

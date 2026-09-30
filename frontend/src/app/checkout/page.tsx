@@ -50,6 +50,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import RazorpayModal from "@/components/RazorpayModal";
+import AuthModal from "@/components/AuthModal";
 import { addNotification } from "@/store/notificationSlice";
 
 declare global {
@@ -64,7 +65,8 @@ function CheckoutContent() {
   const dispatch = useAppDispatch();
   const routeId = Number(searchParams.get("routeId"));
 
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, token } = useAppSelector((state) => state.auth);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const { data: latestUser } = useGetMeQuery(undefined, { skip: !user });
   const activeUser = latestUser || user;
   const userWalletBalance = Number(activeUser?.walletBalance || 0);
@@ -86,10 +88,20 @@ function CheckoutContent() {
   const { formattedTime, isLocked } = useSeatLockTimer();
   const isPaymentSuccessRef = useRef(false);
 
-  const [contactEmail, setContactEmail] = useState(user?.email || "user@example.com");
-  const [contactPhone, setContactPhone] = useState(user?.phone || "+91 9876543212");
+  const [contactEmail, setContactEmail] = useState(user?.email || "");
+  const [contactPhone, setContactPhone] = useState(user?.phone || "");
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Synchronize contact info when user logs in
+  useEffect(() => {
+    if (user?.email && (!contactEmail || contactEmail === "user@example.com")) {
+      setContactEmail(user.email);
+    }
+    if (user?.phone && (!contactPhone || contactPhone === "+91 9876543212")) {
+      setContactPhone(user.phone);
+    }
+  }, [user]);
 
   // Free Cancellation Add-on State (defaults to unselected / null)
   const [hasFreeCancellation, setHasFreeCancellation] = useState<boolean | null>(null);
@@ -335,6 +347,11 @@ function CheckoutContent() {
       }
     }
 
+    if (!token || !user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     if (!contactEmail.trim() || !contactPhone.trim()) {
       setErrorMessage("Contact email and phone number are required.");
       return;
@@ -570,6 +587,30 @@ function CheckoutContent() {
               {formattedTime}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Guest Sign In Prompt Banner if not authenticated */}
+      {!user && (
+        <div className="mb-6 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-red-50 via-rose-50 to-orange-50 dark:from-slate-900 dark:via-red-950/30 dark:to-slate-900 border border-red-200/80 dark:border-red-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#d84e55] text-white flex items-center justify-center shadow-md shadow-red-500/20 shrink-0">
+              <UserIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Sign In to Complete Your Booking</h4>
+              <p className="text-xs text-gray-600 dark:text-slate-300">
+                Log in or register with mobile OTP to get instant SMS ticket updates, live bus tracking, and wallet rewards.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAuthModal(true)}
+            className="px-5 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white font-bold text-xs rounded-xl shadow-md shadow-red-500/20 shrink-0 cursor-pointer transition-all self-start sm:self-auto"
+          >
+            Sign In / Register
+          </button>
         </div>
       )}
 
@@ -1415,6 +1456,13 @@ function CheckoutContent() {
           contactPhone={contactPhone}
           passengerName={passengers[0]?.name || user?.name || "Passenger"}
           orderId={pendingBookingData.orderId}
+        />
+      )}
+
+      {/* Auth Modal for Unauthenticated Checkouts */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
         />
       )}
     </div>
