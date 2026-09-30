@@ -16,7 +16,7 @@ import {
   useLoginWithMobileOtpMutation,
   useResetPasswordWithMobileOtpMutation,
 } from "@/store/apiSlice";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, sendFirebasePhoneOtp, type ConfirmationResult } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import {
   X,
@@ -63,6 +63,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const [otpSent, setOtpSent] = useState(false);
   const [previewOtp, setPreviewOtp] = useState<string | null>(null);
   const [resetMethod, setResetMethod] = useState<"mobile" | "email">("mobile");
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   // Feedback states
   const [errorMessage, setErrorMessage] = useState("");
@@ -75,7 +76,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const [registerMutation, { isLoading: isRegisterLoading }] = useRegisterMutation();
   const [verifyEmailMutation, { isLoading: isVerifyLoading }] = useVerifyEmailMutation();
   const [resendVerificationMutation, { isLoading: isResendLoading }] = useResendVerificationMutation();
-  const [firebaseLoginMutation] = useFirebaseLoginMutation();
+  const [firebaseLoginMutation, { isLoading: isFirebaseLoading }] = useFirebaseLoginMutation();
   const [forgotPasswordMutation, { isLoading: isForgotLoading }] = useForgotPasswordMutation();
   const [resetPasswordMutation, { isLoading: isResetLoading }] = useResetPasswordMutation();
 
@@ -104,7 +105,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     }, 1000);
   };
 
-  // 1. Mobile OTP Request
+  // 1. Mobile OTP Request (Firebase Phone Auth + Server Multi-Gateway Fallback)
   const handleSendMobileOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage("");
@@ -117,6 +118,25 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       return;
     }
 
+    // Try Firebase Phone Auth first (Official Google corporate SMS - 10,000 free per month to any number)
+    try {
+      if (typeof window !== "undefined" && auth && auth.app) {
+        try {
+          const confirmRes = await sendFirebasePhoneOtp(fullNumber, "auth-recaptcha-container");
+          setConfirmationResult(confirmRes);
+          setOtpSent(true);
+          setSuccessMessage(`Official redBus verification code dispatched via SMS to ${fullNumber}`);
+          startCooldownTimer(60);
+          return;
+        } catch (fbErr: any) {
+          console.warn("Firebase Phone Auth fallback to server:", fbErr?.message || fbErr);
+        }
+      }
+    } catch (fbInitErr) {
+      console.warn("Firebase Phone Auth init note:", fbInitErr);
+    }
+
+    // Fallback to Server Multi-Gateway SMS Dispatch
     try {
       const purpose = mode === "forgot" || mode === "reset" ? "RESET_PASSWORD" : "LOGIN";
       const res = await sendMobileOtpMutation({ phone: fullNumber, purpose }).unwrap();
@@ -146,6 +166,25 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     }
 
     try {
+      // If Firebase OTP confirmation was created:
+      if (confirmationResult) {
+        const userCredential = await confirmationResult.confirm(otpToken.trim());
+        const idToken = await userCredential.user.getIdToken();
+        const res = await firebaseLoginMutation({
+          idToken,
+          phone: fullNumber,
+          name: name.trim() || userCredential.user.displayName || undefined,
+        }).unwrap();
+
+        dispatch(setCredentials(res));
+        setSuccessMessage("Logged in successfully! Welcome to redBus.");
+        setTimeout(() => {
+          onClose();
+        }, 500);
+        return;
+      }
+
+      // Backend Database OTP verification
       const res = await loginWithMobileOtpMutation({
         phone: fullNumber,
         otp: otpToken.trim(),
@@ -158,7 +197,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         onClose();
       }, 500);
     } catch (err: any) {
-      setErrorMessage(err?.data?.message || err?.data?.error || "Invalid or expired OTP code.");
+      setErrorMessage(err?.data?.message || err?.data?.error || err?.message || "Invalid or expired OTP code.");
     }
   };
 
@@ -369,6 +408,9 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         transition={{ type: "spring", damping: 25, stiffness: 320 }}
         className="bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative z-10 my-auto"
       >
+        {/* Invisible reCAPTCHA container for Google Phone Auth */}
+        <div id="auth-recaptcha-container" className="hidden"></div>
+
         {/* Close Button */}
         <button
           onClick={onClose}

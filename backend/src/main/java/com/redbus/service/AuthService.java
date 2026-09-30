@@ -318,40 +318,67 @@ public class AuthService {
     }
 
     /**
-     * Firebase Google Authentication (no email verification needed, Google pre-verifies)
+     * Firebase Authentication (Google OAuth & Phone SMS OTP)
      */
     @Transactional
     public AuthResponse firebaseLogin(FirebaseLoginRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        boolean isNewUser = userRepository.findByEmail(email).isEmpty();
+        String phone = (request.getPhone() != null && !request.getPhone().isBlank())
+                ? smsService.normalizePhone(request.getPhone().trim())
+                : null;
 
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
+        String email = (request.getEmail() != null && !request.getEmail().isBlank())
+                ? request.getEmail().trim().toLowerCase()
+                : (phone != null ? "user_" + phone.replaceAll("[^0-9]", "") + "@mobile.redbus.com" : null);
+
+        if (email == null && phone == null) {
+            throw new BadRequestException("Either email or mobile number is required for authentication.");
+        }
+
+        // Search by phone first if available, else by email
+        Optional<User> existingUser = Optional.empty();
+        if (phone != null) {
+            existingUser = findUserByPhoneFlexible(phone);
+        }
+        if (existingUser.isEmpty() && email != null) {
+            existingUser = userRepository.findByEmail(email);
+        }
+
+        boolean isNewUser = existingUser.isEmpty();
+
+        User user = existingUser.orElseGet(() -> {
             String defaultName = (request.getName() != null && !request.getName().isBlank())
                     ? request.getName().trim()
-                    : email.split("@")[0];
+                    : (email != null ? email.split("@")[0] : "Traveler");
 
             User newUser = User.builder()
                     .name(defaultName)
                     .email(email)
+                    .phone(phone)
                     .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
                     .role("ROLE_USER")
-                    .emailVerified(true) // Google authentication is pre-verified!
+                    .emailVerified(true) // Firebase authentication is pre-verified!
+                    .isActive(true)
+                    .status("ACTIVE")
                     .build();
             return userRepository.save(newUser);
         });
 
-        // Ensure user is marked verified if logging in via Google
+        // Ensure user is marked verified if logging in via Firebase
         if (Boolean.FALSE.equals(user.getEmailVerified())) {
             user.setEmailVerified(true);
             user = userRepository.save(user);
         }
+        if (phone != null && user.getPhone() == null) {
+            user.setPhone(phone);
+            user = userRepository.save(user);
+        }
 
-        // Send welcome email if brand new passenger verified via Google
-        if (isNewUser) {
+        // Send welcome email if brand new passenger with valid email
+        if (isNewUser && user.getEmail() != null && !user.getEmail().endsWith("@mobile.redbus.com")) {
             try {
                 emailService.sendWelcomeAndVerificationEmail(user);
             } catch (Exception e) {
-                log.warn("Failed to dispatch welcome email for Google user: {}", e.getMessage());
+                log.warn("Failed to dispatch welcome email for Firebase user: {}", e.getMessage());
             }
         }
 

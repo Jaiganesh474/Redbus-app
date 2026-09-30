@@ -147,7 +147,7 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
-    firebaseLogin: builder.mutation<{ token: string; user: User }, { idToken: string; email: string; name?: string }>({
+    firebaseLogin: builder.mutation<{ token: string; user: User }, { idToken?: string; email?: string; phone?: string; name?: string; photoUrl?: string }>({
       query: (data) => ({
         url: "/auth/firebase-login",
         method: "POST",

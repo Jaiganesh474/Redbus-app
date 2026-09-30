@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
+import {
+  getAuth,
+  Auth,
+  GoogleAuthProvider,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyMockKeyForBuild2026",
@@ -25,4 +32,38 @@ try {
   googleProvider = {} as GoogleAuthProvider;
 }
 
-export { app, auth, googleProvider };
+export const setupRecaptcha = (containerId: string = "recaptcha-container") => {
+  if (typeof window === "undefined" || !auth || !auth.app) return null;
+  try {
+    if ((window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier.clear();
+      } catch {}
+    }
+    const verifier = new RecaptchaVerifier(auth, containerId, {
+      size: "invisible",
+      callback: () => {},
+      "expired-callback": () => {},
+    });
+    (window as any).recaptchaVerifier = verifier;
+    return verifier;
+  } catch (err) {
+    console.warn("reCAPTCHA initialization warning:", err);
+    return null;
+  }
+};
+
+export const sendFirebasePhoneOtp = async (
+  phoneNumber: string,
+  containerId: string = "recaptcha-container"
+): Promise<ConfirmationResult> => {
+  const verifier = setupRecaptcha(containerId);
+  if (!verifier) {
+    throw new Error("reCAPTCHA initialization failed. Please refresh the page.");
+  }
+  return await signInWithPhoneNumber(auth, phoneNumber, verifier);
+};
+
+export { app, auth, googleProvider, RecaptchaVerifier, signInWithPhoneNumber };
+export type { ConfirmationResult };
+
