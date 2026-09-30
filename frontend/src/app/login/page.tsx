@@ -12,7 +12,7 @@ import {
   useLoginWithMobileOtpMutation,
   useFirebaseLoginMutation,
 } from "@/store/apiSlice";
-import { auth, googleProvider, sendFirebasePhoneOtp, type ConfirmationResult } from "@/lib/firebase";
+import { auth, googleProvider, sendFirebasePhoneOtp, formatFirebaseAuthError, type ConfirmationResult } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import {
   Bus,
@@ -89,7 +89,10 @@ function LoginContent() {
   };
 
   const handleSendMobileOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isOtpSending || isSendingOtp || resendCooldown > 0) return;
 
     setIsOtpSending(true);
@@ -99,13 +102,12 @@ function LoginContent() {
 
     const fullNumber = getFullPhone();
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
-      setErrorMessage("Please enter a valid mobile number.");
+      setErrorMessage("Please enter a valid 10-digit mobile number.");
       setIsOtpSending(false);
       return;
     }
 
     try {
-      // 1. Try Firebase Phone Auth first
       if (typeof window !== "undefined" && auth && auth.app) {
         try {
           const confirmRes = await sendFirebasePhoneOtp(fullNumber, "login-recaptcha-container");
@@ -113,29 +115,22 @@ function LoginContent() {
           setOtpSent(true);
           setSuccessMessage(`Official redBus verification code dispatched via SMS to ${fullNumber}`);
           startCooldownTimer(60);
+          setIsOtpSending(false);
           return;
         } catch (fbErr: any) {
-          console.warn("Firebase Phone Auth fallback to server:", fbErr?.message || fbErr);
+          console.error("Firebase Phone Auth error:", fbErr);
           setConfirmationResult(null);
+          const friendlyMessage = formatFirebaseAuthError(fbErr);
+          setErrorMessage(friendlyMessage);
+          setIsOtpSending(false);
+          return;
         }
+      } else {
+        setErrorMessage("Firebase Authentication is not available. Please refresh the page.");
+        setIsOtpSending(false);
       }
-    } catch (fbInitErr) {
-      console.warn("Firebase Phone Auth init note:", fbInitErr);
-      setConfirmationResult(null);
-    }
-
-    // 2. Fallback to Server Multi-Gateway SMS Dispatch
-    try {
-      const res = await sendMobileOtpMutation({ phone: fullNumber, purpose: "LOGIN" }).unwrap();
-      setOtpSent(true);
-      setSuccessMessage(res.message || `Verification OTP dispatched to ${fullNumber}`);
-      if (res.previewOtp) {
-        setPreviewOtp(res.previewOtp);
-      }
-      startCooldownTimer(60);
     } catch (err: any) {
-      setErrorMessage(err?.data?.message || err?.data?.error || "Failed to send SMS OTP. Please try again.");
-    } finally {
+      setErrorMessage(formatFirebaseAuthError(err) || "Failed to send SMS OTP. Please try again.");
       setIsOtpSending(false);
     }
   };
@@ -439,14 +434,17 @@ function LoginContent() {
               )}
 
               <button
-                type="submit"
-                disabled={isSendingOtp || isLoggingInWithOtp}
-                className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
+                type={otpSent ? "submit" : "button"}
+                onClick={otpSent ? undefined : (e) => handleSendMobileOtp(e)}
+                disabled={isOtpSending || isSendingOtp || isLoggingInWithOtp || (!otpSent && resendCooldown > 0)}
+                className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isSendingOtp || isLoggingInWithOtp ? (
+                {isOtpSending || isSendingOtp || isLoggingInWithOtp ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : otpSent ? (
                   <span>Verify & Sign In</span>
+                ) : resendCooldown > 0 ? (
+                  <span>Resend OTP in {resendCooldown}s</span>
                 ) : (
                   <span>Get 6-Digit OTP</span>
                 )}

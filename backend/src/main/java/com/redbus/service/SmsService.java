@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
@@ -26,15 +24,6 @@ public class SmsService {
 
     // In-memory thread-safe OTP session storage
     private final Map<String, OtpSession> otpCache = new ConcurrentHashMap<>();
-
-    @Value("${app.sms.fast2sms-api-key:${FAST2SMS_API_KEY:}}")
-    private String fast2smsApiKey;
-
-    @Value("${app.sms.two-factor-api-key:${TWO_FACTOR_API_KEY:}}")
-    private String twoFactorApiKey;
-
-    @Value("${app.sms.textbelt-key:${TEXTBELT_KEY:textbelt}}")
-    private String textbeltKey;
 
     @Value("${app.brevo.api-key:${BREVO_API_KEY:}}")
     private String brevoApiKey;
@@ -55,7 +44,7 @@ public class SmsService {
     }
 
     /**
-     * Clean and normalize phone numbers into a standard format.
+     * Clean and normalize phone numbers into a standard format (E.164 with country code).
      */
     public String normalizePhone(String rawPhone) {
         if (rawPhone == null) {
@@ -76,7 +65,7 @@ public class SmsService {
     }
 
     /**
-     * Dispatches a 6-digit OTP to a mobile number using real SMS gateways.
+     * Dispatches a 6-digit OTP to a mobile number using Brevo SMS Gateway.
      */
     public SendMobileOtpResponse sendOtp(String rawPhone, String purpose) {
         String normalizedPhone = normalizePhone(rawPhone);
@@ -86,11 +75,11 @@ public class SmsService {
 
         String normalizedPurpose = (purpose != null && !purpose.isBlank()) ? purpose.toUpperCase().trim() : "LOGIN";
 
-        // Prevent rapid spamming (cooldown check: 5 seconds)
+        // Prevent rapid spamming (cooldown check: 10 seconds)
         OtpSession existing = otpCache.get(normalizedPhone);
         if (existing != null && existing.getCreatedAt() != null &&
-                existing.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(5))) {
-            long waitTime = 5 - java.time.Duration.between(existing.getCreatedAt(), LocalDateTime.now()).getSeconds();
+                existing.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(10))) {
+            long waitTime = 10 - java.time.Duration.between(existing.getCreatedAt(), LocalDateTime.now()).getSeconds();
             throw new BadRequestException("Please wait " + Math.max(1, waitTime) + "s before requesting a new OTP.");
         }
 
@@ -113,11 +102,15 @@ public class SmsService {
         // Format message tailored to the user/operator action
         String message = formatSmsMessage(otp, normalizedPurpose, normalizedPhone);
 
-        // Dispatch SMS via live gateway providers
-        boolean sentViaGateway = dispatchSms(normalizedPhone, otp, message);
+        // Dispatch SMS via Brevo Transactional SMS
+        boolean sentViaBrevo = dispatchBrevoSms(normalizedPhone, message);
 
-        log.info("📱 [MOBILE OTP SMS DISPATCH] To: {} | Purpose: {} | Gateway Sent: {}",
-                normalizedPhone, normalizedPurpose, sentViaGateway);
+        log.info("📱 [MOBILE OTP SMS DISPATCH] To: {} | Purpose: {} | Brevo Sent: {}",
+                normalizedPhone, normalizedPurpose, sentViaBrevo);
+
+        if (!sentViaBrevo) {
+            log.info("🔑 [SERVER OTP DEBUG] OTP for {} is: {}", normalizedPhone, otp);
+        }
 
         String displayMsg = "Verification OTP has been sent via SMS to " + maskPhoneNumber(normalizedPhone) + ". Code valid for 5 minutes.";
 
@@ -126,7 +119,7 @@ public class SmsService {
                 .message(displayMsg)
                 .phone(normalizedPhone)
                 .expiresInSeconds(300)
-                .previewOtp(null) // Do NOT expose OTP in response
+                .previewOtp(null)
                 .build();
     }
 
@@ -201,134 +194,40 @@ public class SmsService {
     }
 
     /**
-     * Multi-Provider SMS Sender engine (Fast2SMS, 2Factor, Twilio, Brevo SMS, Textbelt).
+     * Dispatches SMS strictly through Brevo Transactional SMS API.
      */
-    private boolean dispatchSms(String phone, String otp, String message) {
-        String digitsOnly = phone.replaceAll("[^0-9]", "");
-        String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
-
-        // 1. Try Brevo Transactional SMS (Fallback to Backend SMS Gateway)
-        if (brevoApiKey != null && !brevoApiKey.isBlank() && !brevoApiKey.startsWith("your_")) {
-            try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("api-key", brevoApiKey.trim());
-                headers.setContentType(MediaType.APPLICATION_JSON);
-
-                String brevoPhone = digitsOnly.startsWith("91") && digitsOnly.length() >= 12 ? digitsOnly : ("91" + indianNumber);
-
-                Map<String, Object> body = Map.of(
-                        "sender", "redBus",
-                        "recipient", brevoPhone,
-                        "content", message
-                );
-
-                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-                ResponseEntity<String> response = restTemplate.postForEntity(
-                        "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
-
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("✅ Brevo SMS dispatched successfully to {} | Response: {}", brevoPhone, response.getBody());
-                    return true;
-                } else {
-                    log.warn("Brevo SMS response: {}", response.getBody());
-                }
-            } catch (Exception e) {
-                log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
-            }
+    private boolean dispatchBrevoSms(String phone, String message) {
+        if (brevoApiKey == null || brevoApiKey.isBlank() || brevoApiKey.startsWith("your_") || "mock-key".equalsIgnoreCase(brevoApiKey)) {
+            return false;
         }
 
-        // 3. Try Fast2SMS (Indian SMS Gateway)
-        if (fast2smsApiKey != null && !fast2smsApiKey.isBlank()) {
-            try {
-                if (indianNumber.length() == 10) {
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.set("authorization", fast2smsApiKey.trim());
-                    headers.setContentType(MediaType.APPLICATION_JSON);
-
-                    Map<String, Object> body = Map.of(
-                            "route", "otp",
-                            "variables_values", otp,
-                            "numbers", indianNumber
-                    );
-
-                    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-                    try {
-                        ResponseEntity<String> response = restTemplate.postForEntity(
-                                "https://www.fast2sms.com/dev/bulkV2", entity, String.class);
-
-                        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"return\":true")) {
-                            log.info("✅ Fast2SMS OTP sent successfully to {}", phone);
-                            return true;
-                        } else {
-                            log.warn("Fast2SMS OTP route response: {}", response.getBody());
-                        }
-                    } catch (Exception otpEx) {
-                        log.warn("Fast2SMS OTP route error (trying Quick SMS route fallback): {}", otpEx.getMessage());
-                        Map<String, Object> qBody = Map.of(
-                                "route", "q",
-                                "message", message,
-                                "language", "english",
-                                "numbers", indianNumber
-                        );
-                        HttpEntity<Map<String, Object>> qEntity = new HttpEntity<>(qBody, headers);
-                        ResponseEntity<String> qResponse = restTemplate.postForEntity(
-                                "https://www.fast2sms.com/dev/bulkV2", qEntity, String.class);
-                        if (qResponse.getStatusCode().is2xxSuccessful() && qResponse.getBody() != null && qResponse.getBody().contains("\"return\":true")) {
-                            log.info("✅ Fast2SMS Quick SMS fallback sent successfully to {}", phone);
-                            return true;
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Fast2SMS dispatch attempt failed: {}", e.getMessage());
-            }
-        }
-
-        // 4. Try 2Factor.in (Specialized Indian OTP SMS Gateway)
-        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank() && !twoFactorApiKey.startsWith("your_")) {
-            try {
-                String formattedPhone = (indianNumber.length() == 10) ? "+91" + indianNumber : phone;
-                String twoFactorUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + formattedPhone + "/" + otp;
-                ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().toUpperCase().contains("SUCCESS")) {
-                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, response.getBody());
-                    return true;
-                } else {
-                    log.warn("2Factor.in primary dispatch response: {} (trying without +91 format)", response.getBody());
-                    String rawUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
-                    ResponseEntity<String> rawResponse = restTemplate.getForEntity(rawUrl, String.class);
-                    if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null && rawResponse.getBody().toUpperCase().contains("SUCCESS")) {
-                        log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, rawResponse.getBody());
-                        return true;
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("2Factor.in dispatch attempt failed: {}", e.getMessage());
-            }
-        }
-
-        // 5. Try Textbelt Free Tier
         try {
+            String digitsOnly = phone.replaceAll("[^0-9]", "");
+            String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
+            String brevoPhone = digitsOnly.startsWith("91") && digitsOnly.length() >= 12 ? digitsOnly : ("91" + indianNumber);
+
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("api-key", brevoApiKey.trim());
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-            map.add("phone", phone);
-            map.add("message", message);
-            map.add("key", (textbeltKey != null && !textbeltKey.isBlank()) ? textbeltKey.trim() : "textbelt");
+            Map<String, Object> body = Map.of(
+                    "sender", "redBus",
+                    "recipient", brevoPhone,
+                    "content", message
+            );
 
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://textbelt.com/text", request, String.class);
+                    "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"success\":true")) {
-                log.info("✅ Textbelt SMS dispatched successfully to {}", phone);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ Brevo SMS dispatched successfully to {} | Response: {}", brevoPhone, response.getBody());
                 return true;
             } else {
-                log.info("Textbelt response: {}", response.getBody());
+                log.warn("Brevo SMS response: {}", response.getBody());
             }
         } catch (Exception e) {
-            log.warn("Textbelt free tier note: {}", e.getMessage());
+            log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
         }
 
         return false;

@@ -66,7 +66,4 @@ app:
     url: ${FRONTEND_URL:https://redbusai.app}
   seat-lock:
     ttl-minutes: 5
-  sms:
-    fast2sms-api-key: ${FAST2SMS_API_KEY:}
-    two-factor-api-key: ${TWO_FACTOR_API_KEY:}
-    textbelt-key: ${TEXTBELT_KEY:textbelt}
+

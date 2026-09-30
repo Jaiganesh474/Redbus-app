@@ -76,7 +76,33 @@ export const sendFirebasePhoneOtp = async (
   return await signInWithPhoneNumber(auth, phoneNumber, verifier);
 };
 
+export const formatFirebaseAuthError = (error: any): string => {
+  const code = error?.code || "";
+  const msg = error?.message || "";
+
+  if (code.includes("too-many-requests") || msg.includes("too-many-requests")) {
+    return "Too many OTP requests have been made from this device. Please wait 2-5 minutes before trying again, or use Email / Google login.";
+  }
+  if (code.includes("quota-exceeded") || msg.includes("quota-exceeded")) {
+    return "SMS limit reached. Please sign in using Email or Google Account.";
+  }
+  if (code.includes("invalid-phone-number") || msg.includes("invalid-phone-number")) {
+    return "Invalid mobile number format. Please ensure you entered a valid 10-digit number.";
+  }
+  if (code.includes("captcha-check-failed") || msg.includes("captcha-check-failed")) {
+    return "reCAPTCHA verification failed. Please refresh the page and try again.";
+  }
+  if (code.includes("invalid-verification-code") || msg.includes("invalid-verification-code")) {
+    return "Invalid 6-digit OTP code. Please check and try again.";
+  }
+  if (code.includes("code-expired") || msg.includes("code-expired")) {
+    return "OTP code has expired. Please request a new code.";
+  }
+  if (code.includes("network-request-failed") || msg.includes("network-request-failed")) {
+    return "Network error. Please check your internet connection.";
+  }
+  return msg || "Authentication failed. Please try again.";
+};
+
 export { app, auth, googleProvider, RecaptchaVerifier, signInWithPhoneNumber };
 export type { ConfirmationResult };
-
-
