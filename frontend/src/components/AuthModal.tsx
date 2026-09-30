@@ -350,7 +350,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -363,24 +363,24 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
       {/* Modal Dialog Card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ type: "spring", damping: 25, stiffness: 320 }}
-        className="bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative z-10"
+        className="bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative z-10 my-auto"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
+          className="absolute top-3.5 right-3.5 p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
           aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="p-6 pb-4 sm:p-7 sm:pb-4 border-b border-gray-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="p-5 pb-3 sm:p-6 sm:pb-3 border-b border-gray-100 dark:border-slate-800/80 shrink-0">
+          <div className="flex items-center gap-2 mb-1.5">
             {(mode === "verify" || mode === "forgot" || mode === "reset") && (
               <button
                 type="button"
@@ -425,7 +425,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
           {/* Mode Switcher Tabs */}
           {(mode === "mobile_login" || mode === "login" || mode === "register") && (
-            <div className="flex bg-gray-100 dark:bg-slate-800/90 p-1.5 rounded-2xl mt-4">
+            <div className="flex bg-gray-100 dark:bg-slate-800/90 p-1.5 rounded-2xl mt-3">
               <button
                 type="button"
                 onClick={() => {
@@ -479,10 +479,10 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 sm:p-7 space-y-4">
+        <div className="p-5 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
           {/* Alerts */}
           {errorMessage && (
-            <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 dark:text-red-300">
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 dark:text-red-300">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
               <div className="flex-1">
                 <span>{errorMessage}</span>
@@ -500,7 +500,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
           )}
 
           {successMessage && (
-            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 dark:text-emerald-300">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
               <div className="flex-1">
                 <span>{successMessage}</span>
@@ -517,8 +517,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
           {/* MODE 1: MOBILE OTP LOGIN */}
           {/* ============================================================== */}
           {mode === "mobile_login" ? (
-            <div className="space-y-4">
-              <form onSubmit={otpSent ? handleMobileOtpLoginSubmit : handleSendMobileOtp} className="space-y-4">
+            <div className="space-y-3.5">
+              <form onSubmit={otpSent ? handleMobileOtpLoginSubmit : handleSendMobileOtp} className="space-y-3.5">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider">
@@ -575,7 +575,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     transition={{ duration: 0.2 }}
-                    className="space-y-4"
+                    className="space-y-3.5"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
@@ -644,12 +644,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
               {/* Social Login */}
               {!otpSent && (
                 <>
-                  <div className="relative flex items-center justify-center pt-1">
-                    <div className="border-t border-gray-200 dark:border-slate-800 w-full" />
-                    <span className="bg-white dark:bg-slate-900 px-3 text-[11px] text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold">
+                  <div className="relative flex items-center justify-center my-1">
+                    <div className="border-t border-gray-200 dark:border-slate-800 flex-1" />
+                    <span className="bg-white dark:bg-slate-900 px-3 text-[11px] text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold whitespace-nowrap shrink-0">
                       or continue with
                     </span>
-                    <div className="border-t border-gray-200 dark:border-slate-800 w-full" />
+                    <div className="border-t border-gray-200 dark:border-slate-800 flex-1" />
                   </div>
 
                   <button
@@ -947,7 +947,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             /* ============================================================== */
             /* MODE 5: EMAIL LOGIN OR REGISTER */
             /* ============================================================== */
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -979,15 +979,15 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 <span>Continue with Google</span>
               </button>
 
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-gray-200 dark:border-slate-800 w-full" />
-                <span className="bg-white dark:bg-slate-900 px-3 text-[11px] text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold">
+              <div className="relative flex items-center justify-center my-1">
+                <div className="border-t border-gray-200 dark:border-slate-800 flex-1" />
+                <span className="bg-white dark:bg-slate-900 px-3 text-[11px] text-gray-400 dark:text-slate-500 uppercase tracking-wider font-bold whitespace-nowrap shrink-0">
                   or with email
                 </span>
-                <div className="border-t border-gray-200 dark:border-slate-800 w-full" />
+                <div className="border-t border-gray-200 dark:border-slate-800 flex-1" />
               </div>
 
-              <form onSubmit={handleEmailPasswordSubmit} className="space-y-3.5">
+              <form onSubmit={handleEmailPasswordSubmit} className="space-y-3">
                 {mode === "register" && (
                   <div>
                     <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
@@ -1091,7 +1091,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         </div>
 
         {/* Footer (Partner Portal Link) */}
-        <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 text-center rounded-b-3xl">
+        <div className="p-3 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 text-center rounded-b-3xl shrink-0">
           <a
             href="/operator/login"
             onClick={onClose}
