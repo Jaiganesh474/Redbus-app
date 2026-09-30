@@ -186,7 +186,7 @@ function ResetPasswordContent() {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-800 max-w-md w-full overflow-hidden text-gray-900 dark:text-white">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#d84e55] to-[#ef4444] px-6 py-8 text-white text-center">
           <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-3 backdrop-blur-xs">
@@ -236,12 +236,12 @@ function ResetPasswordContent() {
 
         <div className="p-6 sm:p-8 space-y-5">
           {feedbackMessage && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 animate-in fade-in">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 dark:text-emerald-300 animate-in fade-in">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span>{feedbackMessage}</span>
                 {previewOtp && (
-                  <div className="mt-1 font-mono font-bold text-emerald-900 bg-emerald-100/90 px-2 py-1 rounded inline-block">
+                  <div className="mt-1 font-mono font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-900/60 px-2 py-1 rounded inline-block">
                     Verification Code: {previewOtp}
                   </div>
                 )}
@@ -250,7 +250,7 @@ function ResetPasswordContent() {
           )}
 
           {errorMessage && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 animate-in fade-in">
+            <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 dark:text-red-300 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -261,50 +261,50 @@ function ResetPasswordContent() {
             <form onSubmit={handleRequestOtp} className="space-y-4">
               {method === "mobile" ? (
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                     Registered Mobile Number
                   </label>
-                  <div className="flex rounded-2xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#d84e55]">
+                  <div className="flex rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden focus-within:ring-2 focus-within:ring-[#d84e55] bg-white dark:bg-slate-800">
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="bg-gray-50 border-r border-gray-200 text-xs px-3 py-3 font-semibold text-gray-700 focus:outline-hidden cursor-pointer"
+                      className="bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 text-xs px-3 py-3 font-semibold text-gray-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
                     >
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+91" className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">🇮🇳 +91</option>
+                      <option value="+1" className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">🇺🇸 +1</option>
+                      <option value="+44" className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">🇬🇧 +44</option>
+                      <option value="+971" className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">🇦🇪 +971</option>
                     </select>
                     <div className="relative flex-1">
-                      <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                      <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                       <input
                         type="tel"
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ""))}
                         placeholder="98765 43210"
-                        className="w-full pl-10 pr-4 py-3 text-sm focus:outline-hidden font-medium"
+                        className="w-full pl-10 pr-4 py-3 text-sm focus:outline-hidden font-medium bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                       />
                     </div>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> A free 6-digit OTP will be sent to your phone
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> A free 6-digit OTP will be sent to your phone
                   </p>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                     Registered Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="e.g. traveler@example.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                     />
                   </div>
                 </div>
@@ -329,8 +329,8 @@ function ResetPasswordContent() {
             /* STEP 2: VERIFY OTP AND SET NEW PASSWORD */
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="flex items-center justify-between pb-1">
-                <span className="text-xs text-gray-500">
-                  Target: <span className="font-semibold text-gray-800">{method === "mobile" ? getFullPhone() : email}</span>
+                <span className="text-xs text-gray-500 dark:text-slate-400">
+                  Target: <span className="font-semibold text-gray-800 dark:text-slate-200">{method === "mobile" ? getFullPhone() : email}</span>
                 </span>
                 <button
                   type="button"
@@ -339,18 +339,18 @@ function ResetPasswordContent() {
                     setOtp("");
                     setPreviewOtp(null);
                   }}
-                  className="text-xs font-semibold text-[#d84e55] hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs font-semibold text-[#d84e55] dark:text-red-400 hover:underline cursor-pointer flex items-center gap-1"
                 >
                   <ArrowLeft className="w-3 h-3" /> Change
                 </button>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   6-Digit OTP Code
                 </label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                  <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                   <input
                     type="text"
                     required
@@ -358,41 +358,41 @@ function ResetPasswordContent() {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="e.g. 123456"
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-base tracking-widest font-mono font-bold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] text-center"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 text-base tracking-widest font-mono font-bold text-gray-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] text-center placeholder-gray-400 dark:placeholder-slate-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   New Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                   <input
                     type="password"
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Minimum 6 characters"
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Confirm New Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                   <input
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-type new password"
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                   />
                 </div>
               </div>
@@ -413,7 +413,7 @@ function ResetPasswordContent() {
                 <button
                   type="button"
                   onClick={() => setStep("request")}
-                  className="text-xs text-gray-500 hover:text-gray-800 cursor-pointer"
+                  className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white cursor-pointer"
                 >
                   ← Back to Request
                 </button>
@@ -421,7 +421,7 @@ function ResetPasswordContent() {
                   type="button"
                   disabled={resendCooldown > 0 || isSendingOtp}
                   onClick={handleRequestOtp}
-                  className="text-xs font-semibold text-[#d84e55] hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-[#d84e55] dark:text-red-400 hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                 >
                   <RefreshCw className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`} />
                   {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP"}
@@ -430,8 +430,8 @@ function ResetPasswordContent() {
             </form>
           )}
 
-          <div className="text-center pt-2 border-t border-gray-100">
-            <Link href="/" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+          <div className="text-center pt-2 border-t border-gray-100 dark:border-slate-800">
+            <Link href="/" className="text-xs font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors">
               ← Return to Home
             </Link>
           </div>

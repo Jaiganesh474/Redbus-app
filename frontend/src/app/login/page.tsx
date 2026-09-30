@@ -21,9 +21,6 @@ import {
   Phone,
   Smartphone,
   ShieldCheck,
-  Zap,
-  Gift,
-  Bot,
   KeyRound,
   AlertCircle,
   CheckCircle2,
@@ -216,439 +213,404 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col md:flex-row">
-        {/* Left Side: Desktop Branding & Benefits */}
-        <div className="md:w-5/12 bg-gradient-to-br from-[#d84e55] via-[#dc2626] to-[#991b1b] text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/20 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10">
-            <Link href="/" className="inline-flex items-center gap-3 mb-8 group">
-              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <Bus className="w-6 h-6 text-[#d84e55]" />
-              </div>
-              <div>
-                <span className="text-2xl font-black tracking-tight text-white block">redBus</span>
-                <span className="text-[10px] tracking-widest uppercase text-red-200 font-bold">India&apos;s No. 1 Bus Platform</span>
-              </div>
-            </Link>
-
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3 leading-snug">
-              Instant Mobile OTP Sign In
-            </h1>
-            <p className="text-xs text-red-100 leading-relaxed">
-              Login or register with any mobile number worldwide without passwords.
-            </p>
-          </div>
-
-          {/* Perks */}
-          <div className="space-y-3.5 my-8 relative z-10">
-            <div className="flex items-start gap-3 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/15">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <Smartphone className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">Free SMS OTP Delivery</h4>
-                <p className="text-[11px] text-red-100">Quick 6-digit verification sent to your mobile phone.</p>
-              </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden">
+        {/* Header */}
+        <div className="p-6 sm:p-8 pb-4 border-b border-gray-100 dark:border-slate-800 text-center">
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#d84e55] to-red-500 flex items-center justify-center shadow-md">
+              <Bus className="w-5 h-5 text-white" />
             </div>
-
-            <div className="flex items-start gap-3 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/15">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">Instant Seat Locks</h4>
-                <p className="text-[11px] text-red-100">Live 5-minute locks prevent seat booking conflicts.</p>
-              </div>
+            <div className="text-left">
+              <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white block">redBus</span>
+              <span className="text-[9px] tracking-widest uppercase text-red-500 font-bold">India&apos;s No. 1 Bus Platform</span>
             </div>
+          </Link>
 
-            <div className="flex items-start gap-3 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/15">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">AI Travel Assistant</h4>
-                <p className="text-[11px] text-red-100">Predict delay risks and get smart seat recommendations.</p>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+            {mode === "mobile_otp" ? "Sign In with Mobile OTP" : mode === "email" ? "Sign In with Email" : "Create Account"}
+          </h1>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            {mode === "mobile_otp"
+              ? "Enter your mobile number to sign in or create an account"
+              : mode === "email"
+              ? "Enter your registered email and password to continue"
+              : "Join redBus to unlock exclusive discounts and live seat locking"}
+          </p>
 
-          {/* Footer stats */}
-          <div className="pt-4 border-t border-white/15 relative z-10 flex items-center justify-between text-xs text-red-100 font-semibold">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-300" /> 36M+ Travelers
-            </span>
-            <span className="flex items-center gap-1 text-white">
-              <Gift className="w-3.5 h-3.5 text-amber-300" /> ₹250 Free Credits
-            </span>
+          {/* Mode Switcher */}
+          <div className="flex bg-gray-100 dark:bg-slate-800/90 p-1.5 rounded-2xl mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("mobile_otp");
+                setErrorMessage("");
+                setSuccessMessage("");
+              }}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                mode === "mobile_otp"
+                  ? "bg-white dark:bg-slate-700 text-[#d84e55] dark:text-red-400 shadow-xs"
+                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mobile OTP</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("email");
+                setErrorMessage("");
+                setSuccessMessage("");
+              }}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                mode === "email"
+                  ? "bg-white dark:bg-slate-700 text-[#d84e55] dark:text-red-400 shadow-xs"
+                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Email</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("register");
+                setErrorMessage("");
+                setSuccessMessage("");
+              }}
+              className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                mode === "register"
+                  ? "bg-white dark:bg-slate-700 text-[#d84e55] dark:text-red-400 shadow-xs"
+                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Register</span>
+            </button>
           </div>
         </div>
 
-        {/* Right Side: Auth Forms */}
-        <div className="md:w-7/12 p-8 sm:p-10 flex flex-col justify-between">
-          <div>
-            {/* Header Title */}
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-                {mode === "mobile_otp" ? "Sign In with Mobile OTP" : mode === "email" ? "Sign In with Email" : "Create Account"}
-              </h2>
-              <p className="text-xs text-gray-500 mt-1">
-                {mode === "mobile_otp"
-                  ? "Enter your mobile number to sign in or create an account"
-                  : mode === "email"
-                  ? "Enter your registered email and password to continue"
-                  : "Join redBus to unlock exclusive discounts and live seat locking"}
-              </p>
+        {/* Content Body */}
+        <div className="p-6 sm:p-8 space-y-4">
+          {/* Alerts */}
+          {errorMessage && (
+            <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 dark:text-red-300">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
             </div>
+          )}
 
-            {/* Mode Switcher */}
-            <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("mobile_otp");
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  mode === "mobile_otp" ? "bg-white text-[#d84e55] shadow-xs" : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Mobile OTP</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("email");
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  mode === "email" ? "bg-white text-[#d84e55] shadow-xs" : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Email</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("register");
-                  setErrorMessage("");
-                  setSuccessMessage("");
-                }}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  mode === "register" ? "bg-white text-[#d84e55] shadow-xs" : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                <UserIcon className="w-3.5 h-3.5" />
-                <span>Register</span>
-              </button>
-            </div>
-
-            {/* Alerts */}
-            {errorMessage && (
-              <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-2xl flex items-start space-x-2.5 text-xs text-red-700 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                <span>{errorMessage}</span>
+          {successMessage && (
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>{successMessage}</span>
+                {previewOtp && (
+                  <div className="mt-1 font-mono font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded inline-block">
+                    Verification Code: {previewOtp}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {successMessage && (
-              <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start space-x-2.5 text-xs text-emerald-800 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span>{successMessage}</span>
-                  {previewOtp && (
-                    <div className="mt-1 font-mono font-bold text-emerald-900 bg-emerald-100/90 px-2 py-0.5 rounded inline-block">
-                      Verification Code: {previewOtp}
-                    </div>
+          {/* FORM 1: MOBILE OTP */}
+          {mode === "mobile_otp" && (
+            <form onSubmit={otpSent ? handleVerifyOtpAndLogin : handleSendMobileOtp} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider">
+                    Mobile Number
+                  </label>
+                  {otpSent && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtp("");
+                      }}
+                      className="text-xs font-semibold text-[#d84e55] dark:text-red-400 hover:underline cursor-pointer"
+                    >
+                      Change Number
+                    </button>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* FORM 1: MOBILE OTP */}
-            {mode === "mobile_otp" && (
-              <form onSubmit={otpSent ? handleVerifyOtpAndLogin : handleSendMobileOtp} className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">Mobile Number</label>
-                    {otpSent && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOtpSent(false);
-                          setOtp("");
-                        }}
-                        className="text-xs font-semibold text-[#d84e55] hover:underline cursor-pointer"
-                      >
-                        Change Number
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex rounded-2xl border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#d84e55] transition-all bg-white shadow-xs">
-                    <select
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
+                <div className="flex rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden focus-within:ring-2 focus-within:ring-[#d84e55] bg-white dark:bg-slate-800">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    disabled={otpSent}
+                    className="bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 text-xs px-3 py-3 font-semibold text-gray-800 dark:text-slate-200 focus:outline-hidden disabled:opacity-60 cursor-pointer"
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+60">🇲🇾 +60</option>
+                  </select>
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                    <input
+                      type="tel"
+                      required
                       disabled={otpSent}
-                      className="bg-gray-50 border-r border-gray-200 text-xs px-3 py-3 font-semibold text-gray-700 focus:outline-hidden disabled:opacity-60 cursor-pointer"
-                    >
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+971">🇦🇪 +971</option>
-                      <option value="+65">🇸🇬 +65</option>
-                      <option value="+60">🇲🇾 +60</option>
-                    </select>
-                    <div className="relative flex-1">
-                      <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                      <input
-                        type="tel"
-                        required
-                        disabled={otpSent}
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ""))}
-                        placeholder="98765 43210"
-                        className="w-full pl-10 pr-4 py-3 text-sm focus:outline-hidden disabled:bg-gray-50 disabled:text-gray-600 font-medium"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {otpSent && (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">6-Digit OTP Code</label>
-                    <div className="relative">
-                      <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-                        placeholder="e.g. 123456"
-                        className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-lg tracking-widest font-mono font-bold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] text-center"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSendingOtp || isLoggingInWithOtp}
-                  className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
-                >
-                  {isSendingOtp || isLoggingInWithOtp ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : otpSent ? (
-                    <span>Verify & Sign In</span>
-                  ) : (
-                    <span>Get 6-Digit OTP</span>
-                  )}
-                </button>
-
-                {otpSent && (
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setOtpSent(false)}
-                      className="text-xs text-gray-500 hover:text-gray-800 cursor-pointer"
-                    >
-                      ← Re-enter Number
-                    </button>
-                    <button
-                      type="button"
-                      disabled={resendCooldown > 0 || isSendingOtp}
-                      onClick={handleSendMobileOtp}
-                      className="text-xs font-semibold text-[#d84e55] hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`} />
-                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
-                    </button>
-                  </div>
-                )}
-              </form>
-            )}
-
-            {/* FORM 2: EMAIL LOGIN */}
-            {mode === "email" && (
-              <form onSubmit={handleEmailLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email Address</label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ""))}
+                      placeholder="98765 43210"
+                      className="w-full pl-10 pr-4 py-3 text-sm focus:outline-hidden bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 font-medium"
                     />
                   </div>
                 </div>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Free SMS OTP delivery
+                </p>
+              </div>
 
+              {otpSent && (
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">Password</label>
-                    <Link href="/reset-password" className="text-xs font-semibold text-[#d84e55] hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    6-Digit OTP Code
+                  </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoggingInWithPassword}
-                  className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
-                >
-                  {isLoggingInWithPassword ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span>Sign In</span>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* FORM 3: REGISTER */}
-            {mode === "register" && (
-              <form onSubmit={handleRegister} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Full Name</label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+                    <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
                     <input
                       type="text"
                       required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Rahul Sharma"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="e.g. 123456"
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-800 text-lg tracking-widest font-mono font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] text-center"
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Email Address</label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
+              <button
+                type="submit"
+                disabled={isSendingOtp || isLoggingInWithOtp}
+                className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
+              >
+                {isSendingOtp || isLoggingInWithOtp ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : otpSent ? (
+                  <span>Verify & Sign In</span>
+                ) : (
+                  <span>Get 6-Digit OTP</span>
+                )}
+              </button>
+
+              {otpSent && (
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setOtpSent(false)}
+                    className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white cursor-pointer"
+                  >
+                    ← Re-enter Number
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resendCooldown > 0 || isSendingOtp}
+                    onClick={handleSendMobileOtp}
+                    className="text-xs font-semibold text-[#d84e55] dark:text-red-400 hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`} />
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                  </button>
                 </div>
+              )}
+            </form>
+          )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Mobile Number</label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 9876543210"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
+          {/* FORM 2: EMAIL LOGIN */}
+          {mode === "email" && (
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Password</label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isRegistering}
-                  className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
-                >
-                  {isRegistering ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span>Create Account & Send OTP</span>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* Social Google Login Button */}
-            {!otpSent && (
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={isGoogleLoading}
-                  className="w-full py-3 px-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-2xl font-semibold text-sm transition-all shadow-xs hover:shadow flex items-center justify-center space-x-3 cursor-pointer"
-                >
-                  {isGoogleLoading ? (
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                  )}
-                  <span>Continue with Google</span>
-                </button>
               </div>
-            )}
-          </div>
 
-          {/* Bottom Partner Portal link */}
-          <div className="pt-4 border-t border-gray-100 text-center mt-4">
-            <Link
-              href="/operator/login"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-[#d84e55] transition-colors py-1 px-2.5 rounded-lg hover:bg-gray-50"
-            >
-              <span>🚍</span>
-              <span>Bus Operator or Fleet Owner? Access Partner Portal →</span>
-            </Link>
-          </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider">
+                    Password
+                  </label>
+                  <Link href="/reset-password" className="text-xs font-semibold text-[#d84e55] dark:text-red-400 hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingInWithPassword}
+                className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
+              >
+                {isLoggingInWithPassword ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Sign In</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* FORM 3: REGISTER */}
+          {mode === "register" && (
+            <form onSubmit={handleRegister} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <UserIcon className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Mobile Number
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 9876543210"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400 dark:text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isRegistering}
+                className="w-full py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-bold text-sm shadow-md shadow-red-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-70 cursor-pointer"
+              >
+                {isRegistering ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Create Account & Send OTP</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Social Google Login Button */}
+          {!otpSent && (
+            <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                className="w-full py-3 px-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 rounded-2xl font-semibold text-sm transition-all shadow-xs hover:shadow flex items-center justify-center space-x-3 cursor-pointer"
+              >
+                {isGoogleLoading ? (
+                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                )}
+                <span>Continue with Google</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 text-center rounded-b-3xl">
+          <Link
+            href="/operator/login"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-slate-400 hover:text-[#d84e55] dark:hover:text-red-400 transition-colors py-1 px-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-800"
+          >
+            <span>🚍</span>
+            <span>Bus Operator or Fleet Owner? Access Partner Portal →</span>
+          </Link>
         </div>
       </div>
     </div>
@@ -659,7 +621,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-[#d84e55] border-t-transparent rounded-full animate-spin" />
         </div>
       }
