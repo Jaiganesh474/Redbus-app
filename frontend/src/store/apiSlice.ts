@@ -53,8 +53,20 @@ export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
     baseUrl: API_BASE_URL,
-    prepareHeaders: (headers) => {
-      if (typeof window !== "undefined") {
+    prepareHeaders: (headers, { endpoint }) => {
+      const publicEndpoints = [
+        "login",
+        "register",
+        "verifyEmail",
+        "resendVerification",
+        "forgotPassword",
+        "resetPassword",
+        "sendMobileOtp",
+        "loginWithMobileOtp",
+        "resetPasswordWithMobileOtp",
+        "firebaseLogin",
+      ];
+      if (typeof window !== "undefined" && !publicEndpoints.includes(endpoint || "")) {
         const token = localStorage.getItem("redbus_token");
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);

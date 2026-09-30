@@ -83,30 +83,18 @@ public class SecurityConfig {
                 // Static file uploads (bus photos, vehicle images)
                 .requestMatchers("/uploads/**").permitAll()
 
-                // Public Authentication Endpoints
-                .requestMatchers(
-                    "/api/auth/login", "/api/v1/auth/login",
-                    "/api/auth/register", "/api/v1/auth/register",
-                    "/api/auth/operator/register", "/api/v1/auth/operator/register",
-                    "/api/auth/verify-email", "/api/v1/auth/verify-email",
-                    "/api/auth/resend-verification", "/api/v1/auth/resend-verification",
-                    "/api/auth/forgot-password", "/api/v1/auth/forgot-password",
-                    "/api/auth/reset-password", "/api/v1/auth/reset-password",
-                    "/api/auth/firebase-login", "/api/v1/auth/firebase-login",
-                    "/api/auth/otp/**", "/api/v1/auth/otp/**",
-                    "/api/auth/send-mobile-otp", "/api/v1/auth/send-mobile-otp",
-                    "/api/auth/login-with-otp", "/api/v1/auth/login-with-otp",
-                    "/api/auth/reset-password-mobile", "/api/v1/auth/reset-password-mobile",
-                    "/api/auth/mobile/**", "/api/v1/auth/mobile/**"
-                ).permitAll()
-
-                // Authenticated User Profile, Travellers & Device Sessions
+                // 1. Authenticated User Profile, Travellers & Sessions
                 .requestMatchers(
                     "/api/auth/me", "/api/v1/auth/me",
                     "/api/auth/profile", "/api/v1/auth/profile",
                     "/api/auth/saved-travellers/**", "/api/v1/auth/saved-travellers/**",
                     "/api/users/**", "/api/v1/users/**"
                 ).authenticated()
+
+                // 2. All Public Authentication & OTP Endpoints (Broad match)
+                .requestMatchers(
+                    "/api/auth/**", "/api/v1/auth/**", "/auth/**"
+                ).permitAll()
 
                 // Public Catalog Search, Discovery, ML & Coupons (Open for Passengers & Operators)
                 .requestMatchers("/api/routes/**", "/api/v1/routes/**").permitAll()
