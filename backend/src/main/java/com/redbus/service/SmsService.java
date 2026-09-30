@@ -95,11 +95,11 @@ public class SmsService {
 
         String normalizedPurpose = (purpose != null && !purpose.isBlank()) ? purpose.toUpperCase().trim() : "LOGIN";
 
-        // Prevent rapid spamming (cooldown check: 30 seconds)
+        // Prevent rapid spamming (cooldown check: 5 seconds)
         OtpSession existing = otpCache.get(normalizedPhone);
         if (existing != null && existing.getCreatedAt() != null &&
-                existing.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(30))) {
-            long waitTime = 30 - java.time.Duration.between(existing.getCreatedAt(), LocalDateTime.now()).getSeconds();
+                existing.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(5))) {
+            long waitTime = 5 - java.time.Duration.between(existing.getCreatedAt(), LocalDateTime.now()).getSeconds();
             throw new BadRequestException("Please wait " + Math.max(1, waitTime) + "s before requesting a new OTP.");
         }
 

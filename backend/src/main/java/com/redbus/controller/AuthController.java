@@ -139,6 +139,14 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping({"/otp/send", "/send-mobile-otp"})
+    public ResponseEntity<Map<String, Object>> getMobileOtpInfo() {
+        return ResponseEntity.ok(Map.of(
+                "status", "active",
+                "message", "Mobile OTP endpoint is online. Send a POST request with JSON { \"phone\": \"+919876543210\", \"purpose\": \"LOGIN\" } to dispatch an SMS OTP."
+        ));
+    }
+
     @PostMapping({"/otp/send", "/send-mobile-otp"})
     public ResponseEntity<SendMobileOtpResponse> sendMobileOtp(@Valid @RequestBody SendMobileOtpRequest request) {
         SendMobileOtpResponse response = authService.sendMobileOtp(request);
