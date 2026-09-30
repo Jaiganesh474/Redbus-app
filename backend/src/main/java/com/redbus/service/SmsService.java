@@ -247,14 +247,32 @@ public class SmsService {
                     );
 
                     HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-                    ResponseEntity<String> response = restTemplate.postForEntity(
-                            "https://www.fast2sms.com/dev/bulkV2", entity, String.class);
+                    try {
+                        ResponseEntity<String> response = restTemplate.postForEntity(
+                                "https://www.fast2sms.com/dev/bulkV2", entity, String.class);
 
-                    if (response.getStatusCode().is2xxSuccessful()) {
-                        log.info("✅ Fast2SMS OTP sent successfully to {}", phone);
-                        return true;
-                    } else {
-                        log.warn("Fast2SMS response: {}", response.getBody());
+                        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"return\":true")) {
+                            log.info("✅ Fast2SMS OTP sent successfully to {}", phone);
+                            return true;
+                        } else {
+                            log.warn("Fast2SMS OTP route response: {}", response.getBody());
+                        }
+                    } catch (Exception otpEx) {
+                        log.warn("Fast2SMS OTP route error (trying Quick SMS route fallback): {}", otpEx.getMessage());
+                        // Fallback to Fast2SMS Quick SMS route ("q")
+                        Map<String, Object> qBody = Map.of(
+                                "route", "q",
+                                "message", message,
+                                "language", "english",
+                                "numbers", indianNumber
+                        );
+                        HttpEntity<Map<String, Object>> qEntity = new HttpEntity<>(qBody, headers);
+                        ResponseEntity<String> qResponse = restTemplate.postForEntity(
+                                "https://www.fast2sms.com/dev/bulkV2", qEntity, String.class);
+                        if (qResponse.getStatusCode().is2xxSuccessful() && qResponse.getBody() != null && qResponse.getBody().contains("\"return\":true")) {
+                            log.info("✅ Fast2SMS Quick SMS fallback sent successfully to {}", phone);
+                            return true;
+                        }
                     }
                 }
             } catch (Exception e) {
