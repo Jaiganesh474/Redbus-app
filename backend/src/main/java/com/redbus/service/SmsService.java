@@ -216,31 +216,61 @@ public class SmsService {
         String digitsOnly = phone.replaceAll("[^0-9]", "");
         String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
 
-        // 1. Try 2Factor.in (Specialized Indian OTP SMS Gateway - Priority #1)
-        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank() && !twoFactorApiKey.startsWith("your_")) {
+        // 1. Try Brevo Transactional SMS (Priority #1 - Direct Text SMS without DLT Voice Call)
+        if (brevoApiKey != null && !brevoApiKey.isBlank() && !brevoApiKey.startsWith("your_")) {
             try {
-                // Correct official 2Factor endpoint: https://2factor.in/API/V1/{API_KEY}/SMS/{PHONE}/{OTP}
-                String formattedPhone = (indianNumber.length() == 10) ? "+91" + indianNumber : phone;
-                String twoFactorUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + formattedPhone + "/" + otp;
-                ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().toUpperCase().contains("SUCCESS")) {
-                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, response.getBody());
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("api-key", brevoApiKey.trim());
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                Map<String, Object> body = Map.of(
+                        "sender", "redBus",
+                        "recipient", phone,
+                        "content", message
+                );
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(
+                        "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("✅ Brevo SMS (Text Message) dispatched successfully to {}", phone);
                     return true;
                 } else {
-                    log.warn("2Factor.in primary dispatch response: {} (trying without +91 format)", response.getBody());
-                    String rawUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
-                    ResponseEntity<String> rawResponse = restTemplate.getForEntity(rawUrl, String.class);
-                    if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null && rawResponse.getBody().toUpperCase().contains("SUCCESS")) {
-                        log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, rawResponse.getBody());
-                        return true;
-                    }
+                    log.warn("Brevo SMS response: {}", response.getBody());
                 }
             } catch (Exception e) {
-                log.warn("2Factor.in dispatch attempt failed: {}", e.getMessage());
+                log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
             }
         }
 
-        // 2. Try Fast2SMS (Indian SMS Gateway)
+        // 2. Try Twilio SMS Gateway
+        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
+            try {
+                String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid.trim() + "/Messages.json";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBasicAuth(twilioAccountSid.trim(), twilioAuthToken.trim());
+                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+                MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+                map.add("To", phone);
+                map.add("From", twilioFromNumber.trim());
+                map.add("Body", message);
+
+                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(twilioUrl, request, String.class);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("✅ Twilio SMS dispatched successfully to {}", phone);
+                    return true;
+                } else {
+                    log.warn("Twilio response: {}", response.getBody());
+                }
+            } catch (Exception e) {
+                log.warn("Twilio SMS dispatch attempt failed: {}", e.getMessage());
+            }
+        }
+
+        // 3. Try Fast2SMS (Indian SMS Gateway)
         if (fast2smsApiKey != null && !fast2smsApiKey.isBlank()) {
             try {
                 if (indianNumber.length() == 10) {
@@ -267,7 +297,6 @@ public class SmsService {
                         }
                     } catch (Exception otpEx) {
                         log.warn("Fast2SMS OTP route error (trying Quick SMS route fallback): {}", otpEx.getMessage());
-                        // Fallback to Fast2SMS Quick SMS route ("q")
                         Map<String, Object> qBody = Map.of(
                                 "route", "q",
                                 "message", message,
@@ -288,57 +317,26 @@ public class SmsService {
             }
         }
 
-        // 3. Try Twilio SMS Gateway
-        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
+        // 4. Try 2Factor.in (Specialized Indian OTP SMS Gateway)
+        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank() && !twoFactorApiKey.startsWith("your_")) {
             try {
-                String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid.trim() + "/Messages.json";
-                HttpHeaders headers = new HttpHeaders();
-                headers.setBasicAuth(twilioAccountSid.trim(), twilioAuthToken.trim());
-                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-                MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-                map.add("To", phone);
-                map.add("From", twilioFromNumber.trim());
-                map.add("Body", message);
-
-                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-                ResponseEntity<String> response = restTemplate.postForEntity(twilioUrl, request, String.class);
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("✅ Twilio SMS dispatched successfully to {}", phone);
+                String formattedPhone = (indianNumber.length() == 10) ? "+91" + indianNumber : phone;
+                String twoFactorUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + formattedPhone + "/" + otp;
+                ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().toUpperCase().contains("SUCCESS")) {
+                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, response.getBody());
                     return true;
                 } else {
-                    log.warn("Twilio response: {}", response.getBody());
+                    log.warn("2Factor.in primary dispatch response: {} (trying without +91 format)", response.getBody());
+                    String rawUrl = "https://2factor.in/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
+                    ResponseEntity<String> rawResponse = restTemplate.getForEntity(rawUrl, String.class);
+                    if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null && rawResponse.getBody().toUpperCase().contains("SUCCESS")) {
+                        log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, rawResponse.getBody());
+                        return true;
+                    }
                 }
             } catch (Exception e) {
-                log.warn("Twilio SMS dispatch attempt failed: {}", e.getMessage());
-            }
-        }
-
-        // 4. Try Brevo Transactional SMS
-        if (brevoApiKey != null && !brevoApiKey.isBlank() && !brevoApiKey.startsWith("your_")) {
-            try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("api-key", brevoApiKey.trim());
-                headers.setContentType(MediaType.APPLICATION_JSON);
-
-                Map<String, Object> body = Map.of(
-                        "sender", "redBus",
-                        "recipient", phone,
-                        "content", message
-                );
-
-                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-                ResponseEntity<String> response = restTemplate.postForEntity(
-                        "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
-
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("✅ Brevo SMS dispatched successfully to {}", phone);
-                    return true;
-                } else {
-                    log.warn("Brevo SMS response: {}", response.getBody());
-                }
-            } catch (Exception e) {
-                log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
+                log.warn("2Factor.in dispatch attempt failed: {}", e.getMessage());
             }
         }
 
