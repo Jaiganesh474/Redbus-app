@@ -14,6 +14,31 @@ export interface User {
   status?: string;
 }
 
+export interface SendMobileOtpRequest {
+  phone: string;
+  purpose?: "LOGIN" | "RESET_PASSWORD" | "REGISTER";
+}
+
+export interface SendMobileOtpResponse {
+  success: boolean;
+  message: string;
+  phone: string;
+  expiresInSeconds: number;
+  previewOtp?: string;
+}
+
+export interface MobileOtpLoginRequest {
+  phone: string;
+  otp: string;
+  name?: string;
+}
+
+export interface MobileOtpResetPasswordRequest {
+  phone: string;
+  otp: string;
+  newPassword: string;
+}
+
 export interface OperatorProfile {
   id: number;
   userId: number;

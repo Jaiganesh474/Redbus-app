@@ -41,6 +41,10 @@ import type {
   CreateBannerRequest,
   GenerateAiBannerRequest,
   UserDeviceSession,
+  SendMobileOtpRequest,
+  SendMobileOtpResponse,
+  MobileOtpLoginRequest,
+  MobileOtpResetPasswordRequest,
 } from "@/types";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://redbus-api.duckdns.org/api/v1";
@@ -103,6 +107,29 @@ export const apiSlice = createApi({
     resetPassword: builder.mutation<{ token: string; user: User }, { email: string; otp: string; newPassword: string }>({
       query: (data) => ({
         url: "/auth/reset-password",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
+    sendMobileOtp: builder.mutation<SendMobileOtpResponse, SendMobileOtpRequest>({
+      query: (data) => ({
+        url: "/auth/otp/send",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    loginWithMobileOtp: builder.mutation<{ token: string; user: User }, MobileOtpLoginRequest>({
+      query: (data) => ({
+        url: "/auth/otp/login",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
+    resetPasswordWithMobileOtp: builder.mutation<{ token: string; user: User }, MobileOtpResetPasswordRequest>({
+      query: (data) => ({
+        url: "/auth/otp/reset-password",
         method: "POST",
         body: data,
       }),
@@ -793,6 +820,9 @@ export const {
   useRevokeAllOtherSessionsMutation,
   useDeactivateAccountMutation,
   useDeleteAccountMutation,
+  useSendMobileOtpMutation,
+  useLoginWithMobileOtpMutation,
+  useResetPasswordWithMobileOtpMutation,
 } = apiSlice;
 
 

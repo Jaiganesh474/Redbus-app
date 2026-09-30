@@ -270,6 +270,126 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> sendMobileOtp({required String phone, String purpose = 'LOGIN'}) async {
+    final body = jsonEncode({
+      'phone': phone.trim(),
+      'purpose': purpose,
+    });
+
+    String? lastError;
+    for (final base in _candidateUrls) {
+      try {
+        final res = await http.post(
+          Uri.parse('$base/auth/otp/send'),
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: body,
+        ).timeout(const Duration(milliseconds: AppConstants.connectTimeout));
+
+        if (res.statusCode == 200) {
+          return jsonDecode(res.body);
+        } else {
+          final err = jsonDecode(res.body);
+          lastError = err['message'] ?? err['error'] ?? 'Failed to send OTP';
+        }
+      } catch (e) {
+        lastError = 'Network error: $e';
+      }
+    }
+    throw Exception(lastError ?? 'Failed to send OTP to $phone');
+  }
+
+  Future<User> loginWithMobileOtp({required String phone, required String otp, String? name}) async {
+    final body = jsonEncode({
+      'phone': phone.trim(),
+      'otp': otp.trim(),
+      if (name != null && name.isNotEmpty) 'name': name.trim(),
+    });
+
+    String? lastError;
+    for (final base in _candidateUrls) {
+      try {
+        final res = await http.post(
+          Uri.parse('$base/auth/otp/login'),
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: body,
+        ).timeout(const Duration(milliseconds: AppConstants.connectTimeout));
+
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final token = data['token'] ?? data['accessToken'];
+          User user;
+          if (data['user'] != null) {
+            user = User.fromJson(data['user']);
+          } else {
+            user = User(
+              id: data['id']?.toString() ?? 'usr_${DateTime.now().millisecondsSinceEpoch}',
+              name: data['name'] ?? 'Traveler',
+              email: data['email'] ?? 'user@mobile.redbus.com',
+              phone: phone,
+              walletBalance: (data['walletBalance'] ?? 250.0).toDouble(),
+            );
+          }
+          await _persistSession(token, user);
+          return user;
+        } else {
+          final err = jsonDecode(res.body);
+          lastError = err['message'] ?? err['error'] ?? 'OTP verification failed';
+        }
+      } catch (e) {
+        lastError = 'Network error: $e';
+      }
+    }
+    throw Exception(lastError ?? 'Invalid or expired OTP');
+  }
+
+  Future<User> resetPasswordWithMobileOtp({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final body = jsonEncode({
+      'phone': phone.trim(),
+      'otp': otp.trim(),
+      'newPassword': newPassword,
+    });
+
+    String? lastError;
+    for (final base in _candidateUrls) {
+      try {
+        final res = await http.post(
+          Uri.parse('$base/auth/otp/reset-password'),
+          headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: body,
+        ).timeout(const Duration(milliseconds: AppConstants.connectTimeout));
+
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final token = data['token'] ?? data['accessToken'];
+          User user;
+          if (data['user'] != null) {
+            user = User.fromJson(data['user']);
+          } else {
+            user = User(
+              id: data['id']?.toString() ?? 'usr_${DateTime.now().millisecondsSinceEpoch}',
+              name: data['name'] ?? 'Traveler',
+              email: data['email'] ?? 'user@mobile.redbus.com',
+              phone: phone,
+              walletBalance: (data['walletBalance'] ?? 250.0).toDouble(),
+            );
+          }
+          await _persistSession(token, user);
+          return user;
+        } else {
+          final err = jsonDecode(res.body);
+          lastError = err['message'] ?? err['error'] ?? 'Failed to reset password';
+        }
+      } catch (e) {
+        lastError = 'Network error: $e';
+      }
+    }
+    throw Exception(lastError ?? 'Failed to reset password');
+  }
+
   Future<void> forgotPassword(String email) async {
     final body = jsonEncode({'email': email.trim()});
     for (final base in _candidateUrls) {

@@ -31,6 +31,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final SmsService smsService;
     private final DeviceSessionService deviceSessionService;
     private final jakarta.servlet.http.HttpServletRequest httpServletRequest;
     private final SecureRandom random = new SecureRandom();
@@ -416,6 +417,166 @@ public class AuthService {
                 .tokenType("Bearer")
                 .user(mapToDto(saved))
                 .build();
+    }
+
+    /**
+     * Send OTP to a mobile phone number for Login, Reset Password, or Registration.
+     */
+    public SendMobileOtpResponse sendMobileOtp(SendMobileOtpRequest request) {
+        String phone = request.getPhone().trim();
+        String purpose = (request.getPurpose() != null && !request.getPurpose().isBlank())
+                ? request.getPurpose().toUpperCase().trim()
+                : "LOGIN";
+
+        if ("RESET_PASSWORD".equals(purpose)) {
+            findUserByPhoneFlexible(phone).orElseThrow(() ->
+                    new BadRequestException("No registered account found with mobile number: " + phone));
+        }
+
+        return smsService.sendOtp(phone, purpose);
+    }
+
+    /**
+     * Login or Auto-Register seamlessly using Mobile Phone OTP.
+     */
+    @Transactional
+    public AuthResponse loginWithMobileOtp(MobileOtpLoginRequest request) {
+        String phone = request.getPhone().trim();
+        String otp = request.getOtp().trim();
+
+        // 1. Verify OTP with SmsService
+        boolean verified = smsService.verifyOtp(phone, otp, "LOGIN");
+        if (!verified) {
+            throw new BadRequestException("Invalid or expired OTP code.");
+        }
+
+        String normalizedPhone = smsService.normalizePhone(phone);
+
+        // 2. Look up user by phone or create seamlessly
+        Optional<User> userOpt = findUserByPhoneFlexible(phone);
+        User user;
+        if (userOpt.isPresent()) {
+            user = userOpt.get();
+            if (Boolean.FALSE.equals(user.getIsActive()) || "DEACTIVATED".equalsIgnoreCase(user.getStatus())) {
+                throw new BadRequestException("Your account has been deactivated. Please contact customer support to reactivate your account.");
+            }
+            if ("DELETED".equalsIgnoreCase(user.getStatus())) {
+                throw new BadRequestException("This account has been deleted. Please sign up for a new account to continue.");
+            }
+            // Auto mark verified if logging in with phone OTP
+            if (Boolean.FALSE.equals(user.getEmailVerified())) {
+                user.setEmailVerified(true);
+                user = userRepository.save(user);
+            }
+        } else {
+            // Auto-register new user with mobile number
+            String defaultName = (request.getName() != null && !request.getName().isBlank())
+                    ? request.getName().trim()
+                    : "Traveler " + (normalizedPhone.length() >= 4 ? normalizedPhone.substring(normalizedPhone.length() - 4) : "User");
+
+            String digitsOnly = normalizedPhone.replaceAll("[^0-9]", "");
+            String fallbackEmail = "user_" + digitsOnly + "@mobile.redbus.com";
+
+            user = User.builder()
+                    .name(defaultName)
+                    .phone(normalizedPhone)
+                    .email(fallbackEmail)
+                    .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                    .role("ROLE_USER")
+                    .emailVerified(true)
+                    .isActive(true)
+                    .status("ACTIVE")
+                    .build();
+
+            user = userRepository.save(user);
+            log.info("Created new user via Mobile OTP: id={}, phone={}", user.getId(), normalizedPhone);
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId());
+        recordDeviceSessionSafely(user, token);
+
+        return AuthResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .user(mapToDto(user))
+                .build();
+    }
+
+    /**
+     * Reset Password using Mobile Phone OTP.
+     */
+    @Transactional
+    public AuthResponse resetPasswordWithMobileOtp(MobileOtpResetPasswordRequest request) {
+        String phone = request.getPhone().trim();
+        String otp = request.getOtp().trim();
+
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            throw new BadRequestException("New password must be at least 6 characters long");
+        }
+
+        // 1. Verify OTP with SmsService
+        boolean verified = smsService.verifyOtp(phone, otp, "RESET_PASSWORD");
+        if (!verified) {
+            throw new BadRequestException("Invalid or expired OTP code.");
+        }
+
+        // 2. Find user
+        User user = findUserByPhoneFlexible(phone)
+                .orElseThrow(() -> new BadRequestException("No registered account found with mobile number: " + phone));
+
+        // 3. Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetExpiry(null);
+        User saved = userRepository.save(user);
+
+        log.info("Password successfully reset via Mobile OTP for user: id={}, phone={}", saved.getId(), saved.getPhone());
+
+        // Dispatch security notification email if user has valid email
+        try {
+            if (saved.getEmail() != null && !saved.getEmail().endsWith("@mobile.redbus.com")) {
+                emailService.sendPasswordResetSuccessEmail(saved);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch password reset confirmation email: {}", e.getMessage());
+        }
+
+        String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
+        recordDeviceSessionSafely(saved, token);
+
+        return AuthResponse.builder()
+                .token(token)
+                .tokenType("Bearer")
+                .user(mapToDto(saved))
+                .build();
+    }
+
+    /**
+     * Resilient lookup for user by phone with various international & local digit formats.
+     */
+    public Optional<User> findUserByPhoneFlexible(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return Optional.empty();
+        }
+        String normalized = smsService.normalizePhone(phone);
+
+        // 1. Direct match on normalized phone
+        Optional<User> direct = userRepository.findByPhone(normalized);
+        if (direct.isPresent()) return direct;
+
+        // 2. Direct match on raw input
+        Optional<User> raw = userRepository.findByPhone(phone.trim());
+        if (raw.isPresent()) return raw;
+
+        // 3. Match without leading '+' or 10-digit suffix
+        String digitsOnly = normalized.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() >= 10) {
+            String last10 = digitsOnly.substring(digitsOnly.length() - 10);
+            return userRepository.findAll().stream()
+                    .filter(u -> u.getPhone() != null && u.getPhone().replaceAll("[^0-9]", "").endsWith(last10))
+                    .findFirst();
+        }
+        return Optional.empty();
     }
 
     @Transactional

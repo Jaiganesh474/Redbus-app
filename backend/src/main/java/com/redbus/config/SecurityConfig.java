@@ -92,7 +92,12 @@ public class SecurityConfig {
                     "/api/auth/resend-verification", "/api/v1/auth/resend-verification",
                     "/api/auth/forgot-password", "/api/v1/auth/forgot-password",
                     "/api/auth/reset-password", "/api/v1/auth/reset-password",
-                    "/api/auth/firebase-login", "/api/v1/auth/firebase-login"
+                    "/api/auth/firebase-login", "/api/v1/auth/firebase-login",
+                    "/api/auth/otp/**", "/api/v1/auth/otp/**",
+                    "/api/auth/send-mobile-otp", "/api/v1/auth/send-mobile-otp",
+                    "/api/auth/login-with-otp", "/api/v1/auth/login-with-otp",
+                    "/api/auth/reset-password-mobile", "/api/v1/auth/reset-password-mobile",
+                    "/api/auth/mobile/**", "/api/v1/auth/mobile/**"
                 ).permitAll()
 
                 // Authenticated User Profile, Travellers & Device Sessions

@@ -118,6 +118,63 @@ class AuthProvider with ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<Map<String, dynamic>> sendMobileOtp(String phone, {String purpose = 'LOGIN'}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final res = await _authService.sendMobileOtp(phone: phone, purpose: purpose);
+      _isLoading = false;
+      notifyListeners();
+      return res;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<bool> loginWithMobileOtp(String phone, String otp, {String? name}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _user = await _authService.loginWithMobileOtp(phone: phone, otp: otp, name: name);
+      _savedTravellers = await _authService.getSavedTravellers();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resetPasswordWithMobileOtp(String phone, String otp, String newPassword) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      _user = await _authService.resetPasswordWithMobileOtp(
+        phone: phone,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      _savedTravellers = await _authService.getSavedTravellers();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> forgotPassword(String email) async {
     await _authService.forgotPassword(email);
   }

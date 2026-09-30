@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setCredentials } from "@/store/authSlice";
-import { useLoginMutation } from "@/store/apiSlice";
+import {
+  useLoginMutation,
+  useSendMobileOtpMutation,
+  useLoginWithMobileOtpMutation,
+} from "@/store/apiSlice";
 import {
   Bus,
   Lock,
   Mail,
+  Phone,
+  Smartphone,
+  KeyRound,
   ArrowRight,
   ShieldCheck,
   TrendingUp,
@@ -17,6 +24,7 @@ import {
   Users,
   AlertCircle,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 export default function OperatorLoginPage() {
@@ -24,12 +32,22 @@ export default function OperatorLoginPage() {
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
 
+  const [authMode, setAuthMode] = useState<"mobile_otp" | "password">("mobile_otp");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [previewOtp, setPreviewOtp] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [loginMutation, { isLoading }] = useLoginMutation();
+  const [loginMutation, { isLoading: isPasswordLoading }] = useLoginMutation();
+  const [sendMobileOtpMutation, { isLoading: isSendingOtp }] = useSendMobileOtpMutation();
+  const [loginWithMobileOtpMutation, { isLoading: isOtpLoginLoading }] = useLoginWithMobileOtpMutation();
 
   // If already logged in as operator, redirect to operator dashboard
   useEffect(() => {
@@ -44,7 +62,92 @@ export default function OperatorLoginPage() {
     }
   }, [token, user, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getFullPhone = () => {
+    const raw = phone.trim();
+    if (raw.startsWith("+")) return raw;
+    const cleanNum = raw.replace(/^0+/, "");
+    return `${countryCode}${cleanNum}`;
+  };
+
+  const startCooldownTimer = (seconds = 60) => {
+    setResendCooldown(seconds);
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    setPreviewOtp(null);
+
+    const fullNumber = getFullPhone();
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
+      setErrorMessage("Please enter a valid operator mobile number.");
+      return;
+    }
+
+    try {
+      const res = await sendMobileOtpMutation({ phone: fullNumber, purpose: "LOGIN" }).unwrap();
+      setOtpSent(true);
+      setSuccessMessage(res.message || `OTP dispatched to ${fullNumber}`);
+      if (res.previewOtp) {
+        setPreviewOtp(res.previewOtp);
+      }
+      startCooldownTimer(60);
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || err?.data?.error || "Failed to send operator OTP.");
+    }
+  };
+
+  const handleOtpLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const fullNumber = getFullPhone();
+    if (!otp.trim() || otp.length !== 6) {
+      setErrorMessage("Please enter the 6-digit OTP code sent to your phone.");
+      return;
+    }
+
+    try {
+      const res = await loginWithMobileOtpMutation({
+        phone: fullNumber,
+        otp: otp.trim(),
+      }).unwrap();
+
+      dispatch(setCredentials(res));
+
+      const isOp =
+        res.user?.role?.includes("OPERATOR") ||
+        res.user?.role?.includes("ADMIN") ||
+        res.user?.roles?.includes("ROLE_OPERATOR") ||
+        res.user?.roles?.includes("ROLE_ADMIN");
+
+      if (isOp) {
+        setSuccessMessage("Login successful! Redirecting to Operator Dashboard...");
+        setTimeout(() => {
+          router.push("/operator");
+        }, 800);
+      } else {
+        setErrorMessage(
+          "Your account is currently registered as a Passenger. Please register your fleet details below to access Partner Portal."
+        );
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.data?.message || err?.data?.error || "Invalid or expired OTP.");
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
@@ -111,6 +214,42 @@ export default function OperatorLoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4 sm:px-0">
         <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 py-8 px-6 shadow-2xl rounded-3xl sm:px-10">
+          {/* Mode Switcher */}
+          <div className="flex bg-slate-950 p-1 rounded-xl mb-6 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("mobile_otp");
+                setErrorMessage("");
+                setSuccessMessage("");
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authMode === "mobile_otp"
+                  ? "bg-[#d84e55] text-white shadow-md"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Mobile OTP</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("password");
+                setErrorMessage("");
+                setSuccessMessage("");
+              }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                authMode === "password"
+                  ? "bg-[#d84e55] text-white shadow-md"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Email & Password</span>
+            </button>
+          </div>
+
           {errorMessage && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start space-x-3 text-xs text-red-400">
               <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
@@ -121,16 +260,7 @@ export default function OperatorLoginPage() {
                     href="/operator/register"
                     className="block mt-2 font-bold text-red-400 hover:text-red-300 underline"
                   >
-                    Click here to register as a Bus Operator →
-                  </Link>
-                )}
-                {(errorMessage.toLowerCase().includes("verify your email") ||
-                  errorMessage.toLowerCase().includes("verification code")) && (
-                  <Link
-                    href={`/operator/register?email=${encodeURIComponent(email)}`}
-                    className="block mt-2 font-bold text-amber-400 hover:text-amber-300 underline"
-                  >
-                    Enter 6-digit email verification code now →
+                    Click here to register your fleet profile →
                   </Link>
                 )}
               </div>
@@ -140,62 +270,173 @@ export default function OperatorLoginPage() {
           {successMessage && (
             <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start space-x-3 text-xs text-emerald-400">
               <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500 mt-0.5" />
-              <span className="font-medium">{successMessage}</span>
+              <div className="flex-1">
+                <span className="font-medium">{successMessage}</span>
+                {previewOtp && (
+                  <div className="mt-1 font-mono font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded inline-block">
+                    Verification Code: {previewOtp}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-                Operator Business Email
-              </label>
-              <div className="relative">
-                <Mail className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="operator@travels.com"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-[#d84e55] focus:ring-1 focus:ring-[#d84e55] transition-all"
-                />
+          {authMode === "mobile_otp" ? (
+            <form onSubmit={otpSent ? handleOtpLogin : handleSendOtp} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Operator Mobile Number
+                  </label>
+                  {otpSent && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtp("");
+                      }}
+                      className="text-xs font-semibold text-[#d84e55] hover:underline cursor-pointer"
+                    >
+                      Change Number
+                    </button>
+                  )}
+                </div>
+                <div className="flex rounded-xl border border-slate-700 overflow-hidden focus-within:ring-1 focus-within:ring-[#d84e55] bg-slate-950/60">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    disabled={otpSent}
+                    className="bg-slate-900 border-r border-slate-700 text-xs px-2.5 py-3 text-slate-300 focus:outline-hidden"
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
+                  </select>
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 absolute left-3 top-3.5 text-slate-500" />
+                    <input
+                      type="tel"
+                      required
+                      disabled={otpSent}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ""))}
+                      placeholder="98765 43210"
+                      className="w-full pl-9 pr-4 py-3 bg-transparent text-sm text-white placeholder-slate-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Password
-                </label>
-              </div>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-[#d84e55] focus:ring-1 focus:ring-[#d84e55] transition-all"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-[#d84e55] to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-600/30 transition-all flex items-center justify-center space-x-2 disabled:opacity-60 cursor-pointer"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>Access Dashboard</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+              {otpSent && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                    6-Digit OTP Code
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                      placeholder="e.g. 123456"
+                      className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-lg tracking-widest font-mono font-bold text-white focus:outline-hidden focus:border-[#d84e55] focus:ring-1 focus:ring-[#d84e55] text-center"
+                    />
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
+
+              <button
+                type="submit"
+                disabled={isSendingOtp || isOtpLoginLoading}
+                className="w-full py-3.5 bg-gradient-to-r from-[#d84e55] to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-600/30 transition-all flex items-center justify-center space-x-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isSendingOtp || isOtpLoginLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : otpSent ? (
+                  <span>Verify & Access Console</span>
+                ) : (
+                  <span>Get 6-Digit OTP</span>
+                )}
+              </button>
+
+              {otpSent && (
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setOtpSent(false)}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    ← Re-enter Number
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resendCooldown > 0 || isSendingOtp}
+                    onClick={handleSendOtp}
+                    className="text-xs font-semibold text-[#d84e55] hover:underline disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isSendingOtp ? "animate-spin" : ""}`} />
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                  </button>
+                </div>
+              )}
+            </form>
+          ) : (
+            <form onSubmit={handlePasswordSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                  Operator Business Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="operator@travels.com"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-[#d84e55] focus:ring-1 focus:ring-[#d84e55] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                    Password
+                  </label>
+                </div>
+                <div className="relative">
+                  <Lock className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-950/60 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-hidden focus:border-[#d84e55] focus:ring-1 focus:ring-[#d84e55] transition-all"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isPasswordLoading}
+                className="w-full py-3.5 bg-gradient-to-r from-[#d84e55] to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-600/30 transition-all flex items-center justify-center space-x-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isPasswordLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Access Dashboard</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
           {/* Registration link */}
           <div className="mt-8 pt-6 border-t border-slate-800 text-center">

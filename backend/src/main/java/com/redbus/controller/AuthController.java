@@ -139,6 +139,24 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping({"/otp/send", "/send-mobile-otp"})
+    public ResponseEntity<SendMobileOtpResponse> sendMobileOtp(@Valid @RequestBody SendMobileOtpRequest request) {
+        SendMobileOtpResponse response = authService.sendMobileOtp(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping({"/otp/login", "/login-with-otp", "/mobile/login"})
+    public ResponseEntity<AuthResponse> loginWithMobileOtp(@Valid @RequestBody MobileOtpLoginRequest request) {
+        AuthResponse response = authService.loginWithMobileOtp(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping({"/otp/reset-password", "/reset-password-mobile", "/mobile/reset-password"})
+    public ResponseEntity<AuthResponse> resetPasswordWithMobileOtp(@Valid @RequestBody MobileOtpResetPasswordRequest request) {
+        AuthResponse response = authService.resetPasswordWithMobileOtp(request);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/saved-travellers")
     public ResponseEntity<List<SavedTravellerDto>> getSavedTravellers(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
