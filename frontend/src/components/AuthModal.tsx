@@ -70,6 +70,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const [successMessage, setSuccessMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isOtpSending, setIsOtpSending] = useState(false);
 
   // RTK Query Mutations
   const [loginMutation, { isLoading: isLoginLoading }] = useLoginMutation();
@@ -105,9 +106,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     }, 1000);
   };
 
-  // 1. Mobile OTP Request (Firebase Phone Auth + Server Multi-Gateway Fallback)
+  // 1. Mobile OTP Request (Single Execution Lock + Debounce)
   const handleSendMobileOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isOtpSending || isSendingMobileOtp || resendCooldown > 0) return;
+
+    setIsOtpSending(true);
     setErrorMessage("");
     setSuccessMessage("");
     setPreviewOtp(null);
@@ -115,11 +119,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     const fullNumber = getFullPhone();
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
       setErrorMessage("Please enter a valid mobile number.");
+      setIsOtpSending(false);
       return;
     }
 
-    // Try Firebase Phone Auth first (Official Google corporate SMS - 10,000 free per month to any number)
     try {
+      // 1. Try Firebase Phone Auth first
       if (typeof window !== "undefined" && auth && auth.app) {
         try {
           const confirmRes = await sendFirebasePhoneOtp(fullNumber, "auth-recaptcha-container");
@@ -138,7 +143,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       setConfirmationResult(null);
     }
 
-    // Fallback to Server Multi-Gateway SMS Dispatch
+    // 2. Fallback to Server Multi-Gateway SMS Dispatch
     try {
       const purpose = mode === "forgot" || mode === "reset" ? "RESET_PASSWORD" : "LOGIN";
       const res = await sendMobileOtpMutation({ phone: fullNumber, purpose }).unwrap();
@@ -152,6 +157,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       setErrorMessage(
         err?.data?.message || err?.data?.error || err?.message || "Failed to send SMS OTP. Please check your number."
       );
+    } finally {
+      setIsOtpSending(false);
     }
   };
 

@@ -51,6 +51,7 @@ function LoginContent() {
   const [successMessage, setSuccessMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isOtpSending, setIsOtpSending] = useState(false);
 
   const [sendMobileOtpMutation, { isLoading: isSendingOtp }] = useSendMobileOtpMutation();
   const [loginWithMobileOtpMutation, { isLoading: isLoggingInWithOtp }] = useLoginWithMobileOtpMutation();
@@ -89,6 +90,9 @@ function LoginContent() {
 
   const handleSendMobileOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isOtpSending || isSendingOtp || resendCooldown > 0) return;
+
+    setIsOtpSending(true);
     setErrorMessage("");
     setSuccessMessage("");
     setPreviewOtp(null);
@@ -96,11 +100,12 @@ function LoginContent() {
     const fullNumber = getFullPhone();
     if (!phone.trim() || phone.replace(/\D/g, "").length < 7) {
       setErrorMessage("Please enter a valid mobile number.");
+      setIsOtpSending(false);
       return;
     }
 
-    // Try Firebase Phone Auth first (Official Google corporate SMS - 10,000 free per month to any number)
     try {
+      // 1. Try Firebase Phone Auth first
       if (typeof window !== "undefined" && auth && auth.app) {
         try {
           const confirmRes = await sendFirebasePhoneOtp(fullNumber, "login-recaptcha-container");
@@ -119,7 +124,7 @@ function LoginContent() {
       setConfirmationResult(null);
     }
 
-    // Fallback to Server Multi-Gateway SMS Dispatch
+    // 2. Fallback to Server Multi-Gateway SMS Dispatch
     try {
       const res = await sendMobileOtpMutation({ phone: fullNumber, purpose: "LOGIN" }).unwrap();
       setOtpSent(true);
@@ -130,6 +135,8 @@ function LoginContent() {
       startCooldownTimer(60);
     } catch (err: any) {
       setErrorMessage(err?.data?.message || err?.data?.error || "Failed to send SMS OTP. Please try again.");
+    } finally {
+      setIsOtpSending(false);
     }
   };
 
