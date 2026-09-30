@@ -66,3 +66,10 @@ app:
     url: ${FRONTEND_URL:https://redbusai.app}
   seat-lock:
     ttl-minutes: 5
+  sms:
+    fast2sms-api-key: ${FAST2SMS_API_KEY:}
+    two-factor-api-key: ${TWO_FACTOR_API_KEY:}
+    textbelt-key: ${TEXTBELT_KEY:textbelt}
+    twilio-account-sid: ${TWILIO_ACCOUNT_SID:}
+    twilio-auth-token: ${TWILIO_AUTH_TOKEN:}
+    twilio-from-number: ${TWILIO_FROM_NUMBER:}

@@ -30,8 +30,14 @@ public class SmsService {
     @Value("${app.sms.fast2sms-api-key:${FAST2SMS_API_KEY:}}")
     private String fast2smsApiKey;
 
+    @Value("${app.sms.two-factor-api-key:${TWO_FACTOR_API_KEY:}}")
+    private String twoFactorApiKey;
+
     @Value("${app.sms.textbelt-key:${TEXTBELT_KEY:textbelt}}")
     private String textbeltKey;
+
+    @Value("${app.brevo.api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
 
     @Value("${app.sms.twilio-account-sid:${TWILIO_ACCOUNT_SID:}}")
     private String twilioAccountSid;
@@ -204,16 +210,34 @@ public class SmsService {
     }
 
     /**
-     * Multi-Provider SMS Sender engine (Textbelt Free Tier, Fast2SMS, 2Factor, Twilio).
+     * Multi-Provider SMS Sender engine (Fast2SMS, 2Factor, Twilio, Brevo SMS, Textbelt).
      */
     private boolean dispatchSms(String phone, String otp, String message) {
-        // 1. Try Fast2SMS if API key is provided
+        String digitsOnly = phone.replaceAll("[^0-9]", "");
+        String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
+
+        // 1. Try 2Factor.in (Specialized Indian OTP SMS Gateway)
+        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank()) {
+            try {
+                String twoFactorUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp + "/AUTOGEN";
+                ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"Status\":\"Success\"")) {
+                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {}", phone);
+                    return true;
+                } else {
+                    log.warn("2Factor.in response: {}", response.getBody());
+                }
+            } catch (Exception e) {
+                log.warn("2Factor.in dispatch attempt failed: {}", e.getMessage());
+            }
+        }
+
+        // 2. Try Fast2SMS (Indian SMS Gateway)
         if (fast2smsApiKey != null && !fast2smsApiKey.isBlank()) {
             try {
-                String indianNumber = phone.replace("+91", "").replaceAll("[^0-9]", "");
                 if (indianNumber.length() == 10) {
                     HttpHeaders headers = new HttpHeaders();
-                    headers.set("authorization", fast2smsApiKey);
+                    headers.set("authorization", fast2smsApiKey.trim());
                     headers.setContentType(MediaType.APPLICATION_JSON);
 
                     Map<String, Object> body = Map.of(
@@ -227,8 +251,10 @@ public class SmsService {
                             "https://www.fast2sms.com/dev/bulkV2", entity, String.class);
 
                     if (response.getStatusCode().is2xxSuccessful()) {
-                        log.info("Fast2SMS OTP sent successfully to {}", phone);
+                        log.info("✅ Fast2SMS OTP sent successfully to {}", phone);
                         return true;
+                    } else {
+                        log.warn("Fast2SMS response: {}", response.getBody());
                     }
                 }
             } catch (Exception e) {
@@ -236,7 +262,61 @@ public class SmsService {
             }
         }
 
-        // 2. Try Textbelt Free Global Tier (Dispatches free SMS to any global or Indian mobile number)
+        // 3. Try Twilio SMS Gateway
+        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
+            try {
+                String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid.trim() + "/Messages.json";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBasicAuth(twilioAccountSid.trim(), twilioAuthToken.trim());
+                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+                MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+                map.add("To", phone);
+                map.add("From", twilioFromNumber.trim());
+                map.add("Body", message);
+
+                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(twilioUrl, request, String.class);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("✅ Twilio SMS dispatched successfully to {}", phone);
+                    return true;
+                } else {
+                    log.warn("Twilio response: {}", response.getBody());
+                }
+            } catch (Exception e) {
+                log.warn("Twilio SMS dispatch attempt failed: {}", e.getMessage());
+            }
+        }
+
+        // 4. Try Brevo Transactional SMS
+        if (brevoApiKey != null && !brevoApiKey.isBlank() && !brevoApiKey.startsWith("your_")) {
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("api-key", brevoApiKey.trim());
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                Map<String, Object> body = Map.of(
+                        "sender", "redBus",
+                        "recipient", phone,
+                        "content", message
+                );
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(
+                        "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
+
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("✅ Brevo SMS dispatched successfully to {}", phone);
+                    return true;
+                } else {
+                    log.warn("Brevo SMS response: {}", response.getBody());
+                }
+            } catch (Exception e) {
+                log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
+            }
+        }
+
+        // 5. Try Textbelt Free Tier
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -244,44 +324,20 @@ public class SmsService {
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
             map.add("phone", phone);
             map.add("message", message);
-            map.add("key", (textbeltKey != null && !textbeltKey.isBlank()) ? textbeltKey : "textbelt");
+            map.add("key", (textbeltKey != null && !textbeltKey.isBlank()) ? textbeltKey.trim() : "textbelt");
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
                     "https://textbelt.com/text", request, String.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"success\":true")) {
-                log.info("Textbelt free SMS dispatched successfully to {}", phone);
+                log.info("✅ Textbelt SMS dispatched successfully to {}", phone);
                 return true;
             } else {
                 log.info("Textbelt response: {}", response.getBody());
             }
         } catch (Exception e) {
             log.warn("Textbelt free tier note: {}", e.getMessage());
-        }
-
-        // 3. Try Twilio if credentials configured
-        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
-            try {
-                String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid + "/Messages.json";
-                HttpHeaders headers = new HttpHeaders();
-                headers.setBasicAuth(twilioAccountSid, twilioAuthToken);
-                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-                MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-                map.add("To", phone);
-                map.add("From", twilioFromNumber);
-                map.add("Body", message);
-
-                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-                ResponseEntity<String> response = restTemplate.postForEntity(twilioUrl, request, String.class);
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("Twilio SMS dispatched successfully to {}", phone);
-                    return true;
-                }
-            } catch (Exception e) {
-                log.warn("Twilio SMS dispatch attempt failed: {}", e.getMessage());
-            }
         }
 
         return false;

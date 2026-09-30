@@ -107,6 +107,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/ml/**", "/api/v1/ml/**").permitAll()
                 .requestMatchers("/api/coupons/**", "/api/v1/coupons/**").permitAll()
                 .requestMatchers("/api/operator/coupons/**", "/api/v1/operator/coupons/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/banners/**", "/api/v1/banners/**").permitAll()
                 .requestMatchers("/favicon.ico").permitAll()
 
                 // Public Ticket Booking & PNR Lookup
