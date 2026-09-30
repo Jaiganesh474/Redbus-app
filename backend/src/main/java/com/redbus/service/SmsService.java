@@ -39,15 +39,6 @@ public class SmsService {
     @Value("${app.brevo.api-key:${BREVO_API_KEY:}}")
     private String brevoApiKey;
 
-    @Value("${app.sms.twilio-account-sid:${TWILIO_ACCOUNT_SID:}}")
-    private String twilioAccountSid;
-
-    @Value("${app.sms.twilio-auth-token:${TWILIO_AUTH_TOKEN:}}")
-    private String twilioAuthToken;
-
-    @Value("${app.sms.twilio-from-number:${TWILIO_FROM_NUMBER:}}")
-    private String twilioFromNumber;
-
     public SmsService() {
         this.restTemplate = new RestTemplate();
     }
@@ -216,37 +207,7 @@ public class SmsService {
         String digitsOnly = phone.replaceAll("[^0-9]", "");
         String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
 
-        // 1. Try Twilio SMS Gateway (Priority #1 - Free via GitHub Student Developer Pack)
-        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && !twilioAccountSid.startsWith("your_")
-                && twilioAuthToken != null && !twilioAuthToken.isBlank() && !twilioAuthToken.startsWith("your_")
-                && twilioFromNumber != null && !twilioFromNumber.isBlank()) {
-            try {
-                String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid.trim() + "/Messages.json";
-                HttpHeaders headers = new HttpHeaders();
-                headers.setBasicAuth(twilioAccountSid.trim(), twilioAuthToken.trim());
-                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-                String formattedPhone = phone.startsWith("+") ? phone : ("+91" + indianNumber);
-
-                MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-                map.add("To", formattedPhone);
-                map.add("From", twilioFromNumber.trim());
-                map.add("Body", message);
-
-                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-                ResponseEntity<String> response = restTemplate.postForEntity(twilioUrl, request, String.class);
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    log.info("✅ Twilio SMS dispatched successfully to {} | SID info: {}", formattedPhone, response.getBody());
-                    return true;
-                } else {
-                    log.warn("Twilio dispatch response: {}", response.getBody());
-                }
-            } catch (Exception e) {
-                log.warn("Twilio SMS dispatch attempt failed: {}", e.getMessage());
-            }
-        }
-
-        // 2. Try Brevo Transactional SMS
+        // 1. Try Brevo Transactional SMS (Fallback to Backend SMS Gateway)
         if (brevoApiKey != null && !brevoApiKey.isBlank() && !brevoApiKey.startsWith("your_")) {
             try {
                 HttpHeaders headers = new HttpHeaders();

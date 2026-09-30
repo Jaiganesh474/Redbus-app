@@ -12,7 +12,7 @@ import {
   useLoginWithMobileOtpMutation,
   useFirebaseLoginMutation,
 } from "@/store/apiSlice";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, sendFirebasePhoneOtp, type ConfirmationResult } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
 import {
   Bus,
@@ -41,6 +41,7 @@ function LoginContent() {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [previewOtp, setPreviewOtp] = useState<string | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,7 +56,7 @@ function LoginContent() {
   const [loginWithMobileOtpMutation, { isLoading: isLoggingInWithOtp }] = useLoginWithMobileOtpMutation();
   const [loginMutation, { isLoading: isLoggingInWithPassword }] = useLoginMutation();
   const [registerMutation, { isLoading: isRegistering }] = useRegisterMutation();
-  const [firebaseLoginMutation] = useFirebaseLoginMutation();
+  const [firebaseLoginMutation, { isLoading: isFirebaseLoggingIn }] = useFirebaseLoginMutation();
 
   const redirectUrl = searchParams.get("redirect") || "/";
 
@@ -98,6 +99,25 @@ function LoginContent() {
       return;
     }
 
+    // Try Firebase Phone Auth first (Official Google corporate SMS - 10,000 free per month to any number)
+    try {
+      if (typeof window !== "undefined" && auth && auth.app) {
+        try {
+          const confirmRes = await sendFirebasePhoneOtp(fullNumber, "login-recaptcha-container");
+          setConfirmationResult(confirmRes);
+          setOtpSent(true);
+          setSuccessMessage(`Official redBus verification code dispatched via SMS to ${fullNumber}`);
+          startCooldownTimer(60);
+          return;
+        } catch (fbErr: any) {
+          console.warn("Firebase Phone Auth fallback to server:", fbErr?.message || fbErr);
+        }
+      }
+    } catch (fbInitErr) {
+      console.warn("Firebase Phone Auth init note:", fbInitErr);
+    }
+
+    // Fallback to Server Multi-Gateway SMS Dispatch
     try {
       const res = await sendMobileOtpMutation({ phone: fullNumber, purpose: "LOGIN" }).unwrap();
       setOtpSent(true);
@@ -123,6 +143,25 @@ function LoginContent() {
     }
 
     try {
+      // If Firebase OTP was used
+      if (confirmationResult) {
+        const userCredential = await confirmationResult.confirm(otp.trim());
+        const idToken = await userCredential.user.getIdToken();
+        const res = await firebaseLoginMutation({
+          idToken,
+          phone: fullNumber,
+          name: name.trim() || userCredential.user.displayName || undefined,
+        }).unwrap();
+
+        dispatch(setCredentials(res));
+        setSuccessMessage("Logged in successfully! Redirecting...");
+        setTimeout(() => {
+          router.push(redirectUrl);
+        }, 500);
+        return;
+      }
+
+      // Backend Database OTP verification
       const res = await loginWithMobileOtpMutation({
         phone: fullNumber,
         otp: otp.trim(),
@@ -214,7 +253,10 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden relative">
+        {/* Invisible reCAPTCHA container for Google Phone Auth */}
+        <div id="login-recaptcha-container" className="hidden"></div>
+
         {/* Header */}
         <div className="p-6 sm:p-8 pb-4 border-b border-gray-100 dark:border-slate-800 text-center">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
