@@ -255,7 +255,7 @@ function LoginContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden relative">
         {/* Invisible reCAPTCHA container for Google Phone Auth */}
-        <div id="login-recaptcha-container" className="hidden"></div>
+        <div id="login-recaptcha-container" style={{ position: "absolute", opacity: 0, pointerEvents: "none", zIndex: -1 }}></div>
 
         {/* Header */}
         <div className="p-6 sm:p-8 pb-4 border-b border-gray-100 dark:border-slate-800 text-center">

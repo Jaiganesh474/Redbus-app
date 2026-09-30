@@ -409,7 +409,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         className="bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative z-10 my-auto"
       >
         {/* Invisible reCAPTCHA container for Google Phone Auth */}
-        <div id="auth-recaptcha-container" className="hidden"></div>
+        <div id="auth-recaptcha-container" style={{ position: "absolute", opacity: 0, pointerEvents: "none", zIndex: -1 }}></div>
 
         {/* Close Button */}
         <button
