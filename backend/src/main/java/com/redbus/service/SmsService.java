@@ -216,16 +216,23 @@ public class SmsService {
         String digitsOnly = phone.replaceAll("[^0-9]", "");
         String indianNumber = (digitsOnly.length() >= 10) ? digitsOnly.substring(digitsOnly.length() - 10) : digitsOnly;
 
-        // 1. Try 2Factor.in (Specialized Indian OTP SMS Gateway)
-        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank()) {
+        // 1. Try 2Factor.in (Specialized Indian OTP SMS Gateway - Priority #1)
+        if (twoFactorApiKey != null && !twoFactorApiKey.isBlank() && !twoFactorApiKey.startsWith("your_")) {
             try {
-                String twoFactorUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp + "/AUTOGEN";
+                // 2Factor primary endpoint for custom OTP dispatch
+                String twoFactorUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp;
                 ResponseEntity<String> response = restTemplate.getForEntity(twoFactorUrl, String.class);
-                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"Status\":\"Success\"")) {
-                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {}", phone);
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().toUpperCase().contains("SUCCESS")) {
+                    log.info("✅ 2Factor.in OTP SMS successfully delivered to {} | Response: {}", phone, response.getBody());
                     return true;
                 } else {
-                    log.warn("2Factor.in response: {}", response.getBody());
+                    log.warn("2Factor.in primary dispatch response: {} (trying AUTOGEN format)", response.getBody());
+                    String autogenUrl = "https://2factor.in/v1/API/V1/" + twoFactorApiKey.trim() + "/SMS/" + indianNumber + "/" + otp + "/AUTOGEN";
+                    ResponseEntity<String> autoResponse = restTemplate.getForEntity(autogenUrl, String.class);
+                    if (autoResponse.getStatusCode().is2xxSuccessful() && autoResponse.getBody() != null && autoResponse.getBody().toUpperCase().contains("SUCCESS")) {
+                        log.info("✅ 2Factor.in (AUTOGEN) OTP SMS successfully delivered to {}", phone);
+                        return true;
+                    }
                 }
             } catch (Exception e) {
                 log.warn("2Factor.in dispatch attempt failed: {}", e.getMessage());
