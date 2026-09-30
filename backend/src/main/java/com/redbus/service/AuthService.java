@@ -428,9 +428,24 @@ public class AuthService {
                 ? request.getPurpose().toUpperCase().trim()
                 : "LOGIN";
 
-        if ("RESET_PASSWORD".equals(purpose)) {
-            findUserByPhoneFlexible(phone).orElseThrow(() ->
-                    new BadRequestException("No registered account found with mobile number: " + phone));
+        // Validate that mobile number is registered for Login, Reset Password, or Operator Login
+        if ("LOGIN".equals(purpose) || "RESET_PASSWORD".equals(purpose) || "FORGOT_PASSWORD".equals(purpose)) {
+            Optional<User> userOpt = findUserByPhoneFlexible(phone);
+            if (userOpt.isEmpty()) {
+                throw new BadRequestException("This mobile number is not registered. Please try again with a registered mobile number or create a new account.");
+            }
+            User user = userOpt.get();
+            if (Boolean.FALSE.equals(user.getIsActive()) || "DEACTIVATED".equalsIgnoreCase(user.getStatus())) {
+                throw new BadRequestException("Your account has been deactivated. Please contact customer support.");
+            }
+            if ("DELETED".equalsIgnoreCase(user.getStatus())) {
+                throw new BadRequestException("This account has been deleted. Please register for a new account.");
+            }
+        } else if ("OPERATOR_LOGIN".equals(purpose) || "OPERATOR".equals(purpose)) {
+            Optional<User> userOpt = findUserByPhoneFlexible(phone);
+            if (userOpt.isEmpty() || (!"OPERATOR".equalsIgnoreCase(userOpt.get().getRole()) && !"ROLE_OPERATOR".equalsIgnoreCase(userOpt.get().getRole()) && !"ADMIN".equalsIgnoreCase(userOpt.get().getRole()) && !"ROLE_ADMIN".equalsIgnoreCase(userOpt.get().getRole()))) {
+                throw new BadRequestException("This mobile number is not registered as an authorized Bus Operator partner. Please check your number or register your fleet.");
+            }
         }
 
         return smsService.sendOtp(phone, purpose);

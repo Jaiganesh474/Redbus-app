@@ -306,11 +306,6 @@ function LoginContent() {
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span>{successMessage}</span>
-                {previewOtp && (
-                  <div className="mt-1 font-mono font-bold text-emerald-900 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded inline-block">
-                    Verification Code: {previewOtp}
-                  </div>
-                )}
               </div>
             </div>
           )}

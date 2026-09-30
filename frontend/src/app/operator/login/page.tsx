@@ -272,11 +272,6 @@ export default function OperatorLoginPage() {
               <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500 mt-0.5" />
               <div className="flex-1">
                 <span className="font-medium">{successMessage}</span>
-                {previewOtp && (
-                  <div className="mt-1 font-mono font-bold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded inline-block">
-                    Verification Code: {previewOtp}
-                  </div>
-                )}
               </div>
             </div>
           )}

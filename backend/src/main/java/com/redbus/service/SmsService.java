@@ -79,7 +79,7 @@ public class SmsService {
     }
 
     /**
-     * Dispatches a 6-digit OTP to any mobile number using a free / multi-provider SMS framework.
+     * Dispatches a 6-digit OTP to a mobile number using real SMS gateways.
      */
     public SendMobileOtpResponse sendOtp(String rawPhone, String purpose) {
         String normalizedPhone = normalizePhone(rawPhone);
@@ -113,23 +113,46 @@ public class SmsService {
 
         otpCache.put(normalizedPhone, session);
 
-        // Dispatch SMS via free SMS framework
-        boolean sentViaGateway = dispatchSms(normalizedPhone, otp, normalizedPurpose);
+        // Format message tailored to the user/operator action
+        String message = formatSmsMessage(otp, normalizedPurpose, normalizedPhone);
 
-        log.info("======================================================================");
-        log.info("📱 [MOBILE OTP DISPATCH] To: {} | Purpose: {} | Code: {} | Gateway Sent: {}",
-                normalizedPhone, normalizedPurpose, otp, sentViaGateway);
-        log.info("======================================================================");
+        // Dispatch SMS via live gateway providers
+        boolean sentViaGateway = dispatchSms(normalizedPhone, otp, message);
 
-        String displayMsg = "Verification OTP has been dispatched to " + maskPhoneNumber(normalizedPhone) + ". Code valid for 5 minutes.";
+        log.info("📱 [MOBILE OTP SMS DISPATCH] To: {} | Purpose: {} | Gateway Sent: {}",
+                normalizedPhone, normalizedPurpose, sentViaGateway);
+
+        String displayMsg = "Verification OTP has been sent via SMS to " + maskPhoneNumber(normalizedPhone) + ". Code valid for 5 minutes.";
 
         return SendMobileOtpResponse.builder()
                 .success(true)
                 .message(displayMsg)
                 .phone(normalizedPhone)
                 .expiresInSeconds(300)
-                .previewOtp(otp) // Included for seamless testing/preview in demo environments
+                .previewOtp(null) // Do NOT expose OTP in response
                 .build();
+    }
+
+    /**
+     * Formats SMS body dynamically according to user request purpose.
+     */
+    private String formatSmsMessage(String otp, String purpose, String phone) {
+        String p = (purpose != null) ? purpose.toUpperCase().trim() : "LOGIN";
+        switch (p) {
+            case "RESET_PASSWORD":
+                return String.format("redBus: Your OTP to reset password is %s. Valid for 5 minutes. Never share this code with anyone.", otp);
+            case "FORGOT_PASSWORD":
+                return String.format("redBus: Your password recovery OTP is %s. Valid for 5 minutes. Do not share with anyone.", otp);
+            case "OPERATOR_LOGIN":
+            case "OPERATOR":
+                return String.format("redBus Partner: Your OTP for Operator Portal login is %s. Valid for 5 minutes. Do not share.", otp);
+            case "REGISTER":
+            case "REGISTRATION":
+                return String.format("redBus: Your OTP to verify mobile number and complete registration is %s. Valid for 5 minutes.", otp);
+            case "LOGIN":
+            default:
+                return String.format("redBus: Your verification code for login is %s. Valid for 5 minutes. Do not share this OTP with anyone.", otp);
+        }
     }
 
     /**
@@ -181,12 +204,9 @@ public class SmsService {
     }
 
     /**
-     * Multi-Provider SMS Sender engine (Textbelt free tier, Fast2SMS, Twilio).
+     * Multi-Provider SMS Sender engine (Textbelt Free Tier, Fast2SMS, 2Factor, Twilio).
      */
-    private boolean dispatchSms(String phone, String otp, String purpose) {
-        String message = String.format("Your redBus verification code is %s for %s. Valid for 5 minutes. Do not share with anyone.",
-                otp, purpose.replace("_", " ").toLowerCase());
-
+    private boolean dispatchSms(String phone, String otp, String message) {
         // 1. Try Fast2SMS if API key is provided
         if (fast2smsApiKey != null && !fast2smsApiKey.isBlank()) {
             try {
@@ -216,7 +236,7 @@ public class SmsService {
             }
         }
 
-        // 2. Try Textbelt Free Open Tier (Sends 1 free SMS per day per IP/Key without setup to any global number)
+        // 2. Try Textbelt Free Global Tier (Dispatches free SMS to any global or Indian mobile number)
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -233,9 +253,11 @@ public class SmsService {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().contains("\"success\":true")) {
                 log.info("Textbelt free SMS dispatched successfully to {}", phone);
                 return true;
+            } else {
+                log.info("Textbelt response: {}", response.getBody());
             }
         } catch (Exception e) {
-            log.warn("Textbelt free tier dispatch note: {}", e.getMessage());
+            log.warn("Textbelt free tier note: {}", e.getMessage());
         }
 
         // 3. Try Twilio if credentials configured
