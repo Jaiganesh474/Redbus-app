@@ -46,6 +46,13 @@ public class WhatsAppService {
     @Value("${app.twilio.whatsapp-from:${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}}")
     private String twilioWhatsAppFrom;
 
+    // UltraMsg Properties (Instant QR-based Gateway to ANY number worldwide)
+    @Value("${app.ultramsg.instance-id:${ULTRAMSG_INSTANCE_ID:}}")
+    private String ultramsgInstanceId;
+
+    @Value("${app.ultramsg.token:${ULTRAMSG_TOKEN:}}")
+    private String ultramsgToken;
+
     @Value("${app.whatsapp.enabled:true}")
     private boolean isWhatsAppEnabled;
 
@@ -322,21 +329,59 @@ public class WhatsAppService {
             return false;
         }
 
-        // 1. Try Twilio WhatsApp API first (Instant zero-document sandbox delivery)
+        // 1. Try UltraMsg QR-Gateway first (Dispatches to ANY number without business verification)
+        if (ultramsgInstanceId != null && !ultramsgInstanceId.isBlank() && ultramsgToken != null && !ultramsgToken.isBlank()) {
+            boolean ultraSent = sendViaUltraMsg(normalizedPhone, text);
+            if (ultraSent) return true;
+        }
+
+        // 2. Try Twilio WhatsApp API (Sandbox)
         if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
             boolean twilioSent = sendViaTwilioWhatsApp(normalizedPhone, text);
             if (twilioSent) return true;
         }
 
-        // 2. Try Meta WhatsApp Cloud API (Graph API)
+        // 3. Try Meta WhatsApp Cloud API (Graph API)
         if (whatsappApiToken != null && !whatsappApiToken.isBlank() && whatsappPhoneNumberId != null && !whatsappPhoneNumberId.isBlank() && !"mock-token".equalsIgnoreCase(whatsappApiToken)) {
             boolean metaSent = sendViaMetaGraphApi(normalizedPhone, text);
             if (metaSent) return true;
         }
 
-        // 3. Fallback: Simulator console output
+        // 4. Fallback: Simulator console output
         log.info("🟢 [WHATSAPP SIMULATOR / CONSOLE DISPATCH]\nTo: {}\nMessage:\n{}\n", normalizedPhone, text);
         return true;
+    }
+
+    /**
+     * Dispatch WhatsApp message using UltraMsg QR-Code Gateway (delivers to any number worldwide).
+     */
+    private boolean sendViaUltraMsg(String normalizedPhone, String bodyText) {
+        try {
+            String url = String.format("https://api.ultramsg.com/%s/messages/chat", ultramsgInstanceId.trim());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("token", ultramsgToken.trim());
+            map.add("to", "+" + normalizedPhone);
+            map.add("body", bodyText);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ [ULTRAMSG WHATSAPP GATEWAY] Message sent to +{}. Response: {}", normalizedPhone, response.getBody());
+                return true;
+            } else {
+                log.warn("⚠️ [ULTRAMSG WHATSAPP GATEWAY] Response status {}: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("❌ [ULTRAMSG HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("❌ [ULTRAMSG FAILED] Error: {}", e.getMessage(), e);
+        }
+        return false;
     }
 
     /**
