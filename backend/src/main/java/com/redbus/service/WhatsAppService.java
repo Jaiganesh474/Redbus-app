@@ -351,4 +351,58 @@ public class WhatsAppService {
 
         return false;
     }
+
+    /**
+     * Send pre-approved Meta WhatsApp Template message (Always delivered instantly without 24-hr window restrictions).
+     */
+    public boolean sendTemplateMessage(String phone, String templateName, String languageCode) {
+        String normalizedPhone = normalizeWhatsAppPhone(phone);
+        if (normalizedPhone.length() < 10) {
+            return false;
+        }
+
+        if (whatsappApiToken == null || whatsappApiToken.isBlank() || whatsappPhoneNumberId == null || whatsappPhoneNumberId.isBlank() || "mock-token".equalsIgnoreCase(whatsappApiToken)) {
+            log.info("🟢 [WHATSAPP TEMPLATE SIMULATOR] To: {} | Template: {} | Lang: {}", normalizedPhone, templateName, languageCode);
+            return true;
+        }
+
+        try {
+            String url = String.format("https://graph.facebook.com/v18.0/%s/messages", whatsappPhoneNumberId.trim());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(whatsappApiToken.trim());
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> langMap = new HashMap<>();
+            langMap.put("code", (languageCode != null && !languageCode.isBlank()) ? languageCode : "en_US");
+
+            Map<String, Object> templateMap = new HashMap<>();
+            templateMap.put("name", (templateName != null && !templateName.isBlank()) ? templateName : "hello_world");
+            templateMap.put("language", langMap);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("messaging_product", "whatsapp");
+            payload.put("recipient_type", "individual");
+            payload.put("to", normalizedPhone);
+            payload.put("type", "template");
+            payload.put("template", templateMap);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ [WHATSAPP CLOUD API TEMPLATE] Template '{}' sent successfully to {}. Response: {}", 
+                        templateName, normalizedPhone, response.getBody());
+                return true;
+            } else {
+                log.warn("⚠️ [WHATSAPP CLOUD API TEMPLATE] Response status {}: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("❌ [WHATSAPP TEMPLATE HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("❌ [WHATSAPP TEMPLATE FAILED] Error: {}", e.getMessage(), e);
+        }
+
+        return false;
+    }
 }
