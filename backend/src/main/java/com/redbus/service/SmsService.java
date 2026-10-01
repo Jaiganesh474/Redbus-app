@@ -235,9 +235,9 @@ public class SmsService {
                     .collect(Collectors.joining(", "));
         }
 
-        String busDetails = busReg.isBlank() ? operatorName : (operatorName + " [" + busReg + "]");
+        String busDetails = busReg.isBlank() ? operatorName : (operatorName + " " + busReg);
         String smsMessage = String.format(
-                "redBus Journey Alert: Your bus (%s) to %s departs at %s (in ~1 hr). Boarding: %s. PNR: %s, Seat(s): %s. Have a safe journey!",
+                "redBus Alert: Your bus %s to %s departs at %s (in 1 hr). Boarding: %s. PNR: %s, Seat: %s. Safe journey!",
                 busDetails, destination, depTimeStr, boardingPoint, pnr, seats
         );
 
@@ -286,13 +286,14 @@ public class SmsService {
             headers.set("api-key", brevoApiKey.trim());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            Map<String, Object> body = Map.of(
-                    "sender", "redBus",
-                    "recipient", brevoPhone,
-                    "content", message
-            );
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("sender", "REDBUS");
+            body.put("recipient", brevoPhone);
+            body.put("content", message);
+            body.put("type", "transactional");
+            body.put("unicodeEnabled", true);
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            HttpEntity<java.util.Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(
                     "https://api.brevo.com/v3/transactionalSMS/send", entity, String.class);
 
