@@ -28,7 +28,7 @@ import {
   Bell,
 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
-import { useGetMeQuery } from "@/store/apiSlice";
+import { useGetMeQuery, apiSlice } from "@/store/apiSlice";
 import { toggleNotificationDropdown } from "@/store/notificationSlice";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import NotificationDropdown from "@/components/NotificationDropdown";
@@ -115,6 +115,12 @@ export default function Navbar() {
     setShowLogoutModal(false);
     setUserDropdownOpen(false);
     dispatch(logout());
+    dispatch(apiSlice.util.resetApiState());
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("redbus_token");
+      localStorage.removeItem("redbus_user");
+      window.location.href = "/login";
+    }
   };
 
   const getInitials = (name?: string) => {

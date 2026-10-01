@@ -14,6 +14,7 @@ import {
   useRevokeAllOtherSessionsMutation,
   useDeactivateAccountMutation,
   useDeleteAccountMutation,
+  apiSlice,
 } from "@/store/apiSlice";
 import {
   User as UserIcon,
@@ -102,12 +103,14 @@ export default function SettingsPage() {
         await revokeSessionMutation(sessionId).unwrap();
       } catch (e) {}
       dispatch(logout());
+      dispatch(apiSlice.util.resetApiState());
       if (typeof window !== "undefined") {
         localStorage.removeItem("redbus_token");
+        localStorage.removeItem("redbus_user");
         localStorage.removeItem("token");
         sessionStorage.clear();
+        window.location.href = "/login";
       }
-      router.push("/");
       return;
     }
 

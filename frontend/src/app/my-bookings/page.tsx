@@ -164,7 +164,7 @@ export default function MyBookingsPage() {
   const rawBookings: BookingDetails[] = [];
   if (pnrBooking) {
     rawBookings.push(pnrBooking);
-  } else if (userBookingsData?.content) {
+  } else if (isAuthenticated && userBookingsData?.content) {
     rawBookings.push(...userBookingsData.content);
   }
 
@@ -749,6 +749,36 @@ export default function MyBookingsPage() {
               </motion.div>
             );
           })
+        ) : !isAuthenticated && !activePnr ? (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45 }}
+            className="bg-white rounded-3xl p-12 text-center border border-gray-200 shadow-xs"
+          >
+            <div className="w-16 h-16 rounded-full bg-red-50 text-[#d84e55] flex items-center justify-center mx-auto mb-4">
+              <Ticket className="w-8 h-8" />
+            </div>
+            <p className="text-lg font-bold text-gray-900">Please Log In to View Your Bookings</p>
+            <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+              Sign in to your account to view your confirmed bus tickets, live boarding tracking, download tax invoices, or request instant refunds.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/login"
+                className="px-6 py-2.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20"
+              >
+                Log In / Sign Up
+              </Link>
+              <Link
+                href="/"
+                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all"
+              >
+                Search Buses
+              </Link>
+            </div>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
