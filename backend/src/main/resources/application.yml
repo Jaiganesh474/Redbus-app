@@ -66,4 +66,10 @@ app:
     url: ${FRONTEND_URL:https://redbusai.app}
   seat-lock:
     ttl-minutes: 5
+  firebase:
+    server-key: ${FIREBASE_SERVER_KEY:}
+    project-id: ${FIREBASE_PROJECT_ID:redbus-clone-app}
+  automation:
+    journey-reminder-enabled: ${JOURNEY_REMINDER_ENABLED:true}
+    reminder-window-minutes: ${JOURNEY_REMINDER_MINUTES:60}
 

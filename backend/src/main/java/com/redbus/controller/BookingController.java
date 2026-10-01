@@ -25,6 +25,7 @@ public class BookingController {
     private final com.redbus.service.EmailService emailService;
     private final com.redbus.service.PdfService pdfService;
     private final com.redbus.repository.BookingRepository bookingRepository;
+    private final com.redbus.service.JourneyReminderAutomationService journeyReminderAutomationService;
 
     @GetMapping("/{pnr}/ticket-pdf")
     public ResponseEntity<byte[]> downloadTicketPdf(@PathVariable String pnr) {
@@ -106,6 +107,11 @@ public class BookingController {
         String destination = request != null && request.getRefundDestination() != null ? request.getRefundDestination() : "WALLET";
         CancelBookingResponse response = bookingService.cancelBooking(pnr, reason, destination, userId);
         return ResponseEntity.ok(response);
+    }
+
+    @RequestMapping(value = {"/{pnr}/send-reminder", "/{pnr}/send-reminder-sms"}, method = {RequestMethod.POST, RequestMethod.GET})
+    public ResponseEntity<java.util.Map<String, Object>> sendReminderNotification(@PathVariable String pnr) {
+        return ResponseEntity.ok(journeyReminderAutomationService.sendImmediateReminderForPnr(pnr));
     }
 
     private Long extractUserIdFromHeader(String authHeader) {

@@ -117,6 +117,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/bookings/*/ticket-pdf", "/api/v1/bookings/*/ticket-pdf").permitAll()
                 .requestMatchers("/api/bookings/*/send-ticket", "/api/v1/bookings/*/send-ticket").permitAll()
                 .requestMatchers("/api/bookings/*/send-email", "/api/v1/bookings/*/send-email").permitAll()
+                .requestMatchers("/api/bookings/*/send-reminder", "/api/v1/bookings/*/send-reminder").permitAll()
+                .requestMatchers("/api/bookings/*/send-reminder-sms", "/api/v1/bookings/*/send-reminder-sms").permitAll()
+                .requestMatchers("/api/automation/**", "/api/v1/automation/**").permitAll()
 
                 // Operator Manifest PDF download endpoint (Permitted via JWT token query or header)
                 .requestMatchers(HttpMethod.GET, "/api/operator/manifest/pdf", "/api/v1/operator/manifest/pdf").permitAll()

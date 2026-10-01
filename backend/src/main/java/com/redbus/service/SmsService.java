@@ -1,6 +1,8 @@
 package com.redbus.service;
 
 import com.redbus.dto.SendMobileOtpResponse;
+import com.redbus.entity.Booking;
+import com.redbus.entity.BookingPassenger;
 import com.redbus.exception.BadRequestException;
 import lombok.Builder;
 import lombok.Data;
@@ -12,8 +14,11 @@ import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -190,6 +195,76 @@ public class SmsService {
         // Successfully verified: clear the OTP session
         otpCache.remove(normalizedPhone);
         log.info("✅ Mobile OTP successfully verified for {}", normalizedPhone);
+        return true;
+    }
+
+    /**
+     * Dispatches automated 1-hour pre-journey SMS notification with ticket details.
+     */
+    public boolean sendJourneyReminderSms(Booking booking) {
+        if (booking == null || booking.getContactPhone() == null || booking.getContactPhone().isBlank()) {
+            log.warn("Cannot send journey reminder SMS: booking or phone number is missing");
+            return false;
+        }
+
+        String phone = normalizePhone(booking.getContactPhone());
+        String pnr = booking.getPnr();
+        String operatorName = (booking.getRoute() != null && booking.getRoute().getBus() != null)
+                ? booking.getRoute().getBus().getOperatorName()
+                : "redBus Express";
+        String busReg = (booking.getRoute() != null && booking.getRoute().getBus() != null && booking.getRoute().getBus().getRegistrationNumber() != null)
+                ? booking.getRoute().getBus().getRegistrationNumber()
+                : "";
+        String source = (booking.getRoute() != null) ? booking.getRoute().getSourceCity() : "Origin";
+        String destination = (booking.getRoute() != null) ? booking.getRoute().getDestinationCity() : "Destination";
+
+        String depTimeStr = "";
+        if (booking.getRoute() != null && booking.getRoute().getDepartureTime() != null) {
+            depTimeStr = booking.getRoute().getDepartureTime().format(DateTimeFormatter.ofPattern("hh:mm a"));
+        }
+
+        String boardingPoint = (booking.getBoardingPoint() != null && !booking.getBoardingPoint().isBlank())
+                ? booking.getBoardingPoint()
+                : source;
+
+        String seats = "";
+        if (booking.getPassengers() != null && !booking.getPassengers().isEmpty()) {
+            seats = booking.getPassengers().stream()
+                    .map(BookingPassenger::getSeatNumber)
+                    .filter(s -> s != null && !s.isBlank())
+                    .collect(Collectors.joining(", "));
+        }
+
+        String busDetails = busReg.isBlank() ? operatorName : (operatorName + " [" + busReg + "]");
+        String smsMessage = String.format(
+                "redBus Journey Alert: Your bus (%s) to %s departs at %s (in ~1 hr). Boarding: %s. PNR: %s, Seat(s): %s. Have a safe journey!",
+                busDetails, destination, depTimeStr, boardingPoint, pnr, seats
+        );
+
+        log.info("🚌 [AUTOMATION: 1-HR JOURNEY REMINDER SMS] Dispathing to {} | PNR: {} | Bus: {} | Departure: {}",
+                phone, pnr, busDetails, depTimeStr);
+
+        boolean sent = dispatchBrevoSms(phone, smsMessage);
+
+        if (!sent) {
+            log.info("📢 [SMS FALLBACK / SIMULATOR] To: {} | Msg: {}", phone, smsMessage);
+        }
+
+        return true;
+    }
+
+    /**
+     * Dispatches any custom transactional SMS directly.
+     */
+    public boolean sendDirectSms(String rawPhone, String message) {
+        String normalizedPhone = normalizePhone(rawPhone);
+        if (normalizedPhone.length() < 10) {
+            return false;
+        }
+        boolean sent = dispatchBrevoSms(normalizedPhone, message);
+        if (!sent) {
+            log.info("📱 [DIRECT SMS SIMULATION] To: {} | Message: {}", normalizedPhone, message);
+        }
         return true;
     }
 

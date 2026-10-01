@@ -117,6 +117,13 @@ public class Booking {
     @Column(name = "cancellation_reason", length = 255)
     private String cancellationReason;
 
+    @Column(name = "departure_reminder_sent", nullable = false)
+    @Builder.Default
+    private Boolean departureReminderSent = false;
+
+    @Column(name = "departure_reminder_sent_at")
+    private LocalDateTime departureReminderSentAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

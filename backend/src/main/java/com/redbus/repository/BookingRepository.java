@@ -40,4 +40,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByStatus(String status);
 
     long countByOperatorIdAndStatus(Long operatorId, String status);
+
+    @Query("SELECT DISTINCT b FROM Booking b " +
+           "JOIN FETCH b.route r " +
+           "JOIN FETCH r.bus bus " +
+           "LEFT JOIN FETCH b.passengers bp " +
+           "WHERE b.status = 'CONFIRMED' " +
+           "AND (b.departureReminderSent IS NULL OR b.departureReminderSent = false) " +
+           "AND r.travelDate IN (:dates)")
+    List<Booking> findPendingDepartureReminders(@Param("dates") List<java.time.LocalDate> dates);
 }
