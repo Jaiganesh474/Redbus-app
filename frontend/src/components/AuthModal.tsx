@@ -126,13 +126,27 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       return;
     }
 
+    // 1. Strict Database Registration Check: Verify mobile number is registered in redBus DB
+    try {
+      await sendMobileOtpMutation({ phone: fullNumber, purpose: "LOGIN" }).unwrap();
+    } catch (apiErr: any) {
+      const errorMsg =
+        apiErr?.data?.message ||
+        apiErr?.data?.error ||
+        apiErr?.message ||
+        "This mobile number is not registered with redBus. Please create an account or sign up to continue.";
+      setErrorMessage(errorMsg);
+      setIsOtpSending(false);
+      return;
+    }
+
     try {
       if (typeof window !== "undefined" && auth && auth.app) {
         try {
           const confirmRes = await sendFirebasePhoneOtp(fullNumber, "auth-recaptcha-container");
           setConfirmationResult(confirmRes);
           setOtpSent(true);
-          setSuccessMessage(`Official redBus verification code dispatched via SMS to ${fullNumber}`);
+          setSuccessMessage(`Official redBus verification code dispatched via SMS & WhatsApp to ${fullNumber}`);
           startCooldownTimer(60);
           setIsOtpSending(false);
           return;
