@@ -67,8 +67,9 @@ app:
   seat-lock:
     ttl-minutes: 5
   firebase:
+    api-key: ${FIREBASE_API_KEY:${NEXT_PUBLIC_FIREBASE_API_KEY:}}
     server-key: ${FIREBASE_SERVER_KEY:}
-    project-id: ${FIREBASE_PROJECT_ID:redbus-clone-app}
+    project-id: ${FIREBASE_PROJECT_ID:${NEXT_PUBLIC_FIREBASE_PROJECT_ID:redbus-clone-app}}
   automation:
     journey-reminder-enabled: ${JOURNEY_REMINDER_ENABLED:true}
     reminder-window-minutes: ${JOURNEY_REMINDER_MINUTES:60}
