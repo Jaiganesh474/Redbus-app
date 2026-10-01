@@ -112,6 +112,13 @@
             <version>${zxing.version}</version>
         </dependency>
 
+        <!-- Firebase Admin SDK for FCM HTTP v1 -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.3.0</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

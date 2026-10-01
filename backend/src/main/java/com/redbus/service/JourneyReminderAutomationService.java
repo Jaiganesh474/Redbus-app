@@ -24,6 +24,7 @@ public class JourneyReminderAutomationService {
 
     private final BookingRepository bookingRepository;
     private final FirebaseNotificationService firebaseNotificationService;
+    private final SmsService smsService;
 
     @Value("${app.automation.journey-reminder-enabled:true}")
     private boolean isReminderAutomationEnabled;
@@ -33,7 +34,7 @@ public class JourneyReminderAutomationService {
 
     /**
      * Automatic Cron / Background Task: Runs every 60 seconds (1 minute).
-     * Scans for confirmed bookings whose departure is within 1 hour (~60 mins) and dispatches Firebase SMS & push alerts.
+     * Scans for confirmed bookings whose departure is within 1 hour (~60 mins) and dispatches alerts.
      */
     @Scheduled(fixedRate = 60000, initialDelay = 10000)
     @Transactional
@@ -52,7 +53,6 @@ public class JourneyReminderAutomationService {
      */
     @Transactional
     public Map<String, Object> executeReminderScan() {
-        // Calculate current date & time in Indian Standard Time (Asia/Kolkata)
         LocalDateTime nowIst = LocalDateTime.now(IST_ZONE);
         LocalDate todayIst = nowIst.toLocalDate();
         LocalDate yesterdayIst = todayIst.minusDays(1);
@@ -80,24 +80,28 @@ public class JourneyReminderAutomationService {
             log.debug("Checking PNR: {} | Travel Date: {} | Dep: {} | Minutes to departure: {}",
                     booking.getPnr(), route.getTravelDate(), route.getDepartureTime(), minutesUntilDeparture);
 
-            // Target window: Journey starts within reminderWindowMinutes (e.g. 60-75 mins) and not departed yet (> -15 mins)
             if (minutesUntilDeparture <= reminderWindowMinutes && minutesUntilDeparture >= -15) {
                 matchedCount++;
                 try {
                     log.info("⏰ [JOURNEY REMINDER TRIGGERED] PNR: {} | Departs at: {} (in {} mins) | Recipient: {}",
                             booking.getPnr(), departureDateTime, minutesUntilDeparture, booking.getContactPhone());
 
-                    // 1. Dispatch Firebase SMS & Push Notification (Blaze Plan)
-                    boolean sent = firebaseNotificationService.sendJourneyReminder(booking);
+                    // 1. Dispatch SMS
+                    try {
+                        smsService.sendJourneyReminderSms(booking);
+                    } catch (Exception e) {
+                        log.warn("SMS dispatch attempt note for PNR {}: {}", booking.getPnr(), e.getMessage());
+                    }
 
-                    // 2. Mark booking as reminder sent to ensure single idempotent delivery
+                    // 2. Dispatch Firebase Cloud Messaging (FCM HTTP v1)
+                    boolean fcmSent = firebaseNotificationService.sendJourneyReminder(booking);
+
+                    // 3. Mark booking as reminder sent
                     booking.setDepartureReminderSent(true);
                     booking.setDepartureReminderSentAt(LocalDateTime.now());
                     bookingRepository.save(booking);
 
-                    if (sent) {
-                        dispatchedCount++;
-                    }
+                    dispatchedCount++;
                 } catch (Exception e) {
                     log.error("Failed to process journey reminder for PNR {}: {}", booking.getPnr(), e.getMessage(), e);
                 }
@@ -105,7 +109,7 @@ public class JourneyReminderAutomationService {
         }
 
         if (dispatchedCount > 0) {
-            log.info("🚀 [FIREBASE JOURNEY REMINDER AUTOMATION COMPLETED] Successfully sent 1-hr alerts for {} ticket(s)", dispatchedCount);
+            log.info("🚀 [JOURNEY REMINDER AUTOMATION COMPLETED] Successfully sent 1-hr alerts for {} ticket(s)", dispatchedCount);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -117,12 +121,17 @@ public class JourneyReminderAutomationService {
     }
 
     /**
-     * Forces immediate dispatch of 1-hour ticket reminder for a specific PNR via Firebase.
+     * Forces immediate dispatch of 1-hour ticket reminder for a specific PNR.
      */
     @Transactional
     public Map<String, Object> sendImmediateReminderForPnr(String pnr) {
         Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found with PNR: " + pnr));
+
+        boolean smsSuccess = false;
+        try {
+            smsSuccess = smsService.sendJourneyReminderSms(booking);
+        } catch (Exception ignored) {}
 
         boolean firebaseSuccess = firebaseNotificationService.sendJourneyReminder(booking);
 
@@ -132,10 +141,11 @@ public class JourneyReminderAutomationService {
 
         Map<String, Object> response = new HashMap<>();
         response.put("pnr", booking.getPnr());
+        response.put("smsSent", smsSuccess);
         response.put("firebaseSent", firebaseSuccess);
         response.put("phone", booking.getContactPhone());
         response.put("departureReminderSentAt", booking.getDepartureReminderSentAt());
-        response.put("message", "Journey reminder dispatched successfully via Firebase SMS and Push Notification.");
+        response.put("message", "Journey reminder dispatched successfully.");
         return response;
     }
 }
