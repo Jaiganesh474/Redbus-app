@@ -10,12 +10,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ public class WhatsAppService {
 
     private final RestTemplate restTemplate;
 
+    // Meta WhatsApp Cloud API Properties
     @Value("${app.whatsapp.api-token:${WHATSAPP_API_TOKEN:}}")
     private String whatsappApiToken;
 
@@ -33,6 +35,16 @@ public class WhatsAppService {
 
     @Value("${app.whatsapp.business-account-id:${WHATSAPP_BUSINESS_ACCOUNT_ID:}}")
     private String whatsappBusinessAccountId;
+
+    // Twilio WhatsApp Properties (Instant Sandbox without Business Verification)
+    @Value("${app.twilio.account-sid:${TWILIO_ACCOUNT_SID:}}")
+    private String twilioAccountSid;
+
+    @Value("${app.twilio.auth-token:${TWILIO_AUTH_TOKEN:}}")
+    private String twilioAuthToken;
+
+    @Value("${app.twilio.whatsapp-from:${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}}")
+    private String twilioWhatsAppFrom;
 
     @Value("${app.whatsapp.enabled:true}")
     private boolean isWhatsAppEnabled;
@@ -45,7 +57,7 @@ public class WhatsAppService {
     }
 
     /**
-     * Clean and format phone number for WhatsApp Cloud API (e.g., "918939129572").
+     * Clean and format phone number for WhatsApp (e.g., "918939129572").
      */
     public String normalizeWhatsAppPhone(String rawPhone) {
         if (rawPhone == null || rawPhone.isBlank()) {
@@ -302,7 +314,7 @@ public class WhatsAppService {
     }
 
     /**
-     * Generic text dispatcher via WhatsApp Cloud API (Meta Graph API).
+     * Generic text dispatcher: Dispatches via Twilio WhatsApp API (if configured) or Meta Cloud API.
      */
     public boolean sendTextMessage(String phone, String text) {
         String normalizedPhone = normalizeWhatsAppPhone(phone);
@@ -310,12 +322,65 @@ public class WhatsAppService {
             return false;
         }
 
-        // If credentials are not configured, simulate smoothly in server logs
-        if (whatsappApiToken == null || whatsappApiToken.isBlank() || whatsappPhoneNumberId == null || whatsappPhoneNumberId.isBlank() || "mock-token".equalsIgnoreCase(whatsappApiToken)) {
-            log.info("🟢 [WHATSAPP SIMULATOR / CONSOLE DISPATCH]\nTo: {}\nMessage:\n{}\n", normalizedPhone, text);
-            return true;
+        // 1. Try Twilio WhatsApp API first (Instant zero-document sandbox delivery)
+        if (twilioAccountSid != null && !twilioAccountSid.isBlank() && twilioAuthToken != null && !twilioAuthToken.isBlank()) {
+            boolean twilioSent = sendViaTwilioWhatsApp(normalizedPhone, text);
+            if (twilioSent) return true;
         }
 
+        // 2. Try Meta WhatsApp Cloud API (Graph API)
+        if (whatsappApiToken != null && !whatsappApiToken.isBlank() && whatsappPhoneNumberId != null && !whatsappPhoneNumberId.isBlank() && !"mock-token".equalsIgnoreCase(whatsappApiToken)) {
+            boolean metaSent = sendViaMetaGraphApi(normalizedPhone, text);
+            if (metaSent) return true;
+        }
+
+        // 3. Fallback: Simulator console output
+        log.info("🟢 [WHATSAPP SIMULATOR / CONSOLE DISPATCH]\nTo: {}\nMessage:\n{}\n", normalizedPhone, text);
+        return true;
+    }
+
+    /**
+     * Dispatch WhatsApp message using Twilio WhatsApp API.
+     */
+    private boolean sendViaTwilioWhatsApp(String normalizedPhone, String bodyText) {
+        try {
+            String url = String.format("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", twilioAccountSid.trim());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(twilioAccountSid.trim(), twilioAuthToken.trim());
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            String formattedTo = "whatsapp:+" + normalizedPhone;
+            String formattedFrom = (twilioWhatsAppFrom != null && !twilioWhatsAppFrom.isBlank())
+                    ? twilioWhatsAppFrom.trim()
+                    : "whatsapp:+14155238886";
+
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("From", formattedFrom);
+            map.add("To", formattedTo);
+            map.add("Body", bodyText);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ [TWILIO WHATSAPP API] Message successfully sent to {}. Response: {}", formattedTo, response.getBody());
+                return true;
+            } else {
+                log.warn("⚠️ [TWILIO WHATSAPP API] Response status {}: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("❌ [TWILIO WHATSAPP HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("❌ [TWILIO WHATSAPP FAILED] Error: {}", e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * Dispatch WhatsApp message using Meta WhatsApp Cloud API.
+     */
+    private boolean sendViaMetaGraphApi(String normalizedPhone, String text) {
         try {
             String url = String.format("https://graph.facebook.com/v18.0/%s/messages", whatsappPhoneNumberId.trim());
 
@@ -340,20 +405,15 @@ public class WhatsAppService {
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.info("✅ [WHATSAPP CLOUD API] Message sent successfully to {}. Response: {}", normalizedPhone, response.getBody());
                 return true;
-            } else {
-                log.warn("⚠️ [WHATSAPP CLOUD API] Response status {}: {}", response.getStatusCode(), response.getBody());
             }
-        } catch (org.springframework.web.client.HttpStatusCodeException e) {
-            log.error("❌ [WHATSAPP CLOUD API HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.error("❌ [WHATSAPP DISPATCH FAILED] Error: {}", e.getMessage(), e);
+            log.error("❌ [WHATSAPP CLOUD API FAILED] Error: {}", e.getMessage());
         }
-
         return false;
     }
 
     /**
-     * Send pre-approved Meta WhatsApp Template message (Always delivered instantly without 24-hr window restrictions).
+     * Send pre-approved Meta WhatsApp Template message.
      */
     public boolean sendTemplateMessage(String phone, String templateName, String languageCode) {
         String normalizedPhone = normalizeWhatsAppPhone(phone);
@@ -394,13 +454,9 @@ public class WhatsAppService {
                 log.info("✅ [WHATSAPP CLOUD API TEMPLATE] Template '{}' sent successfully to {}. Response: {}", 
                         templateName, normalizedPhone, response.getBody());
                 return true;
-            } else {
-                log.warn("⚠️ [WHATSAPP CLOUD API TEMPLATE] Response status {}: {}", response.getStatusCode(), response.getBody());
             }
-        } catch (org.springframework.web.client.HttpStatusCodeException e) {
-            log.error("❌ [WHATSAPP TEMPLATE HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.error("❌ [WHATSAPP TEMPLATE FAILED] Error: {}", e.getMessage(), e);
+            log.error("❌ [WHATSAPP TEMPLATE FAILED] Error: {}", e.getMessage());
         }
 
         return false;
