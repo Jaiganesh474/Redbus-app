@@ -46,16 +46,25 @@ public class JourneyReminderAutomationService {
         executeReminderScan();
     }
 
+    private static final java.time.ZoneId IST_ZONE = java.time.ZoneId.of("Asia/Kolkata");
+
     /**
-     * Core scan and dispatch routine.
+     * Core scan and dispatch routine using Indian Standard Time (IST).
      */
     @Transactional
     public Map<String, Object> executeReminderScan() {
-        LocalDate today = LocalDate.now();
-        LocalDate tomorrow = today.plusDays(1);
-        LocalDateTime now = LocalDateTime.now();
+        // Calculate current date & time in Indian Standard Time (Asia/Kolkata)
+        LocalDateTime nowIst = LocalDateTime.now(IST_ZONE);
+        LocalDate todayIst = nowIst.toLocalDate();
+        LocalDate yesterdayIst = todayIst.minusDays(1);
+        LocalDate tomorrowIst = todayIst.plusDays(1);
 
-        List<Booking> pendingBookings = bookingRepository.findPendingDepartureReminders(List.of(today, tomorrow));
+        log.info("🔍 [JOURNEY REMINDER SCAN] Current IST: {} | Checking window <= {} minutes", 
+                nowIst, reminderWindowMinutes);
+
+        List<Booking> pendingBookings = bookingRepository.findPendingDepartureReminders(
+                List.of(yesterdayIst, todayIst, tomorrowIst)
+        );
 
         int matchedCount = 0;
         int dispatchedCount = 0;
@@ -67,10 +76,13 @@ public class JourneyReminderAutomationService {
             }
 
             LocalDateTime departureDateTime = LocalDateTime.of(route.getTravelDate(), route.getDepartureTime());
-            long minutesUntilDeparture = Duration.between(now, departureDateTime).toMinutes();
+            long minutesUntilDeparture = Duration.between(nowIst, departureDateTime).toMinutes();
 
-            // Target window: Journey starts within reminderWindowMinutes (e.g. 60 mins) and not in the far past (>= -10 mins)
-            if (minutesUntilDeparture <= reminderWindowMinutes && minutesUntilDeparture >= -10) {
+            log.debug("Checking PNR: {} | Travel Date: {} | Dep: {} | Minutes to departure: {}",
+                    booking.getPnr(), route.getTravelDate(), route.getDepartureTime(), minutesUntilDeparture);
+
+            // Target window: Journey starts within reminderWindowMinutes (e.g. 60-75 mins) and not departed yet (> -15 mins)
+            if (minutesUntilDeparture <= reminderWindowMinutes && minutesUntilDeparture >= -15) {
                 matchedCount++;
                 try {
                     log.info("⏰ [JOURNEY REMINDER TRIGGERED] PNR: {} | Departs at: {} (in {} mins) | Recipient: {}",

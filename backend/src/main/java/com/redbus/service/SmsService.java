@@ -273,6 +273,7 @@ public class SmsService {
      */
     private boolean dispatchBrevoSms(String phone, String message) {
         if (brevoApiKey == null || brevoApiKey.isBlank() || brevoApiKey.startsWith("your_") || "mock-key".equalsIgnoreCase(brevoApiKey)) {
+            log.warn("Brevo API key is not configured or is default placeholder.");
             return false;
         }
 
@@ -299,10 +300,12 @@ public class SmsService {
                 log.info("✅ Brevo SMS dispatched successfully to {} | Response: {}", brevoPhone, response.getBody());
                 return true;
             } else {
-                log.warn("Brevo SMS response: {}", response.getBody());
+                log.warn("⚠️ Brevo SMS response status {}: {}", response.getStatusCode(), response.getBody());
             }
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("❌ Brevo SMS HTTP {} Error: {}", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.warn("Brevo SMS dispatch attempt failed: {}", e.getMessage());
+            log.error("❌ Brevo SMS dispatch attempt failed: {}", e.getMessage(), e);
         }
 
         return false;
