@@ -288,6 +288,20 @@ function SearchResultsContent() {
   const filteredAndSortedRoutes = useMemo(() => {
     let result = [...rawRoutes];
 
+    // Filter out buses that have already started/departed if searching for today
+    if (isToday) {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      result = result.filter((r) => {
+        if (!r.departureTime) return true;
+        const parts = r.departureTime.split(":");
+        const h = parseInt(parts[0], 10) || 0;
+        const m = parseInt(parts[1] || "0", 10) || 0;
+        const busMinutes = h * 60 + m;
+        return busMinutes > currentMinutes;
+      });
+    }
+
     // 1. AI Smart Filter text/voice processing
     const aiQuery = (aiAppliedQuery || aiFilterQuery || "").toLowerCase().trim();
     if (aiQuery) {
@@ -509,6 +523,7 @@ function SearchResultsContent() {
     selectedOperators,
     selectedAmenities,
     activeSort,
+    isToday,
   ]);
 
   // Counts for Quick Filter Pills strictly derived from real routes

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class SmsService {
 
     private final RestTemplate restTemplate;
+    private final WhatsAppService whatsAppService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     // In-memory thread-safe OTP session storage
@@ -33,8 +34,9 @@ public class SmsService {
     @Value("${app.brevo.api-key:${BREVO_API_KEY:}}")
     private String brevoApiKey;
 
-    public SmsService() {
+    public SmsService(WhatsAppService whatsAppService) {
         this.restTemplate = new RestTemplate();
+        this.whatsAppService = whatsAppService;
     }
 
     @Data
@@ -110,14 +112,25 @@ public class SmsService {
         // Dispatch SMS via Brevo Transactional SMS
         boolean sentViaBrevo = dispatchBrevoSms(normalizedPhone, message);
 
-        log.info("📱 [MOBILE OTP SMS DISPATCH] To: {} | Purpose: {} | Brevo Sent: {}",
+        // Dispatch WhatsApp Notification (Password Reset OTP / Mobile Verification)
+        try {
+            if ("RESET_PASSWORD".equalsIgnoreCase(normalizedPurpose) || "FORGOT_PASSWORD".equalsIgnoreCase(normalizedPurpose)) {
+                whatsAppService.sendPasswordResetOtp(normalizedPhone, otp);
+            } else {
+                whatsAppService.sendTextMessage(normalizedPhone, "🔐 *redBus Security Code*\n\nYour verification code is: *" + otp + "*\n\nValid for 5 minutes. Do not share this code with anyone.");
+            }
+        } catch (Exception e) {
+            log.warn("WhatsApp OTP dispatch note: {}", e.getMessage());
+        }
+
+        log.info("📱 [MOBILE OTP DISPATCH] To: {} | Purpose: {} | Brevo Sent: {}",
                 normalizedPhone, normalizedPurpose, sentViaBrevo);
 
         if (!sentViaBrevo) {
             log.info("🔑 [SERVER OTP DEBUG] OTP for {} is: {}", normalizedPhone, otp);
         }
 
-        String displayMsg = "Verification OTP has been sent via SMS to " + maskPhoneNumber(normalizedPhone) + ". Code valid for 5 minutes.";
+        String displayMsg = "Verification OTP has been sent via SMS & WhatsApp to " + maskPhoneNumber(normalizedPhone) + ". Code valid for 5 minutes.";
 
         return SendMobileOtpResponse.builder()
                 .success(true)

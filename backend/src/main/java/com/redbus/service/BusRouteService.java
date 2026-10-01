@@ -225,8 +225,24 @@ public class BusRouteService {
             routes = routeRepository.findBySourceAndDestination(destination, source);
         }
 
+        LocalDate todayIst = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        LocalTime nowIst = LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+
         // Apply in-memory stream filtering
         return routes.stream()
+                .filter(r -> {
+                    // Filter out past dates
+                    if (r.getTravelDate() != null && r.getTravelDate().isBefore(todayIst)) {
+                        return false;
+                    }
+                    // Filter out buses that have already departed / started today
+                    if (r.getTravelDate() != null && r.getTravelDate().equals(todayIst)) {
+                        if (r.getDepartureTime() != null && r.getDepartureTime().isBefore(nowIst)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
                 .filter(r -> {
                     if (busType != null && !busType.isBlank()) {
                         String busTypeLower = r.getBus().getBusType().toLowerCase();

@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -816,7 +817,21 @@ public class AiService {
             reason = "Most popular budget and luxury routes across India";
         }
 
+        LocalDate todayIst = LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+        LocalTime nowIst = LocalTime.now(java.time.ZoneId.of("Asia/Kolkata"));
+
         List<RouteResponseDto> dtos = topRoutes.stream()
+                .filter(r -> {
+                    if (r.getTravelDate() != null && r.getTravelDate().isBefore(todayIst)) {
+                        return false;
+                    }
+                    if (r.getTravelDate() != null && r.getTravelDate().equals(todayIst)) {
+                        if (r.getDepartureTime() != null && r.getDepartureTime().isBefore(nowIst)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
                 .limit(4)
                 .map(busRouteService::mapToRouteDto)
                 .collect(Collectors.toList());

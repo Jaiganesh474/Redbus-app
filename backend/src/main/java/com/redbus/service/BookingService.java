@@ -38,6 +38,7 @@ public class BookingService {
     private final OperatorWalletTransactionRepository operatorWalletTransactionRepository;
     private final CouponService couponService;
     private final EmailService emailService;
+    private final WhatsAppService whatsAppService;
 
     private static final String PNR_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private final SecureRandom random = new SecureRandom();
@@ -233,6 +234,12 @@ public class BookingService {
             } catch (Exception e) {
                 log.warn("Automatic e-ticket email dispatch failed for 100% wallet booking PNR {}: {}", saved.getPnr(), e.getMessage());
             }
+
+            try {
+                whatsAppService.sendBookingConfirmation(saved, null);
+            } catch (Exception e) {
+                log.warn("Automatic e-ticket WhatsApp dispatch failed for PNR {}: {}", saved.getPnr(), e.getMessage());
+            }
         }
 
         return mapToDto(saved);
@@ -409,6 +416,12 @@ public class BookingService {
             emailService.sendBookingCancellationEmail(booking, refundAmount);
         } catch (Exception e) {
             log.warn("Failed to dispatch booking cancellation email for PNR {}: {}", booking.getPnr(), e.getMessage());
+        }
+
+        try {
+            whatsAppService.sendBookingCancellation(booking, refundAmount, destination);
+        } catch (Exception e) {
+            log.warn("Failed to dispatch booking cancellation WhatsApp for PNR {}: {}", booking.getPnr(), e.getMessage());
         }
 
         String destLabel = destination.equals("WALLET") ? "redBus Wallet (Instant upon audit)" : "Original Payment Method (3-5 business days)";

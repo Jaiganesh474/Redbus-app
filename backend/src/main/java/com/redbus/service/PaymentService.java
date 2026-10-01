@@ -37,6 +37,7 @@ public class PaymentService {
     private final RouteSeatRepository routeSeatRepository;
     private final EmailService emailService;
     private final BookingService bookingService;
+    private final WhatsAppService whatsAppService;
 
     @Value("${app.razorpay.key-id:rzp_test_redbusKeyMock}")
     private String razorpayKeyId;
@@ -140,6 +141,12 @@ public class PaymentService {
             emailService.sendBookingConfirmationEmail(booking, null);
         } catch (Exception e) {
             log.warn("Automatic e-ticket email dispatch failed: {}", e.getMessage());
+        }
+
+        try {
+            whatsAppService.sendBookingConfirmation(booking, null);
+        } catch (Exception e) {
+            log.warn("Automatic e-ticket WhatsApp dispatch failed for PNR {}: {}", booking.getPnr(), e.getMessage());
         }
 
         // Update all passenger seats to BOOKED

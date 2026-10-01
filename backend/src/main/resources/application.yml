@@ -73,4 +73,9 @@ app:
   automation:
     journey-reminder-enabled: ${JOURNEY_REMINDER_ENABLED:true}
     reminder-window-minutes: ${JOURNEY_REMINDER_MINUTES:60}
+  whatsapp:
+    api-token: ${WHATSAPP_API_TOKEN:}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    business-account-id: ${WHATSAPP_BUSINESS_ACCOUNT_ID:}
+    enabled: ${WHATSAPP_ENABLED:true}
 

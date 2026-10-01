@@ -32,6 +32,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final WhatsAppService whatsAppService;
     private final DeviceSessionService deviceSessionService;
     private final jakarta.servlet.http.HttpServletRequest httpServletRequest;
     private final SecureRandom random = new SecureRandom();
@@ -288,6 +289,15 @@ public class AuthService {
             }
         } catch (Exception e) {
             log.warn("Failed to dispatch welcome / verification confirmation email: {}", e.getMessage());
+        }
+
+        // Dispatch WhatsApp Welcome Notification if phone is registered
+        try {
+            if (saved.getPhone() != null && !saved.getPhone().isBlank()) {
+                whatsAppService.sendWelcomeMessage(saved.getPhone(), saved.getName());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch WhatsApp welcome notification: {}", e.getMessage());
         }
 
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());
@@ -581,6 +591,15 @@ public class AuthService {
             }
         } catch (Exception e) {
             log.warn("Failed to dispatch password reset confirmation email: {}", e.getMessage());
+        }
+
+        // Dispatch WhatsApp Security Alert
+        try {
+            if (saved.getPhone() != null && !saved.getPhone().isBlank()) {
+                whatsAppService.sendTextMessage(saved.getPhone(), "🔐 *redBus Security Alert*\n\nYour account password was just updated successfully. If this wasn't you, contact support immediately.");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dispatch WhatsApp password reset confirmation: {}", e.getMessage());
         }
 
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole(), saved.getId());

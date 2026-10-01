@@ -25,6 +25,7 @@ public class JourneyReminderAutomationService {
     private final BookingRepository bookingRepository;
     private final FirebaseNotificationService firebaseNotificationService;
     private final SmsService smsService;
+    private final WhatsAppService whatsAppService;
 
     @Value("${app.automation.journey-reminder-enabled:true}")
     private boolean isReminderAutomationEnabled;
@@ -93,10 +94,17 @@ public class JourneyReminderAutomationService {
                         log.warn("SMS dispatch attempt note for PNR {}: {}", booking.getPnr(), e.getMessage());
                     }
 
-                    // 2. Dispatch Firebase Cloud Messaging (FCM HTTP v1)
+                    // 2. Dispatch WhatsApp Journey Reminder
+                    try {
+                        whatsAppService.sendJourneyReminder(booking);
+                    } catch (Exception e) {
+                        log.warn("WhatsApp dispatch attempt note for PNR {}: {}", booking.getPnr(), e.getMessage());
+                    }
+
+                    // 3. Dispatch Firebase Cloud Messaging (FCM HTTP v1)
                     boolean fcmSent = firebaseNotificationService.sendJourneyReminder(booking);
 
-                    // 3. Mark booking as reminder sent
+                    // 4. Mark booking as reminder sent
                     booking.setDepartureReminderSent(true);
                     booking.setDepartureReminderSentAt(LocalDateTime.now());
                     bookingRepository.save(booking);
@@ -133,6 +141,11 @@ public class JourneyReminderAutomationService {
             smsSuccess = smsService.sendJourneyReminderSms(booking);
         } catch (Exception ignored) {}
 
+        boolean whatsAppSuccess = false;
+        try {
+            whatsAppSuccess = whatsAppService.sendJourneyReminder(booking);
+        } catch (Exception ignored) {}
+
         boolean firebaseSuccess = firebaseNotificationService.sendJourneyReminder(booking);
 
         booking.setDepartureReminderSent(true);
@@ -142,10 +155,11 @@ public class JourneyReminderAutomationService {
         Map<String, Object> response = new HashMap<>();
         response.put("pnr", booking.getPnr());
         response.put("smsSent", smsSuccess);
+        response.put("whatsAppSent", whatsAppSuccess);
         response.put("firebaseSent", firebaseSuccess);
         response.put("phone", booking.getContactPhone());
         response.put("departureReminderSentAt", booking.getDepartureReminderSentAt());
-        response.put("message", "Journey reminder dispatched successfully.");
+        response.put("message", "Journey reminder dispatched successfully via WhatsApp, SMS, and Push Notifications.");
         return response;
     }
 }
