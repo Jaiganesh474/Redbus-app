@@ -145,7 +145,14 @@ public class WhatsAppService {
         sb.append("_redBus Customer Care: 1800-102-1234_");
 
         log.info("📲 [WHATSAPP API: 1-HR JOURNEY REMINDER] Sending to {} | PNR: {}", recipientPhone, booking.getPnr());
-        return sendTextMessage(recipientPhone, sb.toString());
+        boolean textSent = sendTextMessage(recipientPhone, sb.toString());
+
+        // Automatically dispatch PDF Document attachment into WhatsApp chat
+        try {
+            sendUltraMsgDocument(recipientPhone, ticketPdfUrl, "redBus_Ticket_" + booking.getPnr() + ".pdf", "📄 Official E-Ticket PDF: " + booking.getPnr());
+        } catch (Exception ignored) {}
+
+        return textSent;
     }
 
     /**
@@ -220,7 +227,14 @@ public class WhatsAppService {
         sb.append("_Need help? Reply HELP or visit redbus.in/support_");
 
         log.info("📲 [WHATSAPP API: BOOKING CONFIRMATION] Sending to {} | PNR: {}", recipientPhone, booking.getPnr());
-        return sendTextMessage(recipientPhone, sb.toString());
+        boolean textSent = sendTextMessage(recipientPhone, sb.toString());
+
+        // Automatically dispatch PDF Document attachment into WhatsApp chat
+        try {
+            sendUltraMsgDocument(recipientPhone, pdfUrl, "redBus_Ticket_" + booking.getPnr() + ".pdf", "📄 Official E-Ticket PDF: " + booking.getPnr());
+        } catch (Exception ignored) {}
+
+        return textSent;
     }
 
     /**
@@ -260,7 +274,14 @@ public class WhatsAppService {
         sb.append("_Thank you for choosing redBus._");
 
         log.info("📲 [WHATSAPP API: CANCELLATION NOTIFICATION] Sending to {} | PNR: {} | Refund: ₹{}", recipientPhone, pnr, refund);
-        return sendTextMessage(recipientPhone, sb.toString());
+        boolean textSent = sendTextMessage(recipientPhone, sb.toString());
+
+        // Automatically dispatch Updated Cancellation Receipt PDF Document into WhatsApp chat
+        try {
+            sendUltraMsgDocument(recipientPhone, pdfUrl, "redBus_Cancellation_" + pnr + ".pdf", "📄 Cancellation Receipt PDF: " + pnr);
+        } catch (Exception ignored) {}
+
+        return textSent;
     }
 
     /**
@@ -380,6 +401,44 @@ public class WhatsAppService {
             log.error("❌ [ULTRAMSG HTTP ERROR] Status: {} | Body: {}", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("❌ [ULTRAMSG FAILED] Error: {}", e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * Dispatch WhatsApp PDF Document attachment using UltraMsg.
+     */
+    public boolean sendUltraMsgDocument(String normalizedPhone, String documentUrl, String filename, String caption) {
+        if (ultramsgInstanceId == null || ultramsgInstanceId.isBlank() || ultramsgToken == null || ultramsgToken.isBlank()) {
+            return false;
+        }
+
+        try {
+            String url = String.format("https://api.ultramsg.com/%s/messages/document", ultramsgInstanceId.trim());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+            map.add("token", ultramsgToken.trim());
+            map.add("to", "+" + normalizedPhone);
+            map.add("filename", (filename != null && !filename.isBlank()) ? filename : "redBus_Ticket.pdf");
+            map.add("document", documentUrl);
+            if (caption != null && !caption.isBlank()) {
+                map.add("caption", caption);
+            }
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("✅ [ULTRAMSG PDF DOCUMENT ATTACHED] Sent to +{}. Response: {}", normalizedPhone, response.getBody());
+                return true;
+            } else {
+                log.warn("⚠️ [ULTRAMSG PDF DOCUMENT ATTEMPT] Status {}: {}", response.getStatusCode(), response.getBody());
+            }
+        } catch (Exception e) {
+            log.warn("UltraMsg PDF document dispatch note: {}", e.getMessage());
         }
         return false;
     }
