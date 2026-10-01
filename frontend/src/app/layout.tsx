@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AiChatWidget from "@/components/AiChatWidget";
+import RealtimeNotificationToast from "@/components/RealtimeNotificationToast";
 
 // Load Google Fonts matching Zomato / redBus modern UI design system
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -67,6 +68,7 @@ export default function RootLayout({
       >
         <Providers>
           <Navbar />
+          <RealtimeNotificationToast />
           <main className="flex-1">{children}</main>
           <Footer />
           <AiChatWidget />
