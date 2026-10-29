@@ -49,6 +49,9 @@ data class RedbusUiState(
     val otpSent: Boolean = false,
     // Live Home & Discovery Data from Backend
     val availableCities: List<String> = emptyList(),
+    val fromCitySuggestions: List<AiCityItem> = emptyList(),
+    val toCitySuggestions: List<AiCityItem> = emptyList(),
+    val isSearchingCities: Boolean = false,
     val popularRoutes: List<CityPair> = emptyList(),
     val banners: List<Banner> = emptyList(),
     val aiRecommendedRoutes: List<RouteItem> = emptyList(),
@@ -181,6 +184,8 @@ class RedbusViewModel(
         }
 
         performSearch()
+        searchCities("", isSource = true)
+        searchCities("", isSource = false)
 
         if (!currentToken.isNullOrBlank()) {
             refreshAuthenticatedAccountData()
@@ -418,13 +423,86 @@ class RedbusViewModel(
     // --- Search & Route Filtering ---
 
     fun updateCities(source: String, destination: String) {
-        _uiState.update { it.copy(sourceCity = source, destinationCity = destination) }
+        val cleanSource = source.trim()
+        val cleanDest = if (destination.trim().equals(cleanSource, ignoreCase = true)) "" else destination.trim()
+        _uiState.update { it.copy(sourceCity = cleanSource, destinationCity = cleanDest) }
+        searchCities("", isSource = true)
+        searchCities("", isSource = false)
+    }
+
+    fun selectSourceCity(city: String) {
+        val cleanSource = city.trim()
+        _uiState.update { state ->
+            // Once selected city in From input box, it MUST NOT reflect in To input box
+            val nextDest = if (state.destinationCity.equals(cleanSource, ignoreCase = true)) {
+                state.availableCities.firstOrNull { !it.equals(cleanSource, ignoreCase = true) } ?: ""
+            } else {
+                state.destinationCity
+            }
+            state.copy(sourceCity = cleanSource, destinationCity = nextDest)
+        }
+        searchCities("", isSource = false)
+    }
+
+    fun selectDestinationCity(city: String) {
+        val cleanDest = city.trim()
+        // Never allow destination to match sourceCity
+        if (cleanDest.equals(_uiState.value.sourceCity.trim(), ignoreCase = true)) return
+        _uiState.update { it.copy(destinationCity = cleanDest) }
+        searchCities("", isSource = true)
+    }
+
+    fun searchCities(query: String, isSource: Boolean) {
+        val state = _uiState.value
+        val excludedCity = if (isSource) state.destinationCity.trim() else state.sourceCity.trim()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearchingCities = true) }
+            repository.searchCitiesWithAi(query = query, exclude = excludedCity)
+                .onSuccess { list ->
+                    val filtered = list.filterNot {
+                        excludedCity.isNotBlank() && it.name.equals(excludedCity, ignoreCase = true)
+                    }
+                    _uiState.update {
+                        if (isSource) {
+                            it.copy(isSearchingCities = false, fromCitySuggestions = filtered)
+                        } else {
+                            it.copy(isSearchingCities = false, toCitySuggestions = filtered)
+                        }
+                    }
+                }
+                .onFailure {
+                    val fallbackNames = state.availableCities.ifEmpty {
+                        listOf("Bangalore", "Chennai", "Mumbai", "Pune", "Delhi", "Jaipur", "Hyderabad", "Coimbatore")
+                    }
+                    val fallbackItems = fallbackNames
+                        .filterNot { excludedCity.isNotBlank() && it.equals(excludedCity, ignoreCase = true) }
+                        .filter { query.isBlank() || it.contains(query.trim(), ignoreCase = true) }
+                        .map { cityName ->
+                            AiCityItem(
+                                name = cityName,
+                                state = "India",
+                                tag = "Active Routes",
+                                aliases = emptyList(),
+                                activeRoutesCount = 5
+                            )
+                        }
+                    _uiState.update {
+                        if (isSource) {
+                            it.copy(isSearchingCities = false, fromCitySuggestions = fallbackItems)
+                        } else {
+                            it.copy(isSearchingCities = false, toCitySuggestions = fallbackItems)
+                        }
+                    }
+                }
+        }
     }
 
     fun swapCities() {
         _uiState.update {
             it.copy(sourceCity = it.destinationCity, destinationCity = it.sourceCity)
         }
+        searchCities("", isSource = true)
+        searchCities("", isSource = false)
     }
 
     fun updateTravelDate(date: String) {
@@ -689,13 +767,19 @@ class RedbusViewModel(
 
     fun calculateFareBreakdown(): FareBreakdown {
         val state = _uiState.value
-        val routePrice = state.selectedRoute?.basePrice ?: 0.0
+        val route = state.selectedRoute
+        val routePrice = route?.basePrice ?: 0.0
         val baseFare = state.selectedSeats.sumOf { if (it.price > 0) it.price else routePrice }
-        val freeCancelFee = if (state.hasFreeCancellation) state.selectedSeats.size * 49.0 else 0.0
-        val tripGuaranteeFee = if (state.hasTripGuarantee) state.selectedSeats.size * 69.0 else 0.0
-        val gstAndService = (baseFare * 0.05).coerceAtLeast(25.0)
+        val freeCancelFee = if (state.hasFreeCancellation) state.selectedSeats.size * 21.0 else 0.0
+        val tripGuaranteeFee = if (state.hasTripGuarantee) state.selectedSeats.size * 21.0 else 0.0
+        val aiServiceFee = if (route != null) {
+            val factor = ((route.id.coerceAtLeast(1) * 3) + (routePrice / 70.0).toInt()) % 11
+            (5 + factor).toDouble()
+        } else {
+            9.0
+        }
         val discount = state.appliedCoupon?.discountAmount ?: 0.0
-        val gross = (baseFare + freeCancelFee + tripGuaranteeFee + gstAndService - discount).coerceAtLeast(0.0)
+        val gross = (baseFare + freeCancelFee + tripGuaranteeFee + aiServiceFee - discount).coerceAtLeast(0.0)
         val userWallet = state.user?.walletBalance ?: 0.0
         val walletUsed = if (state.useWalletBalance) userWallet.coerceAtMost(gross) else 0.0
         val netPayable = (gross - walletUsed).coerceAtLeast(0.0)
@@ -704,7 +788,7 @@ class RedbusViewModel(
             baseFare = baseFare,
             freeCancelFee = freeCancelFee,
             tripGuaranteeFee = tripGuaranteeFee,
-            gstAndService = gstAndService,
+            gstAndService = aiServiceFee,
             discountAmount = discount,
             walletUsed = walletUsed,
             netPayable = netPayable
@@ -804,6 +888,7 @@ class RedbusViewModel(
     }
 
     fun completeRazorpayPayment(
+        orderId: String,
         paymentId: String,
         signature: String,
         onPaymentVerified: () -> Unit
@@ -813,7 +898,7 @@ class RedbusViewModel(
             _uiState.update { it.copy(isVerifyingPayment = true) }
             repository.verifyPayment(
                 pnr = pending.pnr,
-                orderId = pending.orderId,
+                orderId = orderId.ifBlank { pending.orderId },
                 paymentId = paymentId,
                 signature = signature
             ).onSuccess {
@@ -826,15 +911,15 @@ class RedbusViewModel(
                 }
                 refreshAuthenticatedAccountData()
                 onPaymentVerified()
-            }.onFailure {
+            }.onFailure { err ->
                 _uiState.update {
                     it.copy(
                         isVerifyingPayment = false,
-                        pendingRazorpayPayment = null
+                        pendingRazorpayPayment = null,
+                        errorBanner = extractErrorMessage(err, "Payment verification failed. Please check My Bookings.")
                     )
                 }
                 refreshAuthenticatedAccountData()
-                onPaymentVerified()
             }
         }
     }

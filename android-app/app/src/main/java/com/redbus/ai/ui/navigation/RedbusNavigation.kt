@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -29,12 +30,22 @@ import com.redbus.ai.ui.viewmodel.RedbusViewModel
 
 sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVector? = null) {
     data object Home : ScreenRoute("home", "Home", Icons.Default.Home)
-    data object AiCopilot : ScreenRoute("ai_copilot", "AI Copilot", Icons.Default.AutoAwesome)
+    data object SearchResults : ScreenRoute("search_results", "Buses", Icons.Default.DirectionsBus)
     data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
+    data object AiCopilot : ScreenRoute("ai_copilot", "AI Help", Icons.Default.AutoAwesome)
     data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
-    data object SearchResults : ScreenRoute("search_results", "Search Results")
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
     data object Checkout : ScreenRoute("checkout", "Checkout")
+}
+
+private fun navigateToTab(navController: NavHostController, tabRoute: String) {
+    navController.navigate(tabRoute) {
+        popUpTo(navController.graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
 }
 
 @Composable
@@ -46,54 +57,52 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
 
     val bottomNavTabs = listOf(
         ScreenRoute.Home,
-        ScreenRoute.AiCopilot,
+        ScreenRoute.SearchResults,
         ScreenRoute.MyTrips,
+        ScreenRoute.AiCopilot,
         ScreenRoute.Profile
     )
-    val showBottomBar = currentRoute in bottomNavTabs.map { it.route }
+
+    // Keep the Bottom Navigation Bar visible across all tabs; highlight "Buses" during seat/checkout flow
+    val activeTabRoute = when (currentRoute) {
+        ScreenRoute.SeatSelection.route, ScreenRoute.Checkout.route -> ScreenRoute.SearchResults.route
+        else -> currentRoute ?: ScreenRoute.Home.route
+    }
 
     RedBusAITheme(darkTheme = uiState.isDarkTheme) {
         Scaffold(
             bottomBar = {
-                if (showBottomBar) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 10.dp
-                    ) {
-                        bottomNavTabs.forEach { tab ->
-                            val selected = currentRoute == tab.route
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(tab.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                icon = {
-                                    tab.icon?.let {
-                                        Icon(imageVector = it, contentDescription = tab.label)
-                                    }
-                                },
-                                label = {
-                                    Text(
-                                        text = tab.label,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
-                                    )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Color.White,
-                                    selectedTextColor = RedbusCrimson,
-                                    indicatorColor = RedbusCrimson,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 10.dp
+                ) {
+                    bottomNavTabs.forEach { tab ->
+                        val selected = activeTabRoute == tab.route
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navigateToTab(navController, tab.route)
+                            },
+                            icon = {
+                                tab.icon?.let {
+                                    Icon(imageVector = it, contentDescription = tab.label)
+                                }
+                            },
+                            label = {
+                                Text(
+                                    text = tab.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
                                 )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = RedbusCrimson,
+                                indicatorColor = RedbusCrimson,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
+                        )
                     }
                 }
             }
@@ -105,43 +114,46 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 enterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(320)
-                    ) + fadeIn(animationSpec = tween(320))
+                        animationSpec = tween(280)
+                    ) + fadeIn(animationSpec = tween(280))
                 },
                 exitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(320)
-                    ) + fadeOut(animationSpec = tween(320))
+                        animationSpec = tween(280)
+                    ) + fadeOut(animationSpec = tween(280))
                 },
                 popEnterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(320)
-                    ) + fadeIn(animationSpec = tween(320))
+                        animationSpec = tween(280)
+                    ) + fadeIn(animationSpec = tween(280))
                 },
                 popExitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(320)
-                    ) + fadeOut(animationSpec = tween(320))
+                        animationSpec = tween(280)
+                    ) + fadeOut(animationSpec = tween(280))
                 }
             ) {
                 composable(ScreenRoute.Home.route) {
                     HomeScreen(
                         uiState = uiState,
                         onSwapCities = viewModel::swapCities,
+                        onSelectSourceCity = viewModel::selectSourceCity,
+                        onSelectDestinationCity = viewModel::selectDestinationCity,
                         onSelectCities = viewModel::updateCities,
+                        onSearchCities = viewModel::searchCities,
                         onSelectDate = viewModel::updateTravelDate,
                         onNlpQueryChange = viewModel::updateNlpQuery,
                         onExecuteNlpSearch = {
                             viewModel.executeAiNlpSearch {
-                                navController.navigate(ScreenRoute.SearchResults.route)
+                                navigateToTab(navController, ScreenRoute.SearchResults.route)
                             }
                         },
                         onSearchBuses = {
                             viewModel.performSearch {
-                                navController.navigate(ScreenRoute.SearchResults.route)
+                                navigateToTab(navController, ScreenRoute.SearchResults.route)
                             }
                         },
                         onQuickRouteClick = { route ->
@@ -150,7 +162,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             }
                         },
                         onNavigateToAccount = {
-                            navController.navigate(ScreenRoute.Profile.route)
+                            navigateToTab(navController, ScreenRoute.Profile.route)
                         },
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
@@ -166,7 +178,9 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 navController.navigate(ScreenRoute.SeatSelection.route)
                             }
                         },
-                        onBack = { navController.popBackStack() }
+                        onBack = {
+                            navigateToTab(navController, ScreenRoute.Home.route)
+                        }
                     )
                 }
 
@@ -199,22 +213,18 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onConfirmAndPay = {
                             viewModel.initiateBookingAndRazorpayOrder(
                                 onWalletInstantConfirm = {
-                                    navController.navigate(ScreenRoute.MyTrips.route) {
-                                        popUpTo(ScreenRoute.Home.route)
-                                    }
+                                    navigateToTab(navController, ScreenRoute.MyTrips.route)
                                 }
                             )
                         },
-                        onCompleteRazorpayPayment = { paymentId, signature ->
-                            viewModel.completeRazorpayPayment(paymentId, signature) {
-                                navController.navigate(ScreenRoute.MyTrips.route) {
-                                    popUpTo(ScreenRoute.Home.route)
-                                }
+                        onCompleteRazorpayPayment = { orderId, paymentId, signature ->
+                            viewModel.completeRazorpayPayment(orderId, paymentId, signature) {
+                                navigateToTab(navController, ScreenRoute.MyTrips.route)
                             }
                         },
                         onDismissRazorpayModal = viewModel::dismissRazorpayModal,
                         onNavigateToAuth = {
-                            navController.navigate(ScreenRoute.Profile.route)
+                            navigateToTab(navController, ScreenRoute.Profile.route)
                         },
                         onBack = { navController.popBackStack() }
                     )
@@ -235,7 +245,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onCancelBooking = viewModel::cancelLiveBooking,
                         onEmailTicket = viewModel::emailTicket,
                         onNavigateToLogin = {
-                            navController.navigate(ScreenRoute.Profile.route)
+                            navigateToTab(navController, ScreenRoute.Profile.route)
                         }
                     )
                 }

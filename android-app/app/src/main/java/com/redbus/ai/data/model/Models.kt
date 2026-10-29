@@ -159,6 +159,14 @@ data class CityPair(
     val minPrice: Double = 0.0
 )
 
+data class AiCityItem(
+    val name: String = "",
+    val state: String = "",
+    val tag: String = "",
+    val aliases: List<String>? = emptyList(),
+    val activeRoutesCount: Int = 0
+)
+
 data class PassengerInput(
     val seatId: Int,
     val seatNumber: String,

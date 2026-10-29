@@ -52,6 +52,12 @@ interface RedbusApiService {
     @GET("routes/cities")
     suspend fun getAvailableCities(): List<String>
 
+    @GET("ai/cities/search")
+    suspend fun searchCitiesWithAi(
+        @Query("query") query: String = "",
+        @Query("exclude") exclude: String = ""
+    ): List<AiCityItem>
+
     @GET("ai/recommendations")
     suspend fun getAiRecommendations(
         @Query("userId") userId: Int? = null,

@@ -59,6 +59,11 @@ class RedbusRepository(
         runCatching { api.getAvailableCities() }
     }
 
+    suspend fun searchCitiesWithAi(query: String = "", exclude: String = ""): Result<List<AiCityItem>> =
+        withContext(Dispatchers.IO) {
+            runCatching { api.searchCitiesWithAi(query = query.trim(), exclude = exclude.trim()) }
+        }
+
     suspend fun getAiRecommendations(userId: Int?): Result<AiRecommendationsResponse> =
         withContext(Dispatchers.IO) {
             runCatching { api.getAiRecommendations(userId = userId) }
