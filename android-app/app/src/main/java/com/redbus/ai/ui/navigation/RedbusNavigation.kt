@@ -4,7 +4,15 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -70,7 +78,23 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
     }
 
     RedBusAITheme(darkTheme = uiState.isDarkTheme) {
+        val statusBarBackground = when {
+            uiState.isDarkTheme -> MaterialTheme.colorScheme.background
+            activeTabRoute == ScreenRoute.Home.route -> Color(0xFFFFF8EE)
+            else -> MaterialTheme.colorScheme.surface
+        }
+
         Scaffold(
+            topBar = {
+                // Dedicated Status Bar Cutout so time, signal, Wi-Fi & battery are always visible
+                // in both Light Mode (dark status bar icons) and Dark Mode (white status bar icons)
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsTopHeight(WindowInsets.statusBars)
+                        .background(statusBarBackground)
+                )
+            },
             bottomBar = {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -114,26 +138,38 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 enterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(280)
-                    ) + fadeIn(animationSpec = tween(280))
+                        animationSpec = tween(300)
+                    ) + scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
                 },
                 exitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(280)
-                    ) + fadeOut(animationSpec = tween(280))
+                        animationSpec = tween(300)
+                    ) + scaleOut(
+                        targetScale = 0.94f,
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
                 },
                 popEnterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(280)
-                    ) + fadeIn(animationSpec = tween(280))
+                        animationSpec = tween(300)
+                    ) + scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
                 },
                 popExitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(280)
-                    ) + fadeOut(animationSpec = tween(280))
+                        animationSpec = tween(300)
+                    ) + scaleOut(
+                        targetScale = 0.94f,
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
                 }
             ) {
                 composable(ScreenRoute.Home.route) {
@@ -180,6 +216,10 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             viewModel.selectRouteForSeats(route) {
                                 navController.navigate(ScreenRoute.SeatSelection.route)
                             }
+                        },
+                        onUpdateTravelDate = { newDate ->
+                            viewModel.updateTravelDate(newDate)
+                            viewModel.performSearch()
                         },
                         onBack = {
                             navigateToTab(navController, ScreenRoute.Home.route)

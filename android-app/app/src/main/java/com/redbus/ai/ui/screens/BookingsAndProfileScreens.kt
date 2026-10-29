@@ -5,6 +5,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -333,6 +340,14 @@ private fun BookingTicketCard(
     onEmailClick: () -> Unit
 ) {
     val isConfirmed = booking.status == "CONFIRMED"
+    val cardScale = remember { Animatable(0.95f) }
+    val cardRotX = remember { Animatable(8f) }
+    LaunchedEffect(booking.pnr) {
+        cardScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+    }
+    LaunchedEffect(booking.pnr) {
+        cardRotX.animateTo(0f, tween(340, easing = FastOutSlowInEasing))
+    }
 
     Card(
         onClick = onViewTicketClick,
@@ -341,6 +356,12 @@ private fun BookingTicketCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale.value
+                scaleY = cardScale.value
+                rotationX = cardRotX.value
+                cameraDistance = 14f * density
+            }
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
     ) {
         Column(
@@ -523,11 +544,20 @@ private fun ViewTicketDetailsModal(
         }
     }
 
+    val ticketRotX = remember { Animatable(-16f) }
+    val ticketScale = remember { Animatable(0.88f) }
+    LaunchedEffect(Unit) {
+        ticketRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+    }
+    LaunchedEffect(Unit) {
+        ticketScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            decorFitsSystemWindows = true
         )
     ) {
         val backdropColor = Color(0xFF1C1C1E)
@@ -535,7 +565,9 @@ private fun ViewTicketDetailsModal(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backdropColor.copy(alpha = 0.92f))
-                .padding(horizontal = 18.dp, vertical = 20.dp)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -571,12 +603,19 @@ private fun ViewTicketDetailsModal(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Main Perforated Ticket Card (Matching Image 5)
+                    // Main Perforated Ticket Card (Matching Image 5) with 3D Unfold Animation
                     Card(
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                rotationX = ticketRotX.value
+                                scaleX = ticketScale.value
+                                scaleY = ticketScale.value
+                                cameraDistance = 16f * density
+                            }
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // 1. Top Crimson Header (Source -> Duration -> Destination)
@@ -1085,6 +1124,7 @@ fun ProfileAndWalletScreen(
     val user = uiState.user
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddTravellerDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmModal by remember { mutableStateOf(false) }
 
     var editName by remember(user.name) { mutableStateOf(user.name) }
     var editPhone by remember(user.phone) { mutableStateOf(user.phone.orEmpty()) }
@@ -1389,7 +1429,7 @@ fun ProfileAndWalletScreen(
                     HorizontalDivider()
 
                     OutlinedButton(
-                        onClick = onLogout,
+                        onClick = { showLogoutConfirmModal = true },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
                         contentPadding = PaddingValues(vertical = 14.dp),
@@ -1398,6 +1438,111 @@ fun ProfileAndWalletScreen(
                         Icon(imageVector = Icons.Default.Logout, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Sign Out of redBus AI", fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLogoutConfirmModal) {
+        val modalScale = remember { Animatable(0.85f) }
+        val modalRotX = remember { Animatable(-14f) }
+        LaunchedEffect(Unit) {
+            modalScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+        }
+        LaunchedEffect(Unit) {
+            modalRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+        }
+
+        Dialog(
+            onDismissRequest = { showLogoutConfirmModal = false }
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = modalScale.value
+                        scaleY = modalScale.value
+                        rotationX = modalRotX.value
+                        cameraDistance = 14f * density
+                    }
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = RedbusCrimson.copy(alpha = 0.14f),
+                        modifier = Modifier.size(60.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = "Sign Out",
+                                tint = RedbusCrimson,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Sign Out of redBus AI?",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = "Are you sure you want to sign out of ${user.email}? Your wallet balance, saved travellers, and bookings will stay synced when you log back in.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showLogoutConfirmModal = false },
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(vertical = 13.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                showLogoutConfirmModal = false
+                                onLogout()
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedbusCrimson,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(vertical = 13.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Yes, Sign Out",
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                 }
             }

@@ -1,7 +1,16 @@
 package com.redbus.ai.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -79,9 +89,28 @@ fun HomeScreen(
     var swapRotationCount by remember { mutableIntStateOf(0) }
     val rotationAngle by animateFloatAsState(
         targetValue = swapRotationCount * 180f,
-        animationSpec = tween(durationMillis = 350),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "swapRotation"
     )
+    val swapFlipX = remember { Animatable(0f) }
+    LaunchedEffect(swapRotationCount) {
+        if (swapRotationCount > 0) {
+            swapFlipX.snapTo(-18f)
+            swapFlipX.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+            )
+        }
+    }
+
+    val heroCardRotX = remember { Animatable(12f) }
+    val heroCardScale = remember { Animatable(0.95f) }
+    LaunchedEffect(Unit) {
+        heroCardRotX.animateTo(0f, tween(420, easing = FastOutSlowInEasing))
+    }
+    LaunchedEffect(Unit) {
+        heroCardScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+    }
 
     val todayStr = remember { LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) }
     val tomorrowStr = remember { LocalDate.now().plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE) }
@@ -287,14 +316,21 @@ fun HomeScreen(
                         color = if (uiState.isDarkTheme) Color.White else Color(0xFF111827)
                     )
 
-                    // Main Search Card with Navy "Lowest price guaranteed*" Header (Matching Image 2)
+                    // Main Search Card with Navy "Lowest price guaranteed*" Header & 3D Entrance Animation
                     Card(
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = Color(0xFF17377B) // Navy header background
                         ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                rotationX = heroCardRotX.value
+                                scaleX = heroCardScale.value
+                                scaleY = heroCardScale.value
+                                cameraDistance = 16f * density
+                            }
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // Top Navy Strip: "Lowest price guaranteed*"
@@ -319,9 +355,16 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    // From & To Section with Overlapping Dark Swap Circle Button
+                                    // From & To Section with Overlapping Dark Swap Circle Button & 3D Flip
                                     Box(modifier = Modifier.fillMaxWidth()) {
-                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .graphicsLayer {
+                                                    rotationX = swapFlipX.value
+                                                    cameraDistance = 14f * density
+                                                }
+                                        ) {
                                             // FROM Row
                                             Row(
                                                 modifier = Modifier
@@ -1000,16 +1043,42 @@ private fun ServiceCategoryTile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "category3d")
+    val floatOffsetY by infiniteTransition.animateFloat(
+        initialValue = -1.5f,
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "floatOffsetY"
+    )
+    val rotY by infiniteTransition.animateFloat(
+        initialValue = if (selected) -4f else 0f,
+        targetValue = if (selected) 4f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rotY"
+    )
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = Color.White,
-        shadowElevation = if (selected) 5.dp else 2.dp,
-        modifier = modifier.border(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) RedbusCrimson.copy(alpha = 0.5f) else Color(0xFFE2E8F0),
-            shape = RoundedCornerShape(16.dp)
-        )
+        shadowElevation = if (selected) 6.dp else 2.dp,
+        modifier = modifier
+            .graphicsLayer {
+                translationY = if (selected) floatOffsetY else 0f
+                rotationY = rotY
+                cameraDistance = 12f * density
+            }
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) RedbusCrimson.copy(alpha = 0.5f) else Color(0xFFE2E8F0),
+                shape = RoundedCornerShape(16.dp)
+            )
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),

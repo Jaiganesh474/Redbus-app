@@ -61,8 +61,15 @@ fun RedBusAITheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = RedbusCrimson.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            val statusBarBg = if (darkTheme) DarkBackground else LightBackground
+            val navBarBg = if (darkTheme) DarkSurface else LightSurface
+            window.statusBarColor = statusBarBg.toArgb()
+            window.navigationBarColor = navBarBg.toArgb()
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            // In Light Mode (!darkTheme), use dark status bar icons/text so time, signal & battery are clearly visible.
+            // In Dark Mode (darkTheme), use light/white status bar icons/text.
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

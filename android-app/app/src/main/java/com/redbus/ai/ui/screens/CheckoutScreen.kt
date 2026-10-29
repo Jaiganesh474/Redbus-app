@@ -127,6 +127,7 @@ fun CheckoutScreen(
                         )
                     }
                 },
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RedbusCrimson)
             )
         },
@@ -596,14 +597,20 @@ private fun RazorpayOfficialTestPageModal(
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     var isLoadingGateway by remember { mutableStateOf(true) }
     var gatewayError by remember { mutableStateOf<String?>(null) }
+    var activePopupUrl by remember { mutableStateOf<String?>(null) }
+    var popupWebViewRef by remember { mutableStateOf<WebView?>(null) }
+    var containerRef by remember { mutableStateOf<FrameLayout?>(null) }
+    var hasCompletedCallback by remember(payment.orderId) { mutableStateOf(false) }
 
-    val checkoutHtml = remember(payment) {
+    val effectiveKeyId = payment.keyId.ifBlank { "rzp_test_TdqUpSHbhNlafI" }
+
+    val checkoutHtml = remember(payment, effectiveKeyId) {
         val safeName = JSONObject.quote(payment.passengerName)
         val safeEmail = JSONObject.quote(payment.contactEmail)
         val safePhone = JSONObject.quote(payment.contactPhone)
         val safePnr = JSONObject.quote(payment.pnr)
         val safeOrderId = JSONObject.quote(payment.orderId)
-        val safeKey = JSONObject.quote(payment.keyId)
+        val safeKey = JSONObject.quote(effectiveKeyId)
 
         """
         <!DOCTYPE html>
@@ -627,6 +634,37 @@ private fun RazorpayOfficialTestPageModal(
         </head>
         <body>
             <script>
+                var paymentHandled = false;
+
+                // Relay any postMessage from Razorpay Test Bank popup to all child iframes and check for direct success/failure
+                window.addEventListener('message', function(event) {
+                    try {
+                        for (var i = 0; i < window.frames.length; i++) {
+                            try {
+                                window.frames[i].postMessage(event.data, '*');
+                            } catch (fe) {}
+                        }
+                        var payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                        if (payload) {
+                            var resp = payload.response || payload.data || payload;
+                            if (resp && resp.razorpay_payment_id && resp.razorpay_signature && !paymentHandled) {
+                                paymentHandled = true;
+                                if (window.RazorpayBridge) {
+                                    window.RazorpayBridge.onPaymentSuccess(
+                                        resp.razorpay_order_id || $safeOrderId,
+                                        resp.razorpay_payment_id,
+                                        resp.razorpay_signature
+                                    );
+                                }
+                            } else if (resp && resp.error && resp.error.description) {
+                                if (window.RazorpayBridge) {
+                                    window.RazorpayBridge.onGatewayError(resp.error.description);
+                                }
+                            }
+                        }
+                    } catch (err) {}
+                }, false);
+
                 function launchRazorpay() {
                     if (typeof window.Razorpay === 'undefined') {
                         if (window.RazorpayBridge) {
@@ -653,7 +691,8 @@ private fun RazorpayOfficialTestPageModal(
                             color: "#d84e55"
                         },
                         handler: function (response) {
-                            if (window.RazorpayBridge) {
+                            if (!paymentHandled && window.RazorpayBridge) {
+                                paymentHandled = true;
                                 window.RazorpayBridge.onPaymentSuccess(
                                     response.razorpay_order_id || $safeOrderId,
                                     response.razorpay_payment_id || "",
@@ -663,7 +702,7 @@ private fun RazorpayOfficialTestPageModal(
                         },
                         modal: {
                             ondismiss: function () {
-                                if (window.RazorpayBridge) {
+                                if (!paymentHandled && window.RazorpayBridge) {
                                     window.RazorpayBridge.onPaymentDismissed();
                                 }
                             }
@@ -672,7 +711,9 @@ private fun RazorpayOfficialTestPageModal(
                     try {
                         var rzp = new window.Razorpay(options);
                         rzp.on('payment.failed', function (resp) {
-                            var desc = (resp && resp.error && resp.error.description) ? resp.error.description : "Payment failed in Razorpay.";
+                            var desc = (resp && resp.error && resp.error.description)
+                                ? resp.error.description
+                                : "Payment was declined in Razorpay Test Mode. You can retry or select Success.";
                             if (window.RazorpayBridge) {
                                 window.RazorpayBridge.onGatewayError(desc);
                             }
@@ -688,7 +729,7 @@ private fun RazorpayOfficialTestPageModal(
                     }
                 }
                 window.onload = function() {
-                    setTimeout(launchRazorpay, 100);
+                    setTimeout(launchRazorpay, 120);
                 };
             </script>
         </body>
@@ -700,219 +741,483 @@ private fun RazorpayOfficialTestPageModal(
         onDismissRequest = { if (!isVerifying) onDismiss() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            decorFitsSystemWindows = true
         )
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { context ->
-                    val container = FrameLayout(context).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    }
-
-                    val primaryWebView = WebView(context).apply {
-                        layoutParams = FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
-                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            databaseEnabled = true
-                            javaScriptCanOpenWindowsAutomatically = true
-                            setSupportMultipleWindows(true)
-                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                            loadWithOverviewMode = true
-                            useWideViewPort = true
+            // When the Razorpay Test Bank Popup (`api.razorpay.com/v1/gateway/mocksharp/payment`) is open,
+            // show the exact Test Bank URL bar + Test Mode badge at the top (matching Image 4)
+            if (activePopupUrl != null) {
+                Surface(
+                    color = Color(0xFF1E293B),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF34D399),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = activePopupUrl ?: "api.razorpay.com/v1/gateway/mocksharp/payment",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
                         }
 
-                        CookieManager.getInstance().setAcceptCookie(true)
-                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                        Spacer(modifier = Modifier.width(8.dp))
 
-                        addJavascriptInterface(
-                            object {
-                                @JavascriptInterface
-                                fun onGatewayReady() {
-                                    mainHandler.post { isLoadingGateway = false }
-                                }
+                        Surface(
+                            color = RedbusCrimson,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "TEST MODE",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            )
+                        }
 
-                                @JavascriptInterface
-                                fun onPaymentSuccess(orderId: String, paymentId: String, signature: String) {
-                                    mainHandler.post {
-                                        onPaymentSuccess(orderId, paymentId, signature)
-                                    }
+                        IconButton(
+                            onClick = {
+                                popupWebViewRef?.let { pop ->
+                                    containerRef?.removeView(pop)
+                                    pop.destroy()
                                 }
-
-                                @JavascriptInterface
-                                fun onPaymentDismissed() {
-                                    mainHandler.post {
-                                        if (!isVerifying) onDismiss()
-                                    }
-                                }
-
-                                @JavascriptInterface
-                                fun onGatewayError(message: String) {
-                                    mainHandler.post {
-                                        isLoadingGateway = false
-                                        gatewayError = message
-                                    }
-                                }
+                                popupWebViewRef = null
+                                activePopupUrl = null
                             },
-                            "RazorpayBridge"
-                        )
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Test Bank Window",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                return false
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { context ->
+                        val container = FrameLayout(context).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        }
+                        containerRef = container
+
+                        lateinit var primaryWebView: WebView
+
+                        val bridgeObject = object {
+                            @JavascriptInterface
+                            fun onGatewayReady() {
+                                mainHandler.post { isLoadingGateway = false }
+                            }
+
+                            @JavascriptInterface
+                            fun onPaymentSuccess(orderId: String, paymentId: String, signature: String) {
+                                mainHandler.post {
+                                    if (!hasCompletedCallback && paymentId.isNotBlank() && signature.isNotBlank()) {
+                                        hasCompletedCallback = true
+                                        popupWebViewRef?.let { pop ->
+                                            container.removeView(pop)
+                                        }
+                                        popupWebViewRef = null
+                                        activePopupUrl = null
+                                        onPaymentSuccess(
+                                            orderId.ifBlank { payment.orderId },
+                                            paymentId,
+                                            signature
+                                        )
+                                    }
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onPaymentDismissed() {
+                                mainHandler.post {
+                                    if (!isVerifying && !hasCompletedCallback) onDismiss()
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onGatewayError(message: String) {
+                                mainHandler.post {
+                                    isLoadingGateway = false
+                                    popupWebViewRef?.let { pop ->
+                                        container.removeView(pop)
+                                    }
+                                    popupWebViewRef = null
+                                    activePopupUrl = null
+                                    gatewayError = message
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onForwardPopupMessage(rawJson: String) {
+                                mainHandler.post {
+                                    val quoted = JSONObject.quote(rawJson)
+                                    primaryWebView.evaluateJavascript(
+                                        """
+                                        (function() {
+                                            try {
+                                                var msg = $quoted;
+                                                window.postMessage(msg, '*');
+                                                for (var i = 0; i < window.frames.length; i++) {
+                                                    try { window.frames[i].postMessage(msg, '*'); } catch(e) {}
+                                                }
+                                            } catch(e) {}
+                                        })();
+                                        """.trimIndent(),
+                                        null
+                                    )
+                                }
                             }
                         }
 
-                        // Support Razorpay Test Bank Popup Windows (Success / Failure test page)
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onCreateWindow(
-                                view: WebView?,
-                                isDialog: Boolean,
-                                isUserGesture: Boolean,
-                                resultMsg: Message?
-                            ): Boolean {
-                                val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
-                                val popupWebView = WebView(context).apply {
-                                    layoutParams = FrameLayout.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    settings.apply {
-                                        javaScriptEnabled = true
-                                        domStorageEnabled = true
-                                        databaseEnabled = true
-                                        javaScriptCanOpenWindowsAutomatically = true
-                                        setSupportMultipleWindows(true)
-                                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        primaryWebView = WebView(context).apply {
+                            layoutParams = FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                databaseEnabled = true
+                                javaScriptCanOpenWindowsAutomatically = true
+                                setSupportMultipleWindows(true)
+                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                loadWithOverviewMode = true
+                                useWideViewPort = true
+                                // Strip Android WebView '; wv' marker so Razorpay checkout.js runs in standard web mode
+                                // and opens https://api.razorpay.com/v1/gateway/mocksharp/payment (Success / Failure test page)
+                                userAgentString = userAgentString
+                                    .replace("; wv", "")
+                                    .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+                            }
+
+                            CookieManager.getInstance().setAcceptCookie(true)
+                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                            addJavascriptInterface(bridgeObject, "RazorpayBridge")
+
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: WebResourceRequest?
+                                ): Boolean {
+                                    val url = request?.url?.toString().orEmpty()
+                                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                                        return false
                                     }
-                                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                    webViewClient = WebViewClient()
-                                    webChromeClient = object : WebChromeClient() {
-                                        override fun onCloseWindow(window: WebView?) {
-                                            mainHandler.post {
-                                                container.removeView(this@apply)
+                                    return true
+                                }
+                            }
+
+                            // Support Razorpay Test Bank Popup Windows (api.razorpay.com/v1/gateway/mocksharp/payment)
+                            webChromeClient = object : WebChromeClient() {
+                                override fun onCreateWindow(
+                                    view: WebView?,
+                                    isDialog: Boolean,
+                                    isUserGesture: Boolean,
+                                    resultMsg: Message?
+                                ): Boolean {
+                                    val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                                    val popupWebView = WebView(context).apply {
+                                        layoutParams = FrameLayout.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.MATCH_PARENT
+                                        )
+                                        setBackgroundColor(android.graphics.Color.WHITE)
+                                        settings.apply {
+                                            javaScriptEnabled = true
+                                            domStorageEnabled = true
+                                            databaseEnabled = true
+                                            javaScriptCanOpenWindowsAutomatically = true
+                                            setSupportMultipleWindows(true)
+                                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                            loadWithOverviewMode = true
+                                            useWideViewPort = true
+                                            builtInZoomControls = true
+                                            displayZoomControls = false
+                                            userAgentString = userAgentString
+                                                .replace("; wv", "")
+                                                .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+                                        }
+                                        CookieManager.getInstance().setAcceptCookie(true)
+                                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                        addJavascriptInterface(bridgeObject, "RazorpayBridge")
+
+                                        webViewClient = object : WebViewClient() {
+                                            override fun shouldOverrideUrlLoading(
+                                                v: WebView?,
+                                                req: WebResourceRequest?
+                                            ): Boolean {
+                                                val targetUrl = req?.url?.toString().orEmpty()
+                                                if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+                                                    mainHandler.post { activePopupUrl = targetUrl }
+                                                    return false
+                                                }
+                                                return true
+                                            }
+
+                                            override fun onPageStarted(
+                                                v: WebView?,
+                                                url: String?,
+                                                favicon: android.graphics.Bitmap?
+                                            ) {
+                                                super.onPageStarted(v, url, favicon)
+                                                if (!url.isNullOrBlank() && url != "about:blank") {
+                                                    mainHandler.post { activePopupUrl = url }
+                                                }
+                                            }
+
+                                            override fun onPageFinished(v: WebView?, url: String?) {
+                                                super.onPageFinished(v, url)
+                                                if (!url.isNullOrBlank() && url != "about:blank") {
+                                                    mainHandler.post { activePopupUrl = url }
+                                                }
+                                                // Hook window.opener.postMessage and inspect Razorpay callback response
+                                                // so clicking 'Success' or 'Failure' on Razorpay Software Private Ltd Bank always completes
+                                                v?.evaluateJavascript(
+                                                    """
+                                                    (function() {
+                                                        try {
+                                                            if (window.opener && !window.__rzpOpenerHooked) {
+                                                                window.__rzpOpenerHooked = true;
+                                                                var origPost = window.opener.postMessage.bind(window.opener);
+                                                                window.opener.postMessage = function(msg, targetOrigin) {
+                                                                    try {
+                                                                        var str = typeof msg === 'string' ? msg : JSON.stringify(msg);
+                                                                        if (window.RazorpayBridge) {
+                                                                            window.RazorpayBridge.onForwardPopupMessage(str);
+                                                                        }
+                                                                    } catch(e) {}
+                                                                    return origPost(msg, targetOrigin);
+                                                                };
+                                                            }
+                                                            var htmlText = document.documentElement ? document.documentElement.innerHTML : '';
+                                                            if (htmlText.indexOf('razorpay_payment_id') !== -1 && htmlText.indexOf('razorpay_signature') !== -1) {
+                                                                var payMatch = htmlText.match(/"razorpay_payment_id"\s*:\s*"([^"]+)"/);
+                                                                var ordMatch = htmlText.match(/"razorpay_order_id"\s*:\s*"([^"]+)"/);
+                                                                var sigMatch = htmlText.match(/"razorpay_signature"\s*:\s*"([^"]+)"/);
+                                                                if (payMatch && sigMatch && window.RazorpayBridge) {
+                                                                    var payloadObj = {
+                                                                        razorpay_payment_id: payMatch[1],
+                                                                        razorpay_order_id: ordMatch ? ordMatch[1] : '',
+                                                                        razorpay_signature: sigMatch[1]
+                                                                    };
+                                                                    window.RazorpayBridge.onForwardPopupMessage(JSON.stringify(payloadObj));
+                                                                    setTimeout(function() {
+                                                                        if (window.RazorpayBridge) {
+                                                                            window.RazorpayBridge.onPaymentSuccess(
+                                                                                payloadObj.razorpay_order_id,
+                                                                                payloadObj.razorpay_payment_id,
+                                                                                payloadObj.razorpay_signature
+                                                                            );
+                                                                        }
+                                                                    }, 350);
+                                                                }
+                                                            } else if (htmlText.indexOf('"error"') !== -1 && htmlText.indexOf('"description"') !== -1 && htmlText.indexOf('Welcome to Razorpay') === -1) {
+                                                                var errMatch = htmlText.match(/"description"\s*:\s*"([^"]+)"/);
+                                                                if (errMatch && window.RazorpayBridge) {
+                                                                    setTimeout(function() {
+                                                                        window.RazorpayBridge.onGatewayError(errMatch[1]);
+                                                                    }, 350);
+                                                                }
+                                                            }
+                                                        } catch(e) {}
+                                                    })();
+                                                    """.trimIndent(),
+                                                    null
+                                                )
+                                            }
+                                        }
+
+                                        webChromeClient = object : WebChromeClient() {
+                                            override fun onCloseWindow(window: WebView?) {
+                                                mainHandler.post {
+                                                    container.removeView(this@apply)
+                                                    if (popupWebViewRef == this@apply) {
+                                                        popupWebViewRef = null
+                                                        activePopupUrl = null
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+                                    popupWebViewRef = popupWebView
+                                    activePopupUrl = "https://api.razorpay.com/v1/gateway/mocksharp/payment?key_id=$effectiveKeyId"
+                                    container.addView(popupWebView)
+                                    transport.webView = popupWebView
+                                    resultMsg.sendToTarget()
+                                    return true
                                 }
-                                container.addView(popupWebView)
-                                transport.webView = popupWebView
-                                resultMsg.sendToTarget()
-                                return true
                             }
-                        }
 
-                        loadDataWithBaseURL(
-                            "https://www.redbusai.app",
-                            checkoutHtml,
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
-                    }
-
-                    container.addView(primaryWebView)
-                    container
-                }
-            )
-
-            if (isLoadingGateway && gatewayError == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CircularProgressIndicator(color = RedbusCrimson)
-                            Text(
-                                text = "Opening Razorpay Test Page...",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp
+                            loadDataWithBaseURL(
+                                "https://www.redbusai.app",
+                                checkoutHtml,
+                                "text/html",
+                                "UTF-8",
+                                null
                             )
                         }
-                    }
-                }
-            }
 
-            gatewayError?.let { err ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        container.addView(primaryWebView)
+                        container
+                    }
+                )
+
+                if (isLoadingGateway && gatewayError == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-                            Text(
-                                text = err,
-                                color = RedbusCrimson,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Button(
-                                onClick = onDismiss,
-                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text("Close", fontWeight = FontWeight.Bold)
+                                CircularProgressIndicator(color = RedbusCrimson)
+                                Text(
+                                    text = "Opening Razorpay Test Page...",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }
                 }
-            }
 
-            if (isVerifying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.72f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                gatewayError?.let { err ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Card(
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-                            CircularProgressIndicator(color = RedbusCrimson)
-                            Text(
-                                text = "Verifying Payment & Issuing E-Ticket...",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp
-                            )
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = RedbusSoftTint,
+                                    modifier = Modifier.size(52.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.ErrorOutline,
+                                            contentDescription = null,
+                                            tint = RedbusCrimson,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Test Payment Failed",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 17.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = err,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    OutlinedButton(
+                                        onClick = onDismiss,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Cancel", fontWeight = FontWeight.Bold)
+                                    }
+                                    Button(
+                                        onClick = { gatewayError = null },
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Try Again", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isVerifying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.72f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                CircularProgressIndicator(color = RedbusCrimson)
+                                Text(
+                                    text = "Verifying Payment & Issuing E-Ticket...",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
                 }
