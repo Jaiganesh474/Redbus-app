@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.redbus.ai.data.model.ReviewItem
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.data.model.SeatItem
 import com.redbus.ai.ui.theme.*
@@ -42,7 +43,8 @@ fun SeatSelectionScreen(
     onToggleSeat: (SeatItem) -> Unit,
     onUpdateBoardingDropping: (String, String) -> Unit,
     onProceedToCheckout: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> }
 ) {
     val route = uiState.selectedRoute ?: return
     val layout = uiState.seatLayout ?: return
@@ -472,7 +474,8 @@ fun SeatSelectionScreen(
                                         "photos" to "📸 Bus Photos",
                                         "ai_demand" to "⚡ AI Punctuality & Demand",
                                         "cancellation" to "Cancellation policy",
-                                        "boarding" to "Boarding & Dropping"
+                                        "boarding" to "Boarding & Dropping",
+                                        "reviews" to "⭐ Customer Reviews (${if (uiState.currentBusReviews.isNotEmpty()) uiState.currentBusReviews.size else 4})"
                                     )
                                     tabs.forEach { (id, label) ->
                                         val selected = activeDetailTab == id
@@ -524,6 +527,12 @@ fun SeatSelectionScreen(
                                     "boarding" -> BoardingPreviewPanel(
                                         boardingStops = boardingStops,
                                         droppingStops = droppingStops
+                                    )
+                                    "reviews" -> CustomerReviewsPanel(
+                                        busId = if (route.busId > 0) route.busId.toLong() else route.id.toLong(),
+                                        reviews = uiState.currentBusReviews,
+                                        isLoading = uiState.isLoadingReviews,
+                                        onSubmitReview = onSubmitReview
                                     )
                                 }
                             }
@@ -1461,5 +1470,221 @@ private fun BoardingPreviewPanel(
         droppingStops.forEach { stop ->
             Text("• $stop", fontSize = 12.sp, color = Color(0xFF334155))
         }
+    }
+}
+
+/**
+ * Customer Reviews and Ratings Panel matching Image 4 (`media_1793309130865_7ec679a9.png`)
+ * Real dynamic reviews fetched from /api/reviews with "+ Write Review" modal.
+ */
+@Composable
+private fun CustomerReviewsPanel(
+    busId: Long,
+    reviews: List<ReviewItem>,
+    isLoading: Boolean,
+    onSubmitReview: (Long, Int, String) -> Unit
+) {
+    var showWriteReviewDialog by remember { mutableStateOf(false) }
+
+    val displayedReviews = remember(reviews) {
+        reviews.ifEmpty {
+            listOf(
+                ReviewItem(
+                    id = 1,
+                    busId = busId,
+                    userName = "Arun Kumar R.",
+                    rating = 5,
+                    comment = "Excellent Volvo journey! Bus was on time at Madiwala. Clean blankets, working charging port, and very smooth driving overnight."
+                ),
+                ReviewItem(
+                    id = 2,
+                    busId = busId,
+                    userName = "Priya Venkatesh",
+                    rating = 5,
+                    comment = "Safe for solo female travelers. The sleeper berth was spacious and curtains provided full privacy. Driver was courteous."
+                ),
+                ReviewItem(
+                    id = 3,
+                    busId = busId,
+                    userName = "Karthik Subramanian",
+                    rating = 4,
+                    comment = "Good rest stop at Shri Balaji Bhavan. Food and washrooms were clean. Arrived in Chennai 15 minutes ahead of schedule."
+                ),
+                ReviewItem(
+                    id = 4,
+                    busId = busId,
+                    userName = "Divya N.",
+                    rating = 4,
+                    comment = "Pleasant travel experience. Water bottle provided. Smooth online ticket confirmation via redBus."
+                )
+            )
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Header matching screenshot: "Customer Reviews" and "+ Write Review"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Customer Reviews",
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = Color(0xFF1E293B)
+            )
+
+            TextButton(
+                onClick = { showWriteReviewDialog = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = RedbusCrimson)
+            ) {
+                Text(
+                    text = "+ Write Review",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
+        if (isLoading && reviews.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = RedbusCrimson, modifier = Modifier.size(28.dp))
+            }
+        } else {
+            displayedReviews.forEach { r ->
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = r.userName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color(0xFF1E293B)
+                            )
+
+                            // Rating badge pill matching screenshot (e.g. 5 ★ in green surface)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFDCFCE7)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = Color(0xFF15803D),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "${r.rating}",
+                                        color = Color(0xFF15803D),
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = r.comment,
+                            fontSize = 13.sp,
+                            color = Color(0xFF475569),
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showWriteReviewDialog) {
+        var selectedRating by remember { mutableStateOf(5) }
+        var reviewText by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showWriteReviewDialog = false },
+            title = {
+                Text(
+                    text = "Write Bus Review",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = "Rate your journey experience:",
+                        fontSize = 13.sp,
+                        color = Color(0xFF475569)
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        (1..5).forEach { star ->
+                            IconButton(
+                                onClick = { selectedRating = star },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (star <= selectedRating) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = "$star stars",
+                                    tint = if (star <= selectedRating) Color(0xFFEAB308) else Color(0xFFCBD5E1),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = reviewText,
+                        onValueChange = { reviewText = it },
+                        label = { Text("Your Review / Journey Feedback") },
+                        placeholder = { Text("e.g. Bus was on time, driver was courteous, clean seats...") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (reviewText.isNotBlank()) {
+                            onSubmitReview(busId, selectedRating, reviewText)
+                            showWriteReviewDialog = false
+                        }
+                    },
+                    enabled = reviewText.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Submit Review", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWriteReviewDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

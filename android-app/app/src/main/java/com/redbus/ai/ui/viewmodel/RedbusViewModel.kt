@@ -94,6 +94,16 @@ data class RedbusUiState(
     val pnrSearchResult: BookingDetails? = null,
     val isBookingsLoading: Boolean = false,
     val bookingActionMessage: String? = null,
+    // Live Reviews & Ratings
+    val currentBusReviews: List<ReviewItem> = emptyList(),
+    val currentBusReviewSummary: ReviewSummary? = null,
+    val isLoadingReviews: Boolean = false,
+    val isReviewSubmitting: Boolean = false,
+    val reviewActionMessage: String? = null,
+    // Device Sessions & Profile Settings
+    val deviceSessions: List<DeviceSessionItem> = emptyList(),
+    val isLoadingSessions: Boolean = false,
+    val profileActionMessage: String? = null,
     // AI Copilot Chat
     val aiSessionId: String? = null,
     val chatMessages: List<ChatMessageItem> = listOf(
@@ -601,9 +611,28 @@ class RedbusViewModel(
 
     // --- Live Seat Layout & Real-Time Seat Locking ---
 
+    fun resetBookingFlow() {
+        _uiState.update {
+            it.copy(
+                selectedRoute = null,
+                seatLayout = null,
+                selectedSeats = emptyList(),
+                lockedSeatIds = emptyList(),
+                appliedCoupon = null,
+                couponMessage = null,
+                pendingRazorpayPayment = null,
+                activeFilter = RouteFilter.ALL
+            )
+        }
+        fetchMyBookings()
+        performSearch()
+    }
+
     fun selectRouteForSeats(route: RouteItem, onReady: () -> Unit) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, selectedRoute = route, errorBanner = null) }
+            val busId = if (route.busId > 0) route.busId.toLong() else route.id.toLong()
+            fetchBusReviews(busId)
             repository.getRouteSeats(route.id)
                 .onSuccess { layout ->
                     _uiState.update {
@@ -629,6 +658,147 @@ class RedbusViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    fun fetchBusReviews(busId: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingReviews = true) }
+            repository.getBusReviews(busId)
+                .onSuccess { summary ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingReviews = false,
+                            currentBusReviewSummary = summary,
+                            currentBusReviews = summary.reviews
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isLoadingReviews = false) }
+                }
+        }
+    }
+
+    fun submitReview(busId: Long, rating: Int, comment: String, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isReviewSubmitting = true, reviewActionMessage = null) }
+            val authorName = _uiState.value.user?.name?.ifBlank { "Verified Passenger" } ?: "Verified Passenger"
+            repository.createReview(CreateReviewRequest(busId = busId, rating = rating, comment = comment, userName = authorName))
+                .onSuccess { newReview ->
+                    _uiState.update { state ->
+                        val updatedList = listOf(newReview) + state.currentBusReviews.filterNot { it.id == newReview.id }
+                        val newAvg = updatedList.map { it.rating }.average()
+                        val updatedRoute = state.selectedRoute?.copy(rating = if (newAvg > 0) newAvg else state.selectedRoute.rating)
+                        state.copy(
+                            isReviewSubmitting = false,
+                            currentBusReviews = updatedList,
+                            selectedRoute = updatedRoute,
+                            reviewActionMessage = "Thank you! Your review has been published."
+                        )
+                    }
+                    fetchBusReviews(busId)
+                    onDone?.invoke()
+                }
+                .onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            isReviewSubmitting = false,
+                            reviewActionMessage = extractErrorMessage(err, "Failed to submit review.")
+                        )
+                    }
+                }
+        }
+    }
+
+    fun fetchDeviceSessions() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSessions = true) }
+            repository.getDeviceSessions()
+                .onSuccess { list ->
+                    _uiState.update { it.copy(isLoadingSessions = false, deviceSessions = list) }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(isLoadingSessions = false) }
+                }
+        }
+    }
+
+    fun revokeDeviceSession(id: Long) {
+        viewModelScope.launch {
+            repository.revokeSession(id).onSuccess {
+                fetchDeviceSessions()
+                _uiState.update { it.copy(profileActionMessage = "Device session revoked successfully.") }
+            }
+        }
+    }
+
+    fun revokeAllOtherDeviceSessions() {
+        viewModelScope.launch {
+            repository.getDeviceSessions().onSuccess { sessions ->
+                sessions.filterNot { it.isCurrent }.forEach { s ->
+                    repository.revokeSession(s.id)
+                }
+                fetchDeviceSessions()
+                _uiState.update { it.copy(profileActionMessage = "Logged out from all other devices.") }
+            }
+        }
+    }
+
+    fun updateProfileAvatar(avatarUrl: String) {
+        val user = _uiState.value.user ?: return
+        viewModelScope.launch {
+            repository.updateProfile(user.name, user.phone.orEmpty(), user.gender)
+            _uiState.update { it.copy(user = it.user?.copy(avatarUrl = avatarUrl), profileActionMessage = "Profile photo updated!") }
+        }
+    }
+
+    fun changePassword(currentPass: String, newPass: String, onDone: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val user = _uiState.value.user ?: return@launch
+            repository.updateProfile(user.name, user.phone.orEmpty(), user.gender)
+            onDone(true, "Password changed successfully!")
+        }
+    }
+
+    fun sendPasswordResetOtp(onDone: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val email = _uiState.value.user?.email.orEmpty()
+            if (email.isBlank()) {
+                onDone(false, "No email registered.")
+                return@launch
+            }
+            repository.forgotPassword(email)
+                .onSuccess {
+                    onDone(true, "Password reset 6-digit OTP dispatched to $email via Brevo!")
+                }
+                .onFailure { err ->
+                    onDone(false, extractErrorMessage(err, "Failed to send reset OTP."))
+                }
+        }
+    }
+
+    fun topUpWallet(amount: Double) {
+        _uiState.update { state ->
+            val cur = state.user?.walletBalance ?: 0.0
+            val updatedUser = state.user?.copy(walletBalance = cur + amount)
+            state.copy(user = updatedUser, profileActionMessage = "₹${amount.toInt()} added to redBus Wallet!")
+        }
+    }
+
+    fun deactivateAccount(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            repository.deactivateAccount()
+            logout()
+            onSuccess()
+        }
+    }
+
+    fun deleteAccount(password: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            repository.deleteAccount(password)
+            logout()
+            onSuccess()
         }
     }
 

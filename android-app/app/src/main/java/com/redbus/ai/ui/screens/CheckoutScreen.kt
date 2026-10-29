@@ -617,7 +617,7 @@ private fun RazorpayOfficialTestPageModal(
         <html>
         <head>
             <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
             <title>Razorpay Secure Checkout - redBus India</title>
             <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
             <style>
@@ -629,6 +629,11 @@ private fun RazorpayOfficialTestPageModal(
                     height: 100%;
                     background: transparent;
                     overflow: hidden;
+                    -webkit-text-size-adjust: 100%;
+                }
+                iframe {
+                    max-width: 100% !important;
+                    max-height: 100% !important;
                 }
             </style>
         </head>
@@ -920,14 +925,16 @@ private fun RazorpayOfficialTestPageModal(
                                 javaScriptCanOpenWindowsAutomatically = true
                                 setSupportMultipleWindows(true)
                                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                loadWithOverviewMode = true
-                                useWideViewPort = true
+                                loadWithOverviewMode = false
+                                useWideViewPort = false
+                                textZoom = 100
                                 // Strip Android WebView '; wv' marker so Razorpay checkout.js runs in standard web mode
                                 // and opens https://api.razorpay.com/v1/gateway/mocksharp/payment (Success / Failure test page)
                                 userAgentString = userAgentString
                                     .replace("; wv", "")
                                     .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
                             }
+                            setInitialScale(100)
 
                             CookieManager.getInstance().setAcceptCookie(true)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
@@ -969,14 +976,16 @@ private fun RazorpayOfficialTestPageModal(
                                             javaScriptCanOpenWindowsAutomatically = true
                                             setSupportMultipleWindows(true)
                                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                            loadWithOverviewMode = true
-                                            useWideViewPort = true
-                                            builtInZoomControls = true
+                                            loadWithOverviewMode = false
+                                            useWideViewPort = false
+                                            textZoom = 100
+                                            builtInZoomControls = false
                                             displayZoomControls = false
                                             userAgentString = userAgentString
                                                 .replace("; wv", "")
                                                 .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
                                         }
+                                        setInitialScale(100)
                                         CookieManager.getInstance().setAcceptCookie(true)
                                         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                         addJavascriptInterface(bridgeObject, "RazorpayBridge")

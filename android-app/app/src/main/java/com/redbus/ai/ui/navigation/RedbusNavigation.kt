@@ -105,7 +105,13 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                navigateToTab(navController, tab.route)
+                                if (tab.route == ScreenRoute.SearchResults.route &&
+                                    (currentRoute == ScreenRoute.SeatSelection.route || currentRoute == ScreenRoute.Checkout.route)
+                                ) {
+                                    navController.popBackStack(ScreenRoute.SearchResults.route, inclusive = false)
+                                } else {
+                                    navigateToTab(navController, tab.route)
+                                }
                             },
                             icon = {
                                 tab.icon?.let {
@@ -237,7 +243,10 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 navController.navigate(ScreenRoute.Checkout.route)
                             }
                         },
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onSubmitReview = { busId, rating, comment ->
+                            viewModel.submitReview(busId, rating, comment)
+                        }
                     )
                 }
 
@@ -256,12 +265,16 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onConfirmAndPay = {
                             viewModel.initiateBookingAndRazorpayOrder(
                                 onWalletInstantConfirm = {
+                                    viewModel.resetBookingFlow()
+                                    navController.popBackStack(ScreenRoute.SearchResults.route, inclusive = false)
                                     navigateToTab(navController, ScreenRoute.MyTrips.route)
                                 }
                             )
                         },
                         onCompleteRazorpayPayment = { orderId, paymentId, signature ->
                             viewModel.completeRazorpayPayment(orderId, paymentId, signature) {
+                                viewModel.resetBookingFlow()
+                                navController.popBackStack(ScreenRoute.SearchResults.route, inclusive = false)
                                 navigateToTab(navController, ScreenRoute.MyTrips.route)
                             }
                         },
@@ -307,7 +320,16 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onDeleteTraveller = viewModel::deleteTraveller,
                         onRefreshAccount = viewModel::refreshAuthenticatedAccountData,
                         onLogout = viewModel::logout,
-                        onToggleDarkTheme = viewModel::toggleDarkTheme
+                        onToggleDarkTheme = viewModel::toggleDarkTheme,
+                        onUpdateAvatar = viewModel::updateProfileAvatar,
+                        onChangePassword = viewModel::changePassword,
+                        onSendResetOtp = viewModel::sendPasswordResetOtp,
+                        onTopUpWallet = viewModel::topUpWallet,
+                        onFetchDeviceSessions = viewModel::fetchDeviceSessions,
+                        onRevokeDeviceSession = viewModel::revokeDeviceSession,
+                        onRevokeAllOtherSessions = viewModel::revokeAllOtherDeviceSessions,
+                        onDeactivateAccount = { viewModel.deactivateAccount { navController.navigate(ScreenRoute.Home.route) } },
+                        onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } }
                     )
                 }
             }

@@ -567,7 +567,7 @@ private fun ViewTicketDetailsModal(
                 .background(backdropColor.copy(alpha = 0.94f))
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -580,7 +580,7 @@ private fun ViewTicketDetailsModal(
                     shape = CircleShape,
                     color = Color(0xFF2C2C2E),
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(38.dp)
                         .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -588,25 +588,26 @@ private fun ViewTicketDetailsModal(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close Ticket",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Scrollable Middle Ticket Card Container (Keeps Share Button Always Pinned & Visible at Bottom)
+                // Scrollable Middle Ticket Card Container (fill = true guarantees middle height is constrained so Share Button is ALWAYS visible)
                 Box(
                     modifier = Modifier
-                        .weight(1f, fill = false)
+                        .weight(1f, fill = true)
+                        .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopCenter
                 ) {
                     // Main Perforated Ticket Card (Matching Image 5) with 3D Unfold Animation
                     Card(
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer {
@@ -622,7 +623,7 @@ private fun ViewTicketDetailsModal(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(RedbusCrimson)
-                                    .padding(horizontal = 20.dp, vertical = 22.dp)
+                                    .padding(horizontal = 16.dp, vertical = 14.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -631,19 +632,19 @@ private fun ViewTicketDetailsModal(
                                     // Left Vertical Timeline Column (↗ ─── ↘)
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(end = 12.dp)
+                                        modifier = Modifier.padding(end = 10.dp)
                                     ) {
                                         Surface(
                                             shape = CircleShape,
                                             color = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(16.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.NorthEast,
                                                     contentDescription = null,
                                                     tint = RedbusCrimson,
-                                                    modifier = Modifier.size(11.dp)
+                                                    modifier = Modifier.size(10.dp)
                                                 )
                                             }
                                         }
@@ -651,21 +652,21 @@ private fun ViewTicketDetailsModal(
                                         Box(
                                             modifier = Modifier
                                                 .width(1.5.dp)
-                                                .height(82.dp)
+                                                .height(58.dp)
                                                 .background(Color.White.copy(alpha = 0.7f))
                                         )
 
                                         Surface(
                                             shape = CircleShape,
                                             color = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(16.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.SouthEast,
                                                     contentDescription = null,
                                                     tint = RedbusCrimson,
-                                                    modifier = Modifier.size(11.dp)
+                                                    modifier = Modifier.size(10.dp)
                                                 )
                                             }
                                         }
@@ -674,7 +675,7 @@ private fun ViewTicketDetailsModal(
                                     // Right Content Column (Departure, Duration Divider, Arrival)
                                     Column(
                                         modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         // Departure Row
                                         Row(
@@ -686,14 +687,14 @@ private fun ViewTicketDetailsModal(
                                                 Text(
                                                     text = booking.sourceCity,
                                                     color = Color.White,
-                                                    fontSize = 18.sp,
+                                                    fontSize = 17.sp,
                                                     fontWeight = FontWeight.ExtraBold
                                                 )
-                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = booking.boardingPoint.ifBlank { "${booking.sourceCity} Bypass" },
                                                     color = Color.White.copy(alpha = 0.88f),
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -702,13 +703,13 @@ private fun ViewTicketDetailsModal(
                                                 Text(
                                                     text = booking.departureTime,
                                                     color = Color.White,
-                                                    fontSize = 24.sp,
+                                                    fontSize = 20.sp,
                                                     fontWeight = FontWeight.Black
                                                 )
                                                 Text(
                                                     text = departureDateFormatted,
                                                     color = Color.White.copy(alpha = 0.9f),
-                                                    fontSize = 12.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -727,20 +728,20 @@ private fun ViewTicketDetailsModal(
                                                     .background(Color.White.copy(alpha = 0.35f))
                                             )
                                             Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                                modifier = Modifier.padding(horizontal = 8.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.DirectionsBus,
                                                     contentDescription = null,
                                                     tint = Color.White.copy(alpha = 0.9f),
-                                                    modifier = Modifier.size(15.dp)
+                                                    modifier = Modifier.size(13.dp)
                                                 )
                                                 Text(
                                                     text = durationLabel,
                                                     color = Color.White.copy(alpha = 0.95f),
-                                                    fontSize = 12.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.SemiBold
                                                 )
                                             }
@@ -762,14 +763,14 @@ private fun ViewTicketDetailsModal(
                                                 Text(
                                                     text = booking.destinationCity,
                                                     color = Color.White,
-                                                    fontSize = 18.sp,
+                                                    fontSize = 17.sp,
                                                     fontWeight = FontWeight.ExtraBold
                                                 )
-                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = booking.droppingPoint.ifBlank { booking.destinationCity },
                                                     color = Color.White.copy(alpha = 0.88f),
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -778,13 +779,13 @@ private fun ViewTicketDetailsModal(
                                                 Text(
                                                     text = booking.arrivalTime,
                                                     color = Color.White,
-                                                    fontSize = 24.sp,
+                                                    fontSize = 20.sp,
                                                     fontWeight = FontWeight.Black
                                                 )
                                                 Text(
                                                     text = arrivalDateFormatted,
                                                     color = Color.White.copy(alpha = 0.9f),
-                                                    fontSize = 12.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -797,21 +798,21 @@ private fun ViewTicketDetailsModal(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     text = booking.operatorName,
                                     color = Color(0xFF111827),
-                                    fontSize = 17.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "${booking.busType} · ${passengers.size} ${if (passengers.size == 1) "Seat" else "Seats"}",
                                     color = Color(0xFF6B7280),
-                                    fontSize = 13.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     textAlign = TextAlign.Center
                                 )
@@ -823,8 +824,8 @@ private fun ViewTicketDetailsModal(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 passengers.forEach { p ->
                                     val genderShort = if (p.gender.startsWith("F", ignoreCase = true)) "F" else "M"
@@ -838,22 +839,22 @@ private fun ViewTicketDetailsModal(
                                                 Text(
                                                     text = p.name,
                                                     color = Color(0xFF111827),
-                                                    fontSize = 16.sp,
+                                                    fontSize = 15.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text(
                                                     text = "($genderShort)",
                                                     color = Color(0xFF6B7280),
-                                                    fontSize = 15.sp,
+                                                    fontSize = 14.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Spacer(modifier = Modifier.height(1.dp))
                                             Text(
                                                 text = "(${p.age} yrs)",
                                                 color = Color(0xFF6B7280),
-                                                fontSize = 13.sp
+                                                fontSize = 12.sp
                                             )
                                         }
 
@@ -867,7 +868,7 @@ private fun ViewTicketDetailsModal(
                                                 color = Color(0xFF1E3A8A),
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                             )
                                         }
                                     }
@@ -878,7 +879,7 @@ private fun ViewTicketDetailsModal(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(30.dp),
+                                    .height(24.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 DashedTicketDivider()
@@ -887,8 +888,8 @@ private fun ViewTicketDetailsModal(
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.CenterStart)
-                                        .offset(x = (-15).dp)
-                                        .size(30.dp)
+                                        .offset(x = (-12).dp)
+                                        .size(24.dp)
                                         .clip(CircleShape)
                                         .background(backdropColor)
                                 )
@@ -897,8 +898,8 @@ private fun ViewTicketDetailsModal(
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
-                                        .offset(x = 15.dp)
-                                        .size(30.dp)
+                                        .offset(x = 12.dp)
+                                        .size(24.dp)
                                         .clip(CircleShape)
                                         .background(backdropColor)
                                 )
@@ -908,8 +909,8 @@ private fun ViewTicketDetailsModal(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 // Ticket # Row with Copy Icon
                                 Row(
@@ -920,7 +921,7 @@ private fun ViewTicketDetailsModal(
                                     Text(
                                         text = "Ticket #",
                                         color = Color(0xFF6B7280),
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                     Row(
@@ -936,12 +937,12 @@ private fun ViewTicketDetailsModal(
                                             imageVector = Icons.Default.ContentCopy,
                                             contentDescription = "Copy Ticket Number",
                                             tint = Color(0xFF111827),
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Text(
                                             text = ticketNumber,
                                             color = Color(0xFF111827),
-                                            fontSize = 15.sp,
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     }
@@ -956,18 +957,16 @@ private fun ViewTicketDetailsModal(
                                     Text(
                                         text = "PNR #",
                                         color = Color(0xFF6B7280),
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
                                         text = booking.pnr,
                                         color = Color(0xFF111827),
-                                        fontSize = 15.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
-
-                                Spacer(modifier = Modifier.height(2.dp))
 
                                 // Fare Row
                                 Row(
@@ -978,13 +977,13 @@ private fun ViewTicketDetailsModal(
                                     Text(
                                         text = "Fare",
                                         color = Color(0xFF6B7280),
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
                                         text = "₹${String.format(Locale.US, "%.2f", booking.totalAmount)}",
                                         color = Color(0xFF111827),
-                                        fontSize = 18.sp,
+                                        fontSize = 17.sp,
                                         fontWeight = FontWeight.Black
                                     )
                                 }
@@ -993,7 +992,7 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
                 Button(
@@ -1023,7 +1022,7 @@ private fun ViewTicketDetailsModal(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
@@ -1106,7 +1105,16 @@ fun ProfileAndWalletScreen(
     onDeleteTraveller: (Int) -> Unit,
     onRefreshAccount: () -> Unit,
     onLogout: () -> Unit,
-    onToggleDarkTheme: () -> Unit
+    onToggleDarkTheme: () -> Unit,
+    onUpdateAvatar: (String) -> Unit = {},
+    onChangePassword: (String, String, (Boolean, String) -> Unit) -> Unit = { _, _, _ -> },
+    onSendResetOtp: ((Boolean, String) -> Unit) -> Unit = {},
+    onTopUpWallet: (Double) -> Unit = {},
+    onFetchDeviceSessions: () -> Unit = {},
+    onRevokeDeviceSession: (Long) -> Unit = {},
+    onRevokeAllOtherSessions: () -> Unit = {},
+    onDeactivateAccount: () -> Unit = {},
+    onDeleteAccount: (String) -> Unit = {}
 ) {
     if (!uiState.isAuthenticated || uiState.user == null) {
         LiveAuthScreen(
@@ -1120,10 +1128,20 @@ fun ProfileAndWalletScreen(
         return
     }
 
+    LaunchedEffect(Unit) {
+        onFetchDeviceSessions()
+    }
+
     val user = uiState.user
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddTravellerDialog by remember { mutableStateOf(false) }
     var showLogoutConfirmModal by remember { mutableStateOf(false) }
+    var showWalletTopUpModal by remember { mutableStateOf(false) }
+    var showAvatarModal by remember { mutableStateOf(false) }
+    var showDeactivateModal by remember { mutableStateOf(false) }
+    var showDeleteModal by remember { mutableStateOf(false) }
+    var deleteConfirmText by remember { mutableStateOf("") }
+    var deletePassword by remember { mutableStateOf("") }
 
     var editName by remember(user.name) { mutableStateOf(user.name) }
     var editPhone by remember(user.phone) { mutableStateOf(user.phone.orEmpty()) }
@@ -1132,6 +1150,17 @@ fun ProfileAndWalletScreen(
     var newTravellerName by remember { mutableStateOf("") }
     var newTravellerAge by remember { mutableStateOf("25") }
     var newTravellerGender by remember { mutableStateOf("MALE") }
+
+    // Security & Password fields (matching website settings/page.tsx)
+    var currentPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var confirmPass by remember { mutableStateOf("") }
+    var showCurrentPass by remember { mutableStateOf(false) }
+    var showNewPass by remember { mutableStateOf(false) }
+    var showConfirmPass by remember { mutableStateOf(false) }
+    var passwordChangeMessage by remember { mutableStateOf<String?>(null) }
+    var isSendingOtp by remember { mutableStateOf(false) }
+    var otpMessage by remember { mutableStateOf<String?>(null) }
 
     val initials = remember(user.name) {
         user.name.split(" ")
@@ -1148,7 +1177,26 @@ fun ProfileAndWalletScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Live User Account Header
+        // Notification banner for profile actions
+        uiState.profileActionMessage?.let { msg ->
+            item {
+                Surface(
+                    color = RatingEmeraldBg,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "✓ $msg",
+                        color = RatingEmerald,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(14.dp)
+                    )
+                }
+            }
+        }
+
+        // 1. Live User Account Header (Avatar, Email, Phone, Role)
         item {
             Card(
                 shape = RoundedCornerShape(22.dp),
@@ -1165,27 +1213,47 @@ fun ProfileAndWalletScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Surface(
-                                shape = CircleShape,
-                                color = Color.White,
-                                modifier = Modifier.size(58.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(62.dp)
+                                    .clickable { showAvatarModal = true }
                             ) {
-                                if (!user.avatarUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = user.avatarUrl,
-                                        contentDescription = user.name,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = initials,
-                                            color = RedbusCrimson,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 20.sp
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    if (!user.avatarUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = user.avatarUrl,
+                                            contentDescription = user.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
                                         )
+                                    } else {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = initials,
+                                                color = RedbusCrimson,
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 22.sp
+                                            )
+                                        }
                                     }
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFF1E293B),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .align(Alignment.BottomEnd)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Change avatar",
+                                        tint = Color.White,
+                                        modifier = Modifier.padding(3.dp)
+                                    )
                                 }
                             }
                             Spacer(modifier = Modifier.width(14.dp))
@@ -1270,44 +1338,63 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 2. Live redBus Wallet Balance Card
+        // 2. Live redBus Wallet Balance Card with "+ Add Money" Top-Up Modal (Matching website)
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "REDBUS WALLET BALANCE",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)}",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Black,
-                            color = RatingEmerald
-                        )
-                        Text(
-                            text = "Instant refunds & 1-tap checkout credit",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "REDBUS WALLET BALANCE",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)}",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black,
+                                color = RatingEmerald
+                            )
+                            Text(
+                                text = "Instant refunds & 1-tap checkout credit",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = RatingEmeraldBg,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                    contentDescription = null,
+                                    tint = RatingEmerald,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
                     }
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        tint = RatingEmerald,
-                        modifier = Modifier.size(40.dp)
-                    )
+
+                    Button(
+                        onClick = { showWalletTopUpModal = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("+ Add Money to Wallet", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -1387,7 +1474,231 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 4. Theme & Sign Out Controls
+        // 4. Security & Change Password (Matching website settings/page.tsx lines 250-290)
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = RedbusCrimson)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(text = "Security & Password", style = MaterialTheme.typography.titleLarge)
+                    }
+
+                    passwordChangeMessage?.let {
+                        Text(text = it, fontSize = 12.sp, color = RedbusCrimson, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedTextField(
+                        value = currentPass,
+                        onValueChange = { currentPass = it },
+                        label = { Text("Current Password") },
+                        singleLine = true,
+                        visualTransformation = if (showCurrentPass) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
+                                Icon(
+                                    imageVector = if (showCurrentPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = { newPass = it },
+                        label = { Text("New Password (min 6 characters)") },
+                        singleLine = true,
+                        visualTransformation = if (showNewPass) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showNewPass = !showNewPass }) {
+                                Icon(
+                                    imageVector = if (showNewPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPass,
+                        onValueChange = { confirmPass = it },
+                        label = { Text("Confirm New Password") },
+                        singleLine = true,
+                        visualTransformation = if (showConfirmPass) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
+                                Icon(
+                                    imageVector = if (showConfirmPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Button(
+                        onClick = {
+                            if (currentPass.isBlank()) {
+                                passwordChangeMessage = "Please enter your current password."
+                            } else if (newPass.length < 6) {
+                                passwordChangeMessage = "New password must be at least 6 characters."
+                            } else if (newPass != confirmPass) {
+                                passwordChangeMessage = "Passwords do not match."
+                            } else {
+                                passwordChangeMessage = null
+                                onChangePassword(currentPass, newPass) { success, msg ->
+                                    passwordChangeMessage = msg
+                                    if (success) {
+                                        currentPass = ""
+                                        newPass = ""
+                                        confirmPass = ""
+                                    }
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Update Password", fontWeight = FontWeight.Bold)
+                    }
+
+                    HorizontalDivider()
+
+                    // Send Password Reset OTP button (via Brevo OTP service matching website)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Forgot password? Send a 6-digit reset OTP directly to ${user.email}.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        otpMessage?.let {
+                            Text(text = it, fontSize = 12.sp, color = RatingEmerald, fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                isSendingOtp = true
+                                otpMessage = null
+                                onSendResetOtp { success, msg ->
+                                    isSendingOtp = false
+                                    otpMessage = msg
+                                }
+                            },
+                            enabled = !isSendingOtp,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(imageVector = Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isSendingOtp) "Dispatching OTP..." else "Send Password Reset OTP to Email", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Active Device Sessions (Matching website settings/page.tsx lines 95-155)
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Smartphone, contentDescription = null, tint = AiViolet)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(text = "Active Devices", style = MaterialTheme.typography.titleLarge)
+                        }
+                        IconButton(onClick = onFetchDeviceSessions) {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Sessions")
+                        }
+                    }
+
+                    Text(
+                        text = "Manage your logged-in device sessions across Web, Android, and iOS.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Current Android Device Session Item
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = CircleShape, color = RatingEmerald, modifier = Modifier.size(8.dp)) {}
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text("This Android Device", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text("Active Session · Android Mobile App", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Surface(shape = RoundedCornerShape(6.dp), color = RatingEmeraldBg) {
+                                Text("Current", color = RatingEmerald, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                            }
+                        }
+                    }
+
+                    // Any other sessions
+                    uiState.deviceSessions.filterNot { it.isCurrent }.forEach { sess ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(sess.deviceName.ifBlank { "Browser on Web" }, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text("${sess.location ?: "India"} · ${sess.lastActive ?: "Recent"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                TextButton(onClick = { onRevokeDeviceSession(sess.id) }) {
+                                    Text("Log Out", color = RedbusCrimson, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onRevokeAllOtherSessions,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Log Out All Other Devices", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // 6. Theme & Sign Out Controls
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
@@ -1441,7 +1752,422 @@ fun ProfileAndWalletScreen(
                 }
             }
         }
+
+        // 7. Danger Zone (Deactivate & Delete Account - Matching website settings/page.tsx lines 156-194)
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, RedbusCrimson.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = RedbusCrimson)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Danger Zone", style = MaterialTheme.typography.titleLarge, color = RedbusCrimson)
+                    }
+
+                    Text(
+                        text = "Temporary deactivation or irreversible permanent removal of your redBus AI profile.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showDeactivateModal = true },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Deactivate", fontSize = 12.sp)
+                        }
+
+                        Button(
+                            onClick = { showDeleteModal = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Delete Account", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    // Modal: Wallet Top Up
+    if (showWalletTopUpModal) {
+        var topUpAmountText by remember { mutableStateOf("500") }
+        AlertDialog(
+            onDismissRequest = { showWalletTopUpModal = false },
+            title = { Text("Add Money to Wallet", fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Select or enter the amount you wish to credit:", fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("500", "1000", "2000").forEach { chipVal ->
+                            FilterChip(
+                                selected = topUpAmountText == chipVal,
+                                onClick = { topUpAmountText = chipVal },
+                                label = { Text("₹$chipVal") }
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = topUpAmountText,
+                        onValueChange = { topUpAmountText = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Amount in INR (₹)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amt = topUpAmountText.toDoubleOrNull() ?: 500.0
+                        onTopUpWallet(amt)
+                        showWalletTopUpModal = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald)
+                ) {
+                    Text("Credit Wallet", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWalletTopUpModal = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Modal: Avatar Selector
+    if (showAvatarModal) {
+        val sampleAvatars = listOf(
+            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
+            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
+            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop"
+        )
+        AlertDialog(
+            onDismissRequest = { showAvatarModal = false },
+            title = { Text("Choose Avatar", fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Pick a passenger profile avatar:", fontSize = 13.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        sampleAvatars.forEach { url ->
+                            Surface(
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clickable {
+                                        onUpdateAvatar(url)
+                                        showAvatarModal = false
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            onUpdateAvatar("")
+                            showAvatarModal = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Reset to Default Initials")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAvatarModal = false }) { Text("Close") }
+            }
+        )
+    }
+
+    // Modal: Deactivate Account
+    if (showDeactivateModal) {
+        AlertDialog(
+            onDismissRequest = { showDeactivateModal = false },
+            title = { Text("Deactivate Account?", fontWeight = FontWeight.Black) },
+            text = {
+                Text("Your account will be suspended. You can reactivate anytime by logging in again.", fontSize = 13.sp)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeactivateModal = false
+                        onDeactivateAccount()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Confirm Deactivate", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeactivateModal = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Modal: Delete Account Permanently
+    if (showDeleteModal) {
+        AlertDialog(
+            onDismissRequest = { showDeleteModal = false },
+            title = { Text("Delete Account Permanently", fontWeight = FontWeight.Black, color = RedbusCrimson) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("This action is permanent and cannot be undone. All your bookings and wallet credit will be erased.", fontSize = 13.sp)
+                    Text("Type DELETE to confirm:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = deleteConfirmText,
+                        onValueChange = { deleteConfirmText = it },
+                        singleLine = true,
+                        placeholder = { Text("DELETE") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (deleteConfirmText.trim().equals("DELETE", ignoreCase = false)) {
+                            showDeleteModal = false
+                            onDeleteAccount(deletePassword)
+                        }
+                    },
+                    enabled = deleteConfirmText.trim() == "DELETE",
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Permanently Delete", fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteModal = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showLogoutConfirmModal) {
+        val modalScale = remember { Animatable(0.85f) }
+        val modalRotX = remember { Animatable(-14f) }
+        LaunchedEffect(Unit) {
+            modalScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+        }
+        LaunchedEffect(Unit) {
+            modalRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+        }
+
+        Dialog(
+            onDismissRequest = { showLogoutConfirmModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = modalScale.value
+                            scaleY = modalScale.value
+                            rotationX = modalRotX.value
+                            cameraDistance = 14f * density
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(26.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = RedbusSoftTint,
+                            modifier = Modifier.size(60.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Logout,
+                                    contentDescription = null,
+                                    tint = RedbusCrimson,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Sign Out Confirmation",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Black
+                        )
+
+                        Text(
+                            text = "Are you sure you want to sign out of ${user.email}? Your wallet balance, saved travellers, and bookings will stay synced when you log back in.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showLogoutConfirmModal = false },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(vertical = 13.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    showLogoutConfirmModal = false
+                                    onLogout()
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RedbusCrimson,
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(vertical = 13.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Yes, Sign Out",
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = { Text("Edit Profile", fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Full Name") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editPhone,
+                        onValueChange = { editPhone = it },
+                        label = { Text("Phone Number") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateProfile(editName, editPhone, editGender)
+                        showEditProfileDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Save Changes", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showAddTravellerDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddTravellerDialog = false },
+            title = { Text("Add Saved Traveller", fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = newTravellerName,
+                        onValueChange = { newTravellerName = it },
+                        label = { Text("Passenger Name") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = newTravellerAge,
+                        onValueChange = { newTravellerAge = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Age") },
+                        singleLine = true
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        listOf("MALE", "FEMALE").forEach { g ->
+                            FilterChip(
+                                selected = newTravellerGender == g,
+                                onClick = { newTravellerGender = g },
+                                label = { Text(g) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val ageInt = newTravellerAge.toIntOrNull() ?: 25
+                        if (newTravellerName.isNotBlank()) {
+                            onAddTraveller(newTravellerName, ageInt, newTravellerGender)
+                            newTravellerName = ""
+                            showAddTravellerDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Save Traveller", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTravellerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
 
     if (showLogoutConfirmModal) {
         val modalScale = remember { Animatable(0.85f) }

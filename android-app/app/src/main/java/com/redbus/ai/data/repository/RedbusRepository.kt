@@ -177,4 +177,32 @@ class RedbusRepository(
             )
         }
     }
+
+    suspend fun getBusReviews(busId: Long): Result<ReviewSummary> = withContext(Dispatchers.IO) {
+        runCatching { api.getBusReviews(busId) }
+    }
+
+    suspend fun createReview(request: CreateReviewRequest): Result<ReviewItem> = withContext(Dispatchers.IO) {
+        runCatching { api.createReview(request) }
+    }
+
+    suspend fun getDeviceSessions(): Result<List<DeviceSessionItem>> = withContext(Dispatchers.IO) {
+        runCatching { api.getDeviceSessions() }
+    }
+
+    suspend fun revokeSession(id: Long): Result<Map<String, Any>> = withContext(Dispatchers.IO) {
+        runCatching { api.revokeSession(id) }
+    }
+
+    suspend fun forgotPassword(email: String): Result<Map<String, String>> = withContext(Dispatchers.IO) {
+        runCatching { api.forgotPassword(mapOf("email" to email)) }
+    }
+
+    suspend fun deactivateAccount(): Result<Map<String, String>> = withContext(Dispatchers.IO) {
+        runCatching { api.deactivateAccount() }
+    }
+
+    suspend fun deleteAccount(password: String): Result<Map<String, String>> = withContext(Dispatchers.IO) {
+        runCatching { api.deleteAccount(mapOf("password" to password)) }
+    }
 }

@@ -57,7 +57,9 @@ data class UpdateProfileRequest(
     val name: String? = null,
     val phone: String? = null,
     val gender: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val currentPassword: String? = null,
+    val newPassword: String? = null
 )
 
 data class SavedTraveller(
@@ -333,4 +335,42 @@ data class ChatMessageItem(
 data class SmartSeatRecommendation(
     val recommendedSeats: List<String>? = emptyList(),
     val reason: String? = null
+)
+
+data class ReviewItem(
+    val id: Long = 0,
+    val busId: Long = 0,
+    val userId: Long? = null,
+    val userName: String = "",
+    val rating: Int = 5,
+    val comment: String = "",
+    val tags: List<String>? = emptyList(),
+    val createdAt: String? = null
+)
+
+data class ReviewSummary(
+    val averageRating: Double = 4.5,
+    val totalRatings: Int = 427,
+    val starPercentages: Map<String, Int>? = emptyMap(),
+    val lovedTags: Map<String, Int>? = emptyMap(),
+    val reviews: List<ReviewItem> = emptyList()
+)
+
+data class CreateReviewRequest(
+    val busId: Long,
+    val rating: Int,
+    val comment: String,
+    val userName: String? = null,
+    val tags: List<String>? = emptyList()
+)
+
+data class DeviceSessionItem(
+    val id: Long = 0,
+    val deviceName: String = "",
+    val deviceType: String? = "MOBILE",
+    val ipAddress: String? = null,
+    val location: String? = null,
+    val lastActive: String? = null,
+    val isCurrent: Boolean = false,
+    val isActive: Boolean = true
 )

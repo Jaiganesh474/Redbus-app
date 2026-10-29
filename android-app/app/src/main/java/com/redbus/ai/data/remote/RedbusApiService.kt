@@ -136,6 +136,29 @@ interface RedbusApiService {
     @POST("ai/chat")
     suspend fun chatWithAi(@Body request: AiChatRequest): AiChatResponse
 
+    // 9. Reviews & Ratings
+    @GET("reviews/bus/{busId}")
+    suspend fun getBusReviews(@Path("busId") busId: Long): ReviewSummary
+
+    @POST("reviews")
+    suspend fun createReview(@Body request: CreateReviewRequest): ReviewItem
+
+    // 10. Device Sessions & Security
+    @GET("users/me/sessions")
+    suspend fun getDeviceSessions(): List<DeviceSessionItem>
+
+    @DELETE("users/me/sessions/{id}")
+    suspend fun revokeSession(@Path("id") id: Long): Map<String, Any>
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body body: Map<String, String>): Map<String, String>
+
+    @POST("auth/deactivate")
+    suspend fun deactivateAccount(): Map<String, String>
+
+    @POST("auth/delete-account")
+    suspend fun deleteAccount(@Body body: Map<String, String>): Map<String, String>
+
     companion object {
         fun create(): RedbusApiService {
             val authInterceptor = Interceptor { chain ->

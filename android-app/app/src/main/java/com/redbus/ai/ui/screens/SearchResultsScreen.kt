@@ -105,8 +105,8 @@ fun SearchResultsScreen(
     var selectedAmenities by remember { mutableStateOf(setOf<String>()) }
     var activeSort by remember { mutableStateOf(BusSortOption.RATINGS) }
 
-    // Inline Filter buses panel expanded state + All Filters modal state
-    var isFilterPanelExpanded by remember { mutableStateOf(true) }
+    // Inline Filter buses panel expanded state (default closed so search results aren't pushed down)
+    var isFilterPanelExpanded by remember { mutableStateOf(false) }
     var showAllFiltersModal by remember { mutableStateOf(false) }
     var showDatePickerModal by remember { mutableStateOf(false) }
 
