@@ -31,21 +31,23 @@ fun CheckoutScreen(
     fareBreakdown: FareBreakdown,
     availableCoupons: List<Coupon>,
     onUpdatePassenger: (Int, String, Int, String) -> Unit,
+    onUpdateContact: (String, String) -> Unit,
     onToggleFreeCancellation: (Boolean) -> Unit,
     onToggleTripGuarantee: (Boolean) -> Unit,
     onToggleUseWallet: (Boolean) -> Unit,
     onApplyCoupon: (String) -> Unit,
     onRemoveCoupon: () -> Unit,
     onConfirmAndPay: () -> Unit,
+    onNavigateToAuth: () -> Unit,
     onBack: () -> Unit
 ) {
     val route = uiState.selectedRoute ?: return
     var couponInput by remember { mutableStateOf("") }
-    var showTicketModal by remember { mutableStateOf(false) }
 
     val mins = uiState.seatLockSeconds / 60
     val secs = uiState.seatLockSeconds % 60
     val formattedLockTimer = String.format(Locale.US, "%02d:%02d", mins, secs)
+    val walletBalance = uiState.user?.walletBalance ?: 0.0
 
     Scaffold(
         topBar = {
@@ -134,22 +136,43 @@ fun CheckoutScreen(
                         )
                     }
 
-                    Button(
-                        onClick = { showTicketModal = true },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = RedbusCrimson,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "PAY & BOOK NOW",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp
-                        )
+                    if (!uiState.isAuthenticated) {
+                        Button(
+                            onClick = onNavigateToAuth,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedbusCrimson,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Login, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "SIGN IN TO BOOK",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onConfirmAndPay,
+                            enabled = !uiState.isCreatingBooking,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedbusCrimson,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (uiState.isCreatingBooking) "PROCESSING..." else "PAY & BOOK NOW",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -163,6 +186,24 @@ fun CheckoutScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            uiState.errorBanner?.let { err ->
+                item {
+                    Surface(
+                        color = RedbusSoftTint,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = err,
+                            color = RedbusCrimson,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+
             // 1. Trip Summary Card
             item {
                 Card(
@@ -184,12 +225,12 @@ fun CheckoutScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Boarding: ${uiState.selectedBoardingPoint}",
+                            text = "Boarding: ${uiState.selectedBoardingPoint.ifBlank { route.sourceCity }}",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Dropping: ${uiState.selectedDroppingPoint}",
+                            text = "Dropping: ${uiState.selectedDroppingPoint.ifBlank { route.destinationCity }}",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -197,7 +238,7 @@ fun CheckoutScreen(
                 }
             }
 
-            // 2. Quick-Fill Saved Travellers + Passenger Details
+            // 2. Saved Travellers from User's Account + Passenger Forms
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -209,31 +250,33 @@ fun CheckoutScreen(
                             text = "Passenger Details",
                             style = MaterialTheme.typography.titleLarge
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Tap a saved traveller to autofill:",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(uiState.savedTravellers) { saved ->
-                                AssistChip(
-                                    onClick = {
-                                        if (uiState.passengers.isNotEmpty()) {
-                                            onUpdatePassenger(0, saved.name, saved.age, saved.gender)
+                        if (uiState.savedTravellers.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Saved Travellers from your redbusai.app account:",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(uiState.savedTravellers) { saved ->
+                                    AssistChip(
+                                        onClick = {
+                                            if (uiState.passengers.isNotEmpty()) {
+                                                onUpdatePassenger(0, saved.name, saved.age, saved.gender)
+                                            }
+                                        },
+                                        label = { Text("${saved.name} (${saved.age})") },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
-                                    },
-                                    label = { Text("${saved.name} (${saved.age})") },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
 
@@ -257,17 +300,34 @@ fun CheckoutScreen(
                                 OutlinedTextField(
                                     value = passenger.name,
                                     onValueChange = { onUpdatePassenger(idx, it, passenger.age, passenger.gender) },
-                                    label = { Text("Full Name") },
+                                    label = { Text("Passenger Full Name") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = uiState.contactEmail,
+                            onValueChange = { onUpdateContact(it, uiState.contactPhone) },
+                            label = { Text("Ticket Email") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = uiState.contactPhone,
+                            onValueChange = { onUpdateContact(uiState.contactEmail, it) },
+                            label = { Text("Mobile Number") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
 
-            // 3. Smart Protection Add-ons (Free Cancellation & Trip Guarantee)
+            // 3. Protection Add-ons (Matching CheckoutContent on redbusai.app)
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -276,7 +336,7 @@ fun CheckoutScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "RedBus AI Protection Add-ons",
+                            text = "Trip Protection Add-ons",
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(modifier = Modifier.height(10.dp))
@@ -288,11 +348,11 @@ fun CheckoutScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "100% Free Cancellation (₹49/seat)",
+                                    text = "Free Cancellation (₹49/seat)",
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Instant full refund to RedBus Wallet if plans change",
+                                    text = "100% Base Fare Refund if cancelled anytime before departure",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -312,11 +372,11 @@ fun CheckoutScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "AI Trip Guarantee (₹69/seat)",
+                                    text = "redBus Trip Guarantee (₹69/seat)",
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Get 2X refund if bus is cancelled or delayed > 2 hrs",
+                                    text = "2X Refund if bus is cancelled or delayed > 2 hours",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -330,7 +390,7 @@ fun CheckoutScreen(
                 }
             }
 
-            // 4. Coupons & Offers Card
+            // 4. Live Coupons Validation (/coupons/validate)
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -339,7 +399,7 @@ fun CheckoutScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Apply Coupon Code",
+                            text = "Coupons & Offers",
                             style = MaterialTheme.typography.titleLarge
                         )
                         Spacer(modifier = Modifier.height(10.dp))
@@ -348,17 +408,21 @@ fun CheckoutScreen(
                             OutlinedTextField(
                                 value = couponInput,
                                 onValueChange = { couponInput = it },
-                                placeholder = { Text("Enter REDBUSAI20 or FIRST50") },
+                                placeholder = { Text("Enter Coupon Code") },
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Button(
                                 onClick = { onApplyCoupon(couponInput) },
+                                enabled = !uiState.isValidatingCoupon,
                                 colors = ButtonDefaults.buttonColors(containerColor = AiViolet),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Apply", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = if (uiState.isValidatingCoupon) "..." else "Apply",
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
 
@@ -368,34 +432,35 @@ fun CheckoutScreen(
                                 text = msg,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (uiState.appliedCoupon != null) RatingEmerald else RedbusCrimson
+                                color = if (uiState.appliedCoupon?.valid == true) RatingEmerald else RedbusCrimson
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(availableCoupons) { c ->
-                                val isApplied = uiState.appliedCoupon?.code == c.code
-                                FilterChip(
-                                    selected = isApplied,
-                                    onClick = {
-                                        if (isApplied) onRemoveCoupon() else {
-                                            couponInput = c.code
-                                            onApplyCoupon(c.code)
+                        if (availableCoupons.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(availableCoupons) { c ->
+                                    val isApplied = uiState.appliedCoupon?.code.equals(c.code, ignoreCase = true)
+                                    FilterChip(
+                                        selected = isApplied,
+                                        onClick = {
+                                            if (isApplied) onRemoveCoupon() else {
+                                                couponInput = c.code
+                                                onApplyCoupon(c.code)
+                                            }
+                                        },
+                                        label = {
+                                            Text("${c.code} (${c.discountPercentage}% OFF)")
                                         }
-                                    },
-                                    label = {
-                                        Text("${c.code} (${c.discountPercentage}% OFF)")
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // 5. Wallet & Fare Breakdown Card
+            // 5. Real Wallet Balance & Fare Summary
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -403,30 +468,32 @@ fun CheckoutScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Use RedBus AI Wallet",
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Available Balance: ₹${uiState.walletBalance.toInt()}",
-                                    fontSize = 12.sp,
-                                    color = RatingEmerald,
-                                    fontWeight = FontWeight.Bold
+                        if (uiState.isAuthenticated) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Use redBus Wallet Balance",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Available in your account: ₹${walletBalance.toInt()}",
+                                        fontSize = 12.sp,
+                                        color = RatingEmerald,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Checkbox(
+                                    checked = uiState.useWalletBalance,
+                                    onCheckedChange = onToggleUseWallet,
+                                    enabled = walletBalance > 0
                                 )
                             }
-                            Checkbox(
-                                checked = uiState.useWalletBalance,
-                                onCheckedChange = onToggleUseWallet
-                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
                         }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
                         FareRow("Base Seat Fare", "₹${fareBreakdown.baseFare.toInt()}")
                         if (fareBreakdown.freeCancelFee > 0) {
@@ -435,7 +502,7 @@ fun CheckoutScreen(
                         if (fareBreakdown.tripGuaranteeFee > 0) {
                             FareRow("Trip Guarantee Protection", "+₹${fareBreakdown.tripGuaranteeFee.toInt()}")
                         }
-                        FareRow("GST & Smart Platform Fee", "+₹${fareBreakdown.gstAndService.toInt()}")
+                        FareRow("GST & Platform Service Fee", "+₹${fareBreakdown.gstAndService.toInt()}")
                         if (fareBreakdown.discountAmount > 0) {
                             FareRow(
                                 "Coupon Discount (${uiState.appliedCoupon?.code})",
@@ -445,7 +512,7 @@ fun CheckoutScreen(
                         }
                         if (fareBreakdown.walletUsed > 0) {
                             FareRow(
-                                "RedBus Wallet Applied",
+                                "redBus Wallet Applied",
                                 "-₹${fareBreakdown.walletUsed.toInt()}",
                                 isDiscount = true
                             )
@@ -469,54 +536,6 @@ fun CheckoutScreen(
                 }
             }
         }
-    }
-
-    if (showTicketModal) {
-        AlertDialog(
-            onDismissRequest = { showTicketModal = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = RatingEmerald,
-                    modifier = Modifier.size(48.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Confirm Instant UPI / Card Payment",
-                    fontWeight = FontWeight.Black
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Route: ${route.sourceCity} ➔ ${route.destinationCity}")
-                    Text("Coach: ${route.operatorName}")
-                    Text("Seats: ${uiState.selectedSeats.joinToString { it.seatNumber }}")
-                    Text(
-                        text = "Payable Amount: ₹${fareBreakdown.netPayable.toInt()}",
-                        fontWeight = FontWeight.Black,
-                        color = RedbusCrimson
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showTicketModal = false
-                        onConfirmAndPay()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald)
-                ) {
-                    Text("Approve & Generate PNR Ticket", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTicketModal = false }) {
-                    Text("Back")
-                }
-            }
-        )
     }
 }
 
@@ -545,4 +564,3 @@ private fun FareRow(
         )
     }
 }
-

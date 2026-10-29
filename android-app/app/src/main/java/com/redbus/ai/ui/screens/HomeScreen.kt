@@ -21,23 +21,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.redbus.ai.data.model.CityPair
+import coil.compose.AsyncImage
+import com.redbus.ai.data.model.Banner
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     uiState: RedbusUiState,
-    availableCities: List<String>,
-    popularRoutes: List<CityPair>,
     onSwapCities: () -> Unit,
     onSelectCities: (String, String) -> Unit,
     onSelectDate: (String) -> Unit,
@@ -45,6 +44,8 @@ fun HomeScreen(
     onExecuteNlpSearch: () -> Unit,
     onSearchBuses: () -> Unit,
     onQuickRouteClick: (RouteItem) -> Unit,
+    onNavigateToAccount: () -> Unit,
+    onOpenWebPortal: (String) -> Unit,
     onToggleDarkTheme: () -> Unit
 ) {
     var showCityPickerForSource by remember { mutableStateOf<Boolean?>(null) }
@@ -57,7 +58,13 @@ fun HomeScreen(
 
     val todayStr = remember { LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) }
     val tomorrowStr = remember { LocalDate.now().plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE) }
-    val weekendStr = remember { LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_LOCAL_DATE) }
+    val dayAfterStr = remember { LocalDate.now().plusDays(2).format(DateTimeFormatter.ISO_LOCAL_DATE) }
+
+    val cityOptions = if (uiState.availableCities.isNotEmpty()) {
+        uiState.availableCities
+    } else {
+        listOf("Bangalore", "Chennai", "Mumbai", "Pune", "Delhi", "Jaipur", "Hyderabad", "Coimbatore")
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -65,23 +72,20 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 28.dp)
     ) {
-        // 1. Hero Header & Search Section
+        // 1. Hero Header & Search Section (Matching https://www.redbusai.app HeroSearch)
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                RedbusCrimson,
-                                RedbusCrimsonDark
-                            )
+                            colors = listOf(RedbusCrimson, RedbusCrimsonDark)
                         )
                     )
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
+                    .padding(horizontal = 16.dp, vertical = 18.dp)
             ) {
                 Column {
-                    // Top App Header Row
+                    // Top App Bar Row with Live Account / Wallet Badge
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,15 +94,15 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color.White.copy(alpha = 0.18f),
-                                modifier = Modifier.size(42.dp)
+                                color = Color.White.copy(alpha = 0.2f),
+                                modifier = Modifier.size(40.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.DirectionsBus,
-                                        contentDescription = "RedBus AI",
+                                        contentDescription = "redBus AI",
                                         tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
@@ -108,71 +112,66 @@ fun HomeScreen(
                                     Text(
                                         text = "redBus",
                                         color = Color.White,
-                                        fontSize = 22.sp,
+                                        fontSize = 21.sp,
                                         fontWeight = FontWeight.Black
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Surface(
                                         color = Color.White,
-                                        shape = RoundedCornerShape(6.dp)
+                                        shape = RoundedCornerShape(5.dp)
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.AutoAwesome,
-                                                contentDescription = null,
-                                                tint = RedbusCrimson,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(
-                                                text = "AI",
-                                                color = RedbusCrimson,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Black
-                                            )
-                                        }
+                                        Text(
+                                            text = "AI EDITION",
+                                            color = RedbusCrimson,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
                                     }
                                 }
                                 Text(
-                                    text = "Smart Bus Ticketing & AI Seat Engine",
+                                    text = "redbusai.app • Live Cross-Platform",
                                     color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 12.sp
+                                    fontSize = 11.sp
                                 )
                             }
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Live Account / Wallet Pill
                             Surface(
+                                onClick = onNavigateToAccount,
                                 shape = RoundedCornerShape(20.dp),
-                                color = Color.White.copy(alpha = 0.16f)
+                                color = Color.White.copy(alpha = 0.18f)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.AccountBalanceWallet,
-                                        contentDescription = "Wallet",
+                                        imageVector = if (uiState.isAuthenticated) Icons.Default.AccountBalanceWallet else Icons.Default.Person,
+                                        contentDescription = "Account",
                                         tint = Color.White,
                                         modifier = Modifier.size(15.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(5.dp))
                                     Text(
-                                        text = "₹${uiState.walletBalance.toInt()}",
+                                        text = if (uiState.isAuthenticated && uiState.user != null) {
+                                            "${uiState.user.name.substringBefore(" ")} • ₹${(uiState.user.walletBalance ?: 0.0).toInt()}"
+                                        } else {
+                                            "Sign In"
+                                        },
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             IconButton(
                                 onClick = onToggleDarkTheme,
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(34.dp)
                                     .clip(CircleShape)
                                     .background(Color.White.copy(alpha = 0.16f))
                             ) {
@@ -180,15 +179,15 @@ fun HomeScreen(
                                     imageVector = if (uiState.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                                     contentDescription = "Toggle Theme",
                                     tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(17.dp)
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // AI Natural Language Search Bar
+                    // AI Natural Language Search Bar (/ai/parse-query)
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = Color.White.copy(alpha = 0.14f),
@@ -202,11 +201,11 @@ fun HomeScreen(
                                     imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
                                     tint = Color(0xFFFDE047),
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "AI Natural Language Search",
+                                    text = "AI Smart Trip Search (Live NLP)",
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -219,8 +218,8 @@ fun HomeScreen(
                                     onValueChange = onNlpQueryChange,
                                     placeholder = {
                                         Text(
-                                            text = "e.g. \"AC Sleeper Bangalore to Chennai tomorrow\"",
-                                            color = Color.White.copy(alpha = 0.7f),
+                                            text = "e.g. \"AC Sleeper from Bangalore to Chennai tomorrow\"",
+                                            color = Color.White.copy(alpha = 0.75f),
                                             fontSize = 12.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -256,9 +255,9 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Main Route Search Card
+                    // Main Search Card
                     Card(
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -268,7 +267,6 @@ fun HomeScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Column {
-                                    // Source City Row
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -303,7 +301,6 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                                     )
 
-                                    // Destination City Row
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -334,7 +331,6 @@ fun HomeScreen(
                                     }
                                 }
 
-                                // Animated Swap Button
                                 IconButton(
                                     onClick = {
                                         swapRotationCount++
@@ -361,7 +357,6 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
 
-                            // Date Selection + Quick Chips
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -377,7 +372,7 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
-                                            text = "TRAVEL DATE",
+                                            text = "DATE OF JOURNEY",
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -390,27 +385,14 @@ fun HomeScreen(
                                 }
 
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    DateChip(
-                                        label = "Today",
-                                        selected = uiState.travelDate == todayStr,
-                                        onClick = { onSelectDate(todayStr) }
-                                    )
-                                    DateChip(
-                                        label = "Tomorrow",
-                                        selected = uiState.travelDate == tomorrowStr,
-                                        onClick = { onSelectDate(tomorrowStr) }
-                                    )
-                                    DateChip(
-                                        label = "+2d",
-                                        selected = uiState.travelDate == weekendStr,
-                                        onClick = { onSelectDate(weekendStr) }
-                                    )
+                                    DateChip("Today", uiState.travelDate == todayStr) { onSelectDate(todayStr) }
+                                    DateChip("Tomorrow", uiState.travelDate == tomorrowStr) { onSelectDate(tomorrowStr) }
+                                    DateChip("+2d", uiState.travelDate == dayAfterStr) { onSelectDate(dayAfterStr) }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Primary Search CTA
                             Button(
                                 onClick = onSearchBuses,
                                 modifier = Modifier
@@ -422,8 +404,17 @@ fun HomeScreen(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
+                                if (uiState.isLoading) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                } else {
+                                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
                                 Text(
                                     text = "SEARCH BUSES",
                                     fontSize = 15.sp,
@@ -436,181 +427,224 @@ fun HomeScreen(
             }
         }
 
-        // 2. AI Smart Picks Carousel
-        item {
-            Column(modifier = Modifier.padding(top = 20.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = AiViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "AI Smart Picks For You",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+        // 2. Live Banners from redbusai.app (/banners)
+        if (uiState.banners.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(top = 18.dp)) {
                     Text(
-                        text = "98% On-Time",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = RatingEmerald
+                        text = "AI Curated Fleet & Live Offers",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiState.routes) { route ->
-                        AiSmartPickCard(
-                            route = route,
-                            onClick = { onQuickRouteClick(route) }
-                        )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.banners) { banner ->
+                            LiveBannerCard(
+                                banner = banner,
+                                onClick = {
+                                    banner.routeInfo?.let { info ->
+                                        val parts = info.split("⇄", "->", "to", "-").map { it.trim() }
+                                        if (parts.size >= 2) {
+                                            onSelectCities(parts[0], parts[1])
+                                            onSearchBuses()
+                                            return@LiveBannerCard
+                                        }
+                                    }
+                                    onSearchBuses()
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // 3. Exclusive AI Coupons Strip
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)) {
-                Text(
-                    text = "Trending RedBus AI Offers",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+        // 3. Live AI Recommendations (/ai/recommendations) or Live Routes
+        val recommendedList = uiState.aiRecommendedRoutes.ifEmpty { uiState.routes }
+        if (recommendedList.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(top = 20.dp)) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Surface(
-                                color = AiViolet,
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = "CODE: REDBUSAI20",
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Flat 20% OFF up to ₹250 on AI Smart Sleeper Buses",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = "Valid on all Android app bookings • Auto-applies at checkout",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.LocalOffer,
-                            contentDescription = null,
-                            tint = AiViolet,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 4. Popular Bus Corridors
-        item {
-            PaddingValues(horizontal = 16.dp)
-            Text(
-                text = "Popular Bus Corridors",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
-
-        items(popularRoutes) { pair ->
-            Card(
-                onClick = {
-                    onSelectCities(pair.sourceCity, pair.destinationCity)
-                    onSearchBuses()
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.DirectionsBus,
+                                    imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
                                     tint = RedbusCrimson,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Recommended For Your Journey",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
                             Text(
-                                text = "${pair.sourceCity} ➔ ${pair.destinationCity}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "${pair.busCount}+ Daily AC & Sleeper Coaches",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = uiState.aiRecommendationReason
+                                    ?: "Live schedules fetched from redbusai.app",
+                                fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "from ₹${pair.minPrice.toInt()}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = RedbusCrimson,
-                            fontWeight = FontWeight.Black
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(recommendedList) { route ->
+                            LiveRecommendedRouteCard(
+                                route = route,
+                                onClick = { onQuickRouteClick(route) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Live Available Coupons (/coupons/available)
+        if (uiState.availableCoupons.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(top = 20.dp)) {
+                    Text(
+                        text = "Active Promo Codes on redbusai.app",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.availableCoupons) { coupon ->
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.width(260.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Surface(
+                                        color = AiViolet,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = coupon.code,
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = coupon.title ?: "${coupon.discountPercentage}% OFF up to ₹${coupon.maxDiscountAmount.toInt()}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        text = coupon.description ?: "Min booking ₹${coupon.minBookingAmount.toInt()}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Live Popular Bus Routes Across India (/routes/popular)
+        if (uiState.popularRoutes.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Popular Bus Routes Across India",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 6.dp)
+                )
+            }
+
+            items(uiState.popularRoutes) { pair ->
+                Card(
+                    onClick = {
+                        onSelectCities(pair.sourceCity, pair.destinationCity)
+                        onSearchBuses()
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 5.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.DirectionsBus,
+                                        contentDescription = null,
+                                        tint = RedbusCrimson,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "${pair.sourceCity} ➔ ${pair.destinationCity}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${pair.busCount} Buses Available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "from ₹${pair.minPrice.toInt()}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = RedbusCrimson,
+                                fontWeight = FontWeight.Black
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -629,8 +663,11 @@ fun HomeScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    availableCities.forEach { city ->
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 360.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(cityOptions) { city ->
                         Surface(
                             onClick = {
                                 if (isPickingSource) {
@@ -670,6 +707,98 @@ fun HomeScreen(
 }
 
 @Composable
+private fun LiveBannerCard(
+    banner: Banner,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .width(300.dp)
+            .height(155.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (!banner.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = banner.imageUrl,
+                    contentDescription = banner.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xEB0F172A),
+                                Color(0xB37F1D1D)
+                            )
+                        )
+                    )
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            color = RedbusCrimson,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = banner.tag ?: "AI CURATED",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                        }
+                        banner.promoCode?.let { code ->
+                            Surface(
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = code,
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Column {
+                        Text(
+                            text = banner.title,
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        banner.subtitle?.let { sub ->
+                            Text(
+                                text = sub,
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DateChip(
     label: String,
     selected: Boolean,
@@ -691,7 +820,7 @@ private fun DateChip(
 }
 
 @Composable
-private fun AiSmartPickCard(
+private fun LiveRecommendedRouteCard(
     route: RouteItem,
     onClick: () -> Unit
 ) {
@@ -700,7 +829,7 @@ private fun AiSmartPickCard(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier
-            .width(265.dp)
+            .width(260.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -709,18 +838,12 @@ private fun AiSmartPickCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    color = AiSoftPurple,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = route.aiTag ?: "AI Smart Pick",
-                        color = AiViolet,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                    )
-                }
+                Text(
+                    text = "${route.durationHours} hrs",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Surface(
                     color = RatingEmeraldBg,
                     shape = RoundedCornerShape(6.dp)
@@ -735,7 +858,7 @@ private fun AiSmartPickCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "${route.sourceCity} ➔ ${route.destinationCity}",
@@ -750,7 +873,7 @@ private fun AiSmartPickCard(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${route.departureTime} - ${route.arrivalTime} • ${route.busType}",
+                text = route.busType,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -764,18 +887,25 @@ private fun AiSmartPickCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "₹${route.basePrice.toInt()}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = RedbusCrimson,
-                    fontWeight = FontWeight.Black
-                )
+                Column {
+                    Text(
+                        text = "Starting from",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "₹${route.basePrice.toInt()}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = RedbusCrimson,
+                        fontWeight = FontWeight.Black
+                    )
+                }
                 Surface(
                     color = RedbusCrimson,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "Book Seats ➔",
+                        text = "Select Seats ➔",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -786,4 +916,3 @@ private fun AiSmartPickCard(
         }
     }
 }
-

@@ -44,7 +44,7 @@ fun SearchResultsScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "${uiState.travelDate} • ${filteredRoutes.size} Buses Available",
+                            text = "${uiState.travelDate} • ${filteredRoutes.size} Live Buses Found",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -69,7 +69,6 @@ fun SearchResultsScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Optional AI NLP Banner
             uiState.aiStatusBanner?.let { bannerText ->
                 Surface(
                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -96,7 +95,21 @@ fun SearchResultsScreen(
                 }
             }
 
-            // Filter Chips Row
+            uiState.errorBanner?.let { errText ->
+                Surface(
+                    color = RedbusSoftTint,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = errText,
+                        color = RedbusCrimson,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
+            }
+
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -125,6 +138,34 @@ fun SearchResultsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = RedbusCrimson)
                 }
+            } else if (filteredRoutes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsBus,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "No buses scheduled for ${uiState.sourceCity} ➔ ${uiState.destinationCity} on ${uiState.travelDate}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Try selecting another filter or popular corridor from redbusai.app.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
@@ -147,6 +188,8 @@ private fun BusRouteCard(
     route: RouteItem,
     onSelect: () -> Unit
 ) {
+    val isPrimo = route.rating >= 4.4
+
     Card(
         onClick = onSelect,
         shape = RoundedCornerShape(20.dp),
@@ -157,13 +200,12 @@ private fun BusRouteCard(
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // AI Badge + Punctuality Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (route.aiTag != null) {
+                if (isPrimo) {
                     Surface(
                         color = AiSoftPurple,
                         shape = RoundedCornerShape(8.dp)
@@ -180,7 +222,7 @@ private fun BusRouteCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = route.aiTag,
+                                text = "Primo • Top Rated",
                                 color = AiViolet,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -207,7 +249,7 @@ private fun BusRouteCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "★ ${route.rating} • ${route.onTimeProbability}% On-Time",
+                            text = "★ ${route.rating}",
                             color = RatingEmerald,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black
@@ -218,7 +260,6 @@ private fun BusRouteCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Operator & Bus Type
             Text(
                 text = route.operatorName,
                 style = MaterialTheme.typography.titleLarge,
@@ -232,7 +273,6 @@ private fun BusRouteCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Time & Price Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -293,7 +333,7 @@ private fun BusRouteCard(
                         text = "${route.availableSeats} Seats Left",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (route.availableSeats <= 12) WarningAmber else RatingEmerald
+                        color = if (route.availableSeats <= 10) WarningAmber else RatingEmerald
                     )
                 }
             }
@@ -302,14 +342,13 @@ private fun BusRouteCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Amenities + Select Seats Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = route.amenities.take(3).joinToString(" • "),
+                    text = route.amenities.orEmpty().take(3).joinToString(" • ").ifBlank { "Live GPS • AC • Charging" },
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -334,4 +373,3 @@ private fun BusRouteCard(
         }
     }
 }
-

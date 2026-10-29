@@ -6,10 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ConfirmationNumber
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,8 +30,9 @@ import com.redbus.ai.ui.viewmodel.RedbusViewModel
 sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVector? = null) {
     data object Home : ScreenRoute("home", "Home", Icons.Default.Home)
     data object AiCopilot : ScreenRoute("ai_copilot", "AI Copilot", Icons.Default.AutoAwesome)
-    data object MyTrips : ScreenRoute("my_trips", "My Trips", Icons.Default.ConfirmationNumber)
-    data object Profile : ScreenRoute("profile", "Profile", Icons.Default.Person)
+    data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
+    data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
+    data object WebPortal : ScreenRoute("web_portal", "Web UI", Icons.Default.Language)
     data object SearchResults : ScreenRoute("search_results", "Search Results")
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
     data object Checkout : ScreenRoute("checkout", "Checkout")
@@ -51,7 +49,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         ScreenRoute.Home,
         ScreenRoute.AiCopilot,
         ScreenRoute.MyTrips,
-        ScreenRoute.Profile
+        ScreenRoute.Profile,
+        ScreenRoute.WebPortal
     )
     val showBottomBar = currentRoute in bottomNavTabs.map { it.route }
 
@@ -84,7 +83,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 label = {
                                     Text(
                                         text = tab.label,
-                                        fontSize = 11.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
                                     )
                                 },
@@ -133,8 +132,6 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 composable(ScreenRoute.Home.route) {
                     HomeScreen(
                         uiState = uiState,
-                        availableCities = viewModel.availableCities,
-                        popularRoutes = viewModel.popularRoutes,
                         onSwapCities = viewModel::swapCities,
                         onSelectCities = viewModel::updateCities,
                         onSelectDate = viewModel::updateTravelDate,
@@ -153,6 +150,13 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             viewModel.selectRouteForSeats(route) {
                                 navController.navigate(ScreenRoute.SeatSelection.route)
                             }
+                        },
+                        onNavigateToAccount = {
+                            navController.navigate(ScreenRoute.Profile.route)
+                        },
+                        onOpenWebPortal = { url ->
+                            viewModel.setWebPortalUrl(url)
+                            navController.navigate(ScreenRoute.WebPortal.route)
                         },
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
@@ -177,10 +181,11 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         uiState = uiState,
                         onSelectDeck = viewModel::selectDeck,
                         onToggleSeat = viewModel::toggleSeatSelection,
-                        onApplyAiSmartSeat = viewModel::applyAiSmartSeatPick,
                         onUpdateBoardingDropping = viewModel::updateBoardingDropping,
                         onProceedToCheckout = {
-                            navController.navigate(ScreenRoute.Checkout.route)
+                            viewModel.lockSelectedSeatsAndProceed {
+                                navController.navigate(ScreenRoute.Checkout.route)
+                            }
                         },
                         onBack = { navController.popBackStack() }
                     )
@@ -190,19 +195,29 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                     CheckoutScreen(
                         uiState = uiState,
                         fareBreakdown = viewModel.calculateFareBreakdown(),
-                        availableCoupons = viewModel.availableCoupons,
+                        availableCoupons = uiState.availableCoupons,
                         onUpdatePassenger = viewModel::updatePassenger,
+                        onUpdateContact = viewModel::updateContactDetails,
                         onToggleFreeCancellation = viewModel::toggleFreeCancellation,
                         onToggleTripGuarantee = viewModel::toggleTripGuarantee,
                         onToggleUseWallet = viewModel::toggleUseWallet,
                         onApplyCoupon = viewModel::applyCouponCode,
                         onRemoveCoupon = viewModel::removeCoupon,
                         onConfirmAndPay = {
-                            viewModel.confirmBookingAndPay {
-                                navController.navigate(ScreenRoute.MyTrips.route) {
-                                    popUpTo(ScreenRoute.Home.route)
+                            viewModel.createLiveBooking(
+                                onBookingCreated = {
+                                    navController.navigate(ScreenRoute.MyTrips.route) {
+                                        popUpTo(ScreenRoute.Home.route)
+                                    }
+                                },
+                                onRequireRazorpayWeb = { checkoutUrl ->
+                                    viewModel.setWebPortalUrl(checkoutUrl)
+                                    navController.navigate(ScreenRoute.WebPortal.route)
                                 }
-                            }
+                            )
+                        },
+                        onNavigateToAuth = {
+                            navController.navigate(ScreenRoute.Profile.route)
                         },
                         onBack = { navController.popBackStack() }
                     )
@@ -218,18 +233,46 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 composable(ScreenRoute.MyTrips.route) {
                     MyBookingsScreen(
                         uiState = uiState,
-                        onCancelBooking = viewModel::cancelBookingToWallet
+                        onSearchPnr = viewModel::searchBookingByPnr,
+                        onRefreshBookings = viewModel::fetchMyBookings,
+                        onCancelBooking = viewModel::cancelLiveBooking,
+                        onEmailTicket = viewModel::emailTicket,
+                        onNavigateToLogin = {
+                            navController.navigate(ScreenRoute.Profile.route)
+                        }
                     )
                 }
 
                 composable(ScreenRoute.Profile.route) {
                     ProfileAndWalletScreen(
                         uiState = uiState,
+                        onLoginWithEmail = { email, pass -> viewModel.loginWithEmail(email, pass) },
+                        onRegisterAccount = { name, email, phone, pass ->
+                            viewModel.registerAccount(name, email, phone, pass)
+                        },
+                        onRequestMobileOtp = viewModel::requestMobileOtp,
+                        onVerifyMobileOtp = { phone, otp -> viewModel.verifyMobileOtpAndLogin(phone, otp) },
+                        onUpdateProfile = viewModel::updateProfileDetails,
+                        onAddTraveller = viewModel::addTraveller,
+                        onDeleteTraveller = viewModel::deleteTraveller,
+                        onRefreshAccount = viewModel::refreshAuthenticatedAccountData,
+                        onOpenWebPortal = { url ->
+                            viewModel.setWebPortalUrl(url)
+                            navController.navigate(ScreenRoute.WebPortal.route)
+                        },
+                        onLogout = viewModel::logout,
                         onToggleDarkTheme = viewModel::toggleDarkTheme
+                    )
+                }
+
+                composable(ScreenRoute.WebPortal.route) {
+                    WebPortalScreen(
+                        uiState = uiState,
+                        initialUrl = uiState.activeWebUrl,
+                        onSyncWebSessionToNative = viewModel::syncSessionFromWeb
                     )
                 }
             }
         }
     }
 }
-

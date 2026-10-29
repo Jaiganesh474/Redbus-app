@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Support
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.redbus.ai.data.model.*
+import com.redbus.ai.data.model.SeatItem
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 
@@ -28,9 +28,8 @@ import com.redbus.ai.ui.viewmodel.RedbusUiState
 @Composable
 fun SeatSelectionScreen(
     uiState: RedbusUiState,
-    onSelectDeck: (SeatDeck) -> Unit,
+    onSelectDeck: (String) -> Unit,
     onToggleSeat: (SeatItem) -> Unit,
-    onApplyAiSmartSeat: () -> Unit,
     onUpdateBoardingDropping: (String, String) -> Unit,
     onProceedToCheckout: () -> Unit,
     onBack: () -> Unit
@@ -39,8 +38,12 @@ fun SeatSelectionScreen(
     val layout = uiState.seatLayout ?: return
     var showPointsDialog by remember { mutableStateOf(false) }
 
+    val hasUpperDeck = remember(layout.seats) {
+        layout.seats.any { it.deck.equals("UPPER", ignoreCase = true) }
+    }
     val deckSeats = remember(layout.seats, uiState.selectedDeck) {
-        layout.seats.filter { it.deck == uiState.selectedDeck }
+        val filtered = layout.seats.filter { it.deck.equals(uiState.selectedDeck, ignoreCase = true) }
+        filtered.ifEmpty { layout.seats }
     }
     val rowsMap = remember(deckSeats) {
         deckSeats.groupBy { it.rowNum }.toSortedMap()
@@ -107,6 +110,7 @@ fun SeatSelectionScreen(
 
                         Button(
                             onClick = onProceedToCheckout,
+                            enabled = !uiState.isLoading,
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = RedbusCrimson,
@@ -115,9 +119,9 @@ fun SeatSelectionScreen(
                             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
                         ) {
                             Text(
-                                text = "Continue ➔",
+                                text = if (uiState.isLoading) "Locking..." else "Lock Seats & Continue ➔",
                                 fontWeight = FontWeight.Black,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
                     }
@@ -133,107 +137,51 @@ fun SeatSelectionScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. AI Smart Seat Recommendation Card
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+            if (hasUpperDeck) {
+                item {
                     Row(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(4.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = AiViolet,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                        listOf("LOWER", "UPPER").forEach { deck ->
+                            val active = uiState.selectedDeck.equals(deck, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (active) RedbusCrimson else Color.Transparent)
+                                    .clickable { onSelectDeck(deck) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = "AI Smart Seat Engine",
+                                    text = if (deck == "LOWER") "LOWER DECK" else "UPPER DECK",
+                                    color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    fontSize = 12.sp
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Berths L4, L5 & U4 have 42% lower road vibration & fastest exit access.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Button(
-                            onClick = onApplyAiSmartSeat,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AiViolet,
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "✨ AI Pick",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
                         }
                     }
                 }
             }
 
-            // 2. Deck Switcher (Lower Deck vs Upper Deck)
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(4.dp)
-                ) {
-                    SeatDeck.entries.forEach { deck ->
-                        val active = uiState.selectedDeck == deck
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (active) RedbusCrimson else Color.Transparent)
-                                .clickable { onSelectDeck(deck) }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (deck == SeatDeck.LOWER) "LOWER DECK" else "UPPER DECK (SLEEPER)",
-                                color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 3. Color Legend
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     LegendDot(color = RatingEmerald, label = "Available")
-                    LegendDot(color = AiViolet, label = "AI Pick")
                     LegendDot(color = FemaleSeatPink, label = "Female")
                     LegendDot(color = RedbusCrimson, label = "Selected")
+                    LegendDot(color = WarningAmber, label = "Locked")
                     LegendDot(color = Color.Gray, label = "Booked")
                 }
             }
 
-            // 4. Realistic 2+1 Coach Cabin Matrix
             item {
                 Card(
                     shape = RoundedCornerShape(24.dp),
@@ -243,14 +191,13 @@ fun SeatSelectionScreen(
                         .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp))
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
-                        // Driver Cabin Header
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "FRONT CABIN / ENTRY",
+                                text = "LIVE SEAT MAP (${uiState.selectedDeck} DECK)",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -262,7 +209,7 @@ fun SeatSelectionScreen(
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Support,
-                                        contentDescription = "Steering Wheel",
+                                        contentDescription = "Driver",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -275,49 +222,20 @@ fun SeatSelectionScreen(
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                         )
 
-                        // Seat Rows (2+1 Coach Layout)
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             rowsMap.forEach { (_, rowSeats) ->
-                                val col1 = rowSeats.firstOrNull { it.colNum == 1 }
-                                val col2 = rowSeats.firstOrNull { it.colNum == 2 }
-                                val col3 = rowSeats.firstOrNull { it.colNum == 3 }
-
+                                val sortedCols = rowSeats.sortedBy { it.colNum }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left Twin Seats (Col 1 & Col 2)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        col1?.let { seat ->
-                                            SeatCell(
-                                                seat = seat,
-                                                isSelected = uiState.selectedSeats.any { it.id == seat.id },
-                                                onClick = { onToggleSeat(seat) }
-                                            )
-                                        }
-                                        col2?.let { seat ->
-                                            SeatCell(
-                                                seat = seat,
-                                                isSelected = uiState.selectedSeats.any { it.id == seat.id },
-                                                onClick = { onToggleSeat(seat) }
-                                            )
-                                        }
-                                    }
-
-                                    // Aisle Label
-                                    Text(
-                                        text = "AISLE",
-                                        fontSize = 9.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    // Right Single Sleeper Berth (Col 3)
-                                    col3?.let { seat ->
+                                    sortedCols.forEach { seat ->
                                         SeatCell(
                                             seat = seat,
-                                            isSelected = uiState.selectedSeats.any { it.id == seat.id },
+                                            isSelected = uiState.selectedSeats.any {
+                                                it.seatId == seat.seatId && it.seatNumber == seat.seatNumber
+                                            },
                                             onClick = { onToggleSeat(seat) }
                                         )
                                     }
@@ -328,43 +246,44 @@ fun SeatSelectionScreen(
                 }
             }
 
-            // 5. Boarding & Dropping Point Card
-            item {
-                Card(
-                    onClick = { showPointsDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                ) {
-                    Row(
+            if (!route.boardingPoints.isNullOrEmpty() || !route.droppingPoints.isNullOrEmpty()) {
+                item {
+                    Card(
+                        onClick = { showPointsDialog = true },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "BOARDING & DROPPING POINTS",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = RedbusCrimson
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Boarding: ${uiState.selectedBoardingPoint}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Dropping: ${uiState.selectedDroppingPoint}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        TextButton(onClick = { showPointsDialog = true }) {
-                            Text("Change", color = RedbusCrimson, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "BOARDING & DROPPING POINTS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = RedbusCrimson
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Boarding: ${uiState.selectedBoardingPoint.ifBlank { route.sourceCity }}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Dropping: ${uiState.selectedDroppingPoint.ifBlank { route.destinationCity }}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            TextButton(onClick = { showPointsDialog = true }) {
+                                Text("Change", color = RedbusCrimson, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -379,7 +298,7 @@ fun SeatSelectionScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Boarding Points", fontWeight = FontWeight.Black, color = RedbusCrimson)
-                    route.boardingPoints.forEach { bp ->
+                    route.boardingPoints.orEmpty().forEach { bp ->
                         Surface(
                             onClick = { onUpdateBoardingDropping(bp, uiState.selectedDroppingPoint) },
                             color = if (uiState.selectedBoardingPoint == bp) RedbusSoftTint else MaterialTheme.colorScheme.surfaceVariant,
@@ -395,7 +314,7 @@ fun SeatSelectionScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text("Dropping Points", fontWeight = FontWeight.Black, color = AiViolet)
-                    route.droppingPoints.forEach { dp ->
+                    route.droppingPoints.orEmpty().forEach { dp ->
                         Surface(
                             onClick = { onUpdateBoardingDropping(uiState.selectedBoardingPoint, dp) },
                             color = if (uiState.selectedDroppingPoint == dp) AiSoftPurple else MaterialTheme.colorScheme.surfaceVariant,
@@ -429,34 +348,38 @@ private fun SeatCell(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val isAvailable = seat.status == SeatStatus.AVAILABLE
+    val isAvailable = seat.status.equals("AVAILABLE", ignoreCase = true)
+    val isLocked = seat.status.equals("LOCKED", ignoreCase = true)
+    val isFemale = seat.genderRestriction.equals("FEMALE", ignoreCase = true)
+    val isSleeper = seat.seatType.equals("SLEEPER", ignoreCase = true)
+
     val borderColor = when {
         isSelected -> RedbusCrimson
+        isLocked -> WarningAmber
         !isAvailable -> Color.Gray.copy(alpha = 0.4f)
-        seat.isAiRecommended -> AiViolet
-        seat.genderRestriction == GenderRestriction.FEMALE -> FemaleSeatPink
+        isFemale -> FemaleSeatPink
         else -> RatingEmerald
     }
     val containerColor = when {
         isSelected -> RedbusCrimson
+        isLocked -> WarningAmberBg
         !isAvailable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        seat.isAiRecommended -> AiSoftPurple
-        seat.genderRestriction == GenderRestriction.FEMALE -> FemaleSeatPinkBg
+        isFemale -> FemaleSeatPinkBg
         else -> MaterialTheme.colorScheme.surface
     }
     val textColor = when {
         isSelected -> Color.White
+        isLocked -> WarningAmber
         !isAvailable -> Color.Gray
-        seat.isAiRecommended -> AiViolet
-        seat.genderRestriction == GenderRestriction.FEMALE -> FemaleSeatPink
+        isFemale -> FemaleSeatPink
         else -> MaterialTheme.colorScheme.onSurface
     }
 
-    val heightDp = if (seat.seatType == SeatType.SLEEPER) 74.dp else 58.dp
+    val heightDp = if (isSleeper) 72.dp else 56.dp
 
     Box(
         modifier = Modifier
-            .width(66.dp)
+            .width(64.dp)
             .height(heightDp)
             .clip(RoundedCornerShape(12.dp))
             .background(containerColor)
@@ -466,14 +389,6 @@ private fun SeatCell(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (seat.isAiRecommended && !isSelected) {
-                Text(
-                    text = "✨ AI",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black,
-                    color = AiViolet
-                )
-            }
             Text(
                 text = seat.seatNumber,
                 fontWeight = FontWeight.Black,
@@ -482,7 +397,11 @@ private fun SeatCell(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = if (!isAvailable) "SOLD" else "₹${seat.price.toInt()}",
+                text = when {
+                    isLocked -> "LOCKED"
+                    !isAvailable -> "SOLD"
+                    else -> "₹${seat.price.toInt()}"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor.copy(alpha = 0.85f)
@@ -509,4 +428,3 @@ private fun LegendDot(color: Color, label: String) {
         )
     }
 }
-
