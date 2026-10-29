@@ -56,7 +56,10 @@ fun MyBookingsScreen(
             color = RedbusCrimson,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -70,7 +73,7 @@ fun MyBookingsScreen(
                             fontWeight = FontWeight.Black
                         )
                         Text(
-                            text = "Synced live with your redbusai.app account",
+                            text = "Synced live with your redBus AI account",
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 12.sp
                         )
@@ -84,10 +87,11 @@ fun MyBookingsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Live PNR Search Bar (/bookings/{pnr})
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Live PNR Search Bar
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     OutlinedTextField(
                         value = pnrQuery,
                         onValueChange = {
@@ -111,7 +115,6 @@ fun MyBookingsScreen(
                         ),
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onSearchPnr(pnrQuery) },
                         colors = ButtonDefaults.buttonColors(
@@ -119,7 +122,7 @@ fun MyBookingsScreen(
                             contentColor = RedbusCrimson
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp)
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 15.dp)
                     ) {
                         Text("Find PNR", fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
@@ -137,7 +140,7 @@ fun MyBookingsScreen(
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
         }
@@ -160,7 +163,8 @@ fun MyBookingsScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ConfirmationNumber,
@@ -168,22 +172,21 @@ fun MyBookingsScreen(
                             tint = RedbusCrimson,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Sign In to View Your Bookings",
                             style = MaterialTheme.typography.titleLarge
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Sign in with the same account you use on redbusai.app to see all your bus tickets, or search any ticket above using its PNR.",
+                            text = "Sign in with your redBus AI account to see all your bus tickets, or search any ticket above using its PNR.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Button(
                             onClick = onNavigateToLogin,
                             colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                         ) {
                             Text("Sign In to Account", fontWeight = FontWeight.Bold)
                         }
@@ -197,14 +200,16 @@ fun MyBookingsScreen(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.DirectionsBus,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "No bookings found for your account yet",
                         style = MaterialTheme.typography.titleMedium
@@ -219,7 +224,7 @@ fun MyBookingsScreen(
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(displayedBookings, key = { it.pnr.ifBlank { it.id.toString() } }) { booking ->
                     BookingTicketCard(
@@ -240,7 +245,7 @@ fun MyBookingsScreen(
                 Text("Cancel Ticket (PNR: ${b.pnr})", fontWeight = FontWeight.Black)
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = "${b.sourceCity} ➔ ${b.destinationCity} (${b.operatorName})",
                         fontWeight = FontWeight.Bold
@@ -253,7 +258,7 @@ fun MyBookingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text("Refund Destination:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         FilterChip(
                             selected = refundDestination == "WALLET",
                             onClick = { refundDestination = "WALLET" },
@@ -303,7 +308,10 @@ private fun BookingTicketCard(
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -330,19 +338,17 @@ private fun BookingTicketCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "${booking.sourceCity} ➔ ${booking.destinationCity}",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = "${booking.operatorName} • ${booking.busType}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
+            Column {
+                Text(
+                    text = "${booking.sourceCity} ➔ ${booking.destinationCity}",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "${booking.operatorName} • ${booking.busType}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -368,14 +374,13 @@ private fun BookingTicketCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Boarding: ${booking.boardingPoint} • Dropping: ${booking.droppingPoint}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+            HorizontalDivider()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -398,19 +403,27 @@ private fun BookingTicketCard(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(onClick = onEmailClick) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = onEmailClick,
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Email,
                             contentDescription = "Email E-Ticket",
-                            tint = AiViolet
+                            tint = AiViolet,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Email Ticket", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                     if (isConfirmed) {
                         OutlinedButton(
                             onClick = onCancelClick,
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson)
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text("Cancel", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
@@ -432,7 +445,6 @@ fun ProfileAndWalletScreen(
     onAddTraveller: (String, Int, String) -> Unit,
     onDeleteTraveller: (Int) -> Unit,
     onRefreshAccount: () -> Unit,
-    onOpenWebPortal: (String) -> Unit,
     onLogout: () -> Unit,
     onToggleDarkTheme: () -> Unit
 ) {
@@ -443,7 +455,6 @@ fun ProfileAndWalletScreen(
             onRegisterAccount = onRegisterAccount,
             onRequestMobileOtp = onRequestMobileOtp,
             onVerifyMobileOtp = onVerifyMobileOtp,
-            onOpenWebAuth = { onOpenWebPortal("https://www.redbusai.app/login") },
             onToggleDarkTheme = onToggleDarkTheme
         )
         return
@@ -474,16 +485,19 @@ fun ProfileAndWalletScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Live User Account Header (Matching https://www.redbusai.app/profile)
+        // 1. Live User Account Header
         item {
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = RedbusCrimson),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -545,8 +559,6 @@ fun ProfileAndWalletScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -575,7 +587,7 @@ fun ProfileAndWalletScreen(
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    text = if (user.emailVerified == true) "✓ Verified Email" else "⚠ Unverified Email",
+                                    text = if (user.emailVerified == true) "✓ Verified" else "⚠ Unverified",
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
@@ -607,17 +619,16 @@ fun ProfileAndWalletScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "REDBUS WALLET (LIVE SYNCED)",
+                            text = "REDBUS WALLET BALANCE",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "₹${String.format("%.2f", user.walletBalance ?: 0.0)}",
                             fontSize = 28.sp,
@@ -625,7 +636,7 @@ fun ProfileAndWalletScreen(
                             color = RatingEmerald
                         )
                         Text(
-                            text = "Instant refunds & 1-tap checkout across Web & Android",
+                            text = "Instant refunds & 1-tap checkout credit",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -640,52 +651,17 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 3. Operator / Admin Role Dashboards (If user has Operator or Admin role on redbusai.app)
-        if (user.role == "ROLE_OPERATOR" || user.role == "ROLE_ADMIN") {
-            item {
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Management Portals (${user.role})",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = { onOpenWebPortal("https://www.redbusai.app/operator") },
-                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Open Operator Hub", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                            if (user.role == "ROLE_ADMIN") {
-                                Button(
-                                    onClick = { onOpenWebPortal("https://www.redbusai.app/admin") },
-                                    colors = ButtonDefaults.buttonColors(containerColor = AiViolet),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("Open Admin Portal", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Live Saved Travellers (/auth/saved-travellers)
+        // 3. Live Saved Travellers (/auth/saved-travellers)
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -700,12 +676,10 @@ fun ProfileAndWalletScreen(
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Add Traveller", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
 
                     if (uiState.savedTravellers.isEmpty()) {
                         Text(
@@ -728,7 +702,7 @@ fun ProfileAndWalletScreen(
                                         contentDescription = null,
                                         tint = AiViolet
                                     )
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(text = t.name, fontWeight = FontWeight.Bold)
                                         Text(
@@ -752,14 +726,17 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 5. Theme & Sign Out Controls
+        // 4. Theme & Sign Out Controls
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -775,7 +752,7 @@ fun ProfileAndWalletScreen(
                             Column {
                                 Text(text = "Dark Mode Theme", fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = "Syncs visual theme across screens",
+                                    text = "Comfortable night bus booking appearance",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -787,12 +764,13 @@ fun ProfileAndWalletScreen(
                         )
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    HorizontalDivider()
 
                     OutlinedButton(
                         onClick = onLogout,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                        contentPadding = PaddingValues(vertical = 14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(imageVector = Icons.Default.Logout, contentDescription = null)
@@ -809,7 +787,7 @@ fun ProfileAndWalletScreen(
             onDismissRequest = { showEditProfileDialog = false },
             title = { Text("Edit Profile", fontWeight = FontWeight.Black) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
@@ -848,7 +826,7 @@ fun ProfileAndWalletScreen(
             onDismissRequest = { showAddTravellerDialog = false },
             title = { Text("Add Saved Traveller", fontWeight = FontWeight.Black) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = newTravellerName,
                         onValueChange = { newTravellerName = it },
@@ -861,7 +839,7 @@ fun ProfileAndWalletScreen(
                         label = { Text("Age") },
                         singleLine = true
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         listOf("MALE", "FEMALE").forEach { g ->
                             FilterChip(
                                 selected = newTravellerGender == g,
@@ -903,10 +881,9 @@ private fun LiveAuthScreen(
     onRegisterAccount: (String, String, String, String) -> Unit,
     onRequestMobileOtp: (String) -> Unit,
     onVerifyMobileOtp: (String, String) -> Unit,
-    onOpenWebAuth: () -> Unit,
     onToggleDarkTheme: () -> Unit
 ) {
-    var authTab by remember { mutableIntStateOf(0) } // 0 = Email Login, 1 = Mobile OTP, 2 = Register
+    var authTab by remember { mutableIntStateOf(0) } // 0 = Email Login, 1 = Mobile OTP, 2 = Sign Up
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -918,7 +895,7 @@ private fun LiveAuthScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Card(
@@ -927,7 +904,10 @@ private fun LiveAuthScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -940,7 +920,7 @@ private fun LiveAuthScreen(
                                 color = RedbusCrimson
                             )
                             Text(
-                                text = "Use your exact same account from redbusai.app",
+                                text = "Sign in with your redBus AI account",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -953,9 +933,6 @@ private fun LiveAuthScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Auth Mode Tabs (Email Login | Mobile OTP | Sign Up)
                     TabRow(
                         selectedTabIndex = authTab,
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -979,8 +956,6 @@ private fun LiveAuthScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
                     uiState.authError?.let { err ->
                         Surface(
                             color = RedbusSoftTint,
@@ -992,10 +967,9 @@ private fun LiveAuthScreen(
                                 color = RedbusCrimson,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(10.dp)
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
                     }
 
                     uiState.authSuccessMessage?.let { msg ->
@@ -1009,10 +983,9 @@ private fun LiveAuthScreen(
                                 color = RatingEmerald,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(10.dp)
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
                     }
 
                     when (authTab) {
@@ -1024,7 +997,6 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
                             OutlinedTextField(
                                 value = password,
                                 onValueChange = { password = it },
@@ -1033,7 +1005,7 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Button(
                                 onClick = { onLoginWithEmail(email, password) },
                                 enabled = !uiState.isAuthLoading,
@@ -1041,7 +1013,7 @@ private fun LiveAuthScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
+                                    .height(52.dp)
                             ) {
                                 Text(
                                     text = if (uiState.isAuthLoading) "SIGNING IN..." else "SIGN IN TO REDBUS AI",
@@ -1058,7 +1030,6 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
                             if (uiState.otpSent) {
                                 OutlinedTextField(
                                     value = otpCode,
@@ -1067,7 +1038,7 @@ private fun LiveAuthScreen(
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Button(
                                     onClick = { onVerifyMobileOtp(phone, otpCode) },
                                     enabled = !uiState.isAuthLoading,
@@ -1075,11 +1046,12 @@ private fun LiveAuthScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(50.dp)
+                                        .height(52.dp)
                                 ) {
                                     Text("VERIFY OTP & LOGIN", fontWeight = FontWeight.Black)
                                 }
                             } else {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Button(
                                     onClick = { onRequestMobileOtp(phone) },
                                     enabled = !uiState.isAuthLoading,
@@ -1087,7 +1059,7 @@ private fun LiveAuthScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(50.dp)
+                                        .height(52.dp)
                                 ) {
                                     Text(
                                         text = if (uiState.isAuthLoading) "SENDING OTP..." else "SEND OTP CODE",
@@ -1105,7 +1077,6 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = email,
                                 onValueChange = { email = it },
@@ -1113,7 +1084,6 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = phone,
                                 onValueChange = { phone = it },
@@ -1121,7 +1091,6 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = password,
                                 onValueChange = { password = it },
@@ -1130,7 +1099,7 @@ private fun LiveAuthScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Button(
                                 onClick = { onRegisterAccount(name, email, phone, password) },
                                 enabled = !uiState.isAuthLoading,
@@ -1138,7 +1107,7 @@ private fun LiveAuthScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
+                                    .height(52.dp)
                             ) {
                                 Text(
                                     text = if (uiState.isAuthLoading) "CREATING ACCOUNT..." else "CREATE REDBUS AI ACCOUNT",
@@ -1146,26 +1115,6 @@ private fun LiveAuthScreen(
                                 )
                             }
                         }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                    // Google / Firebase OAuth via synced redbusai.app WebView
-                    OutlinedButton(
-                        onClick = onOpenWebAuth,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Language, contentDescription = null, tint = AiViolet)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Continue with Google / Firebase on redbusai.app",
-                            fontWeight = FontWeight.Bold,
-                            color = AiViolet,
-                            fontSize = 12.sp
-                        )
                     }
                 }
             }

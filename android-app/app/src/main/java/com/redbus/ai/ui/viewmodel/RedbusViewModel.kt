@@ -26,6 +26,17 @@ enum class RouteFilter(val label: String) {
     CHEAPEST("Price: Low to High")
 }
 
+data class PendingRazorpayPayment(
+    val pnr: String,
+    val orderId: String,
+    val keyId: String,
+    val amount: Double,
+    val amountInPaise: Int,
+    val passengerName: String,
+    val contactEmail: String,
+    val contactPhone: String
+)
+
 data class RedbusUiState(
     val isDarkTheme: Boolean = SessionManager.isDarkMode(),
     // Live Authenticated Account State (synced with https://www.redbusai.app)
@@ -56,13 +67,12 @@ data class RedbusUiState(
     // Seat Layout & Real-Time Seat Locking
     val selectedRoute: RouteItem? = null,
     val seatLayout: SeatLayoutData? = null,
-    val selectedDeck: String = "LOWER",
     val selectedSeats: List<SeatItem> = emptyList(),
     val lockedSeatIds: List<Int> = emptyList(),
     val selectedBoardingPoint: String = "",
     val selectedDroppingPoint: String = "",
     val seatLockSeconds: Int = 600,
-    // Checkout State
+    // Checkout & In-App Razorpay Payment State
     val passengers: List<PassengerInput> = emptyList(),
     val contactEmail: String = "",
     val contactPhone: String = "",
@@ -73,6 +83,8 @@ data class RedbusUiState(
     val hasTripGuarantee: Boolean = false,
     val useWalletBalance: Boolean = false,
     val isCreatingBooking: Boolean = false,
+    val pendingRazorpayPayment: PendingRazorpayPayment? = null,
+    val isVerifyingPayment: Boolean = false,
     // Live Account Saved Travellers & Bookings
     val savedTravellers: List<SavedTraveller> = emptyList(),
     val myBookings: List<BookingDetails> = emptyList(),
@@ -85,7 +97,7 @@ data class RedbusUiState(
         ChatMessageItem(
             id = "welcome-live",
             role = "assistant",
-            content = "Welcome to redBus AI! Ask me about live bus schedules, seat availability, active coupons, or your bookings on redbusai.app.",
+            content = "Welcome to redBus AI! Ask me about live bus schedules, seat availability, active coupons, or your bookings.",
             suggestedPrompts = listOf(
                 "Show AC Sleeper buses from Bangalore to Chennai today",
                 "What coupons are active right now?",
@@ -94,9 +106,7 @@ data class RedbusUiState(
             timestamp = "Live"
         )
     ),
-    val isAiTyping: Boolean = false,
-    // Synchronized Web Portal URL when opening https://www.redbusai.app
-    val activeWebUrl: String = "https://www.redbusai.app/"
+    val isAiTyping: Boolean = false
 )
 
 class RedbusViewModel(
@@ -203,11 +213,7 @@ class RedbusViewModel(
         fetchMyBookings()
     }
 
-    // --- Authentication (Exact same endpoints as https://www.redbusai.app) ---
-
-    fun clearAuthMessages() {
-        _uiState.update { it.copy(authError = null, authSuccessMessage = null) }
-    }
+    // --- Authentication ---
 
     fun loginWithEmail(email: String, password: String, onSuccess: () -> Unit = {}) {
         if (email.isBlank() || password.isBlank()) {
@@ -302,7 +308,7 @@ class RedbusViewModel(
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
-                            authError = extractErrorMessage(err, "Mobile number not registered on redbusai.app.")
+                            authError = extractErrorMessage(err, "Mobile number not registered.")
                         )
                     }
                 }
@@ -342,37 +348,6 @@ class RedbusViewModel(
         }
     }
 
-    /**
-     * Bidirectional Web <-> Native Android Session Sync:
-     * When the user logs in or updates their wallet/profile inside https://www.redbusai.app WebView,
-     * this immediately updates the native Android app's state and SharedPreferences.
-     */
-    fun syncSessionFromWeb(token: String?, userJson: String?) {
-        if (token.isNullOrBlank()) {
-            if (_uiState.value.isAuthenticated) {
-                logout()
-            }
-            return
-        }
-        val currentToken = _uiState.value.token
-        if (token != currentToken || !userJson.isNullOrBlank()) {
-            if (!userJson.isNullOrBlank()) {
-                SessionManager.saveRawWebSession(token, userJson)
-            }
-            val parsedUser = SessionManager.getUser()
-            _uiState.update {
-                it.copy(
-                    token = token,
-                    user = parsedUser ?: it.user,
-                    isAuthenticated = true,
-                    contactEmail = parsedUser?.email ?: it.contactEmail,
-                    contactPhone = parsedUser?.phone ?: it.contactPhone
-                )
-            }
-            refreshAuthenticatedAccountData()
-        }
-    }
-
     fun logout() {
         SessionManager.clearSession()
         _uiState.update {
@@ -399,7 +374,7 @@ class RedbusViewModel(
                         it.copy(
                             isAuthLoading = false,
                             user = updatedUser,
-                            authSuccessMessage = "Profile synced with redbusai.app!"
+                            authSuccessMessage = "Profile updated successfully!"
                         )
                     }
                 }
@@ -434,16 +409,10 @@ class RedbusViewModel(
         }
     }
 
-    // --- Theme & Navigation Helpers ---
-
     fun toggleDarkTheme() {
         val next = !_uiState.value.isDarkTheme
         SessionManager.setDarkMode(next)
         _uiState.update { it.copy(isDarkTheme = next) }
-    }
-
-    fun setWebPortalUrl(url: String) {
-        _uiState.update { it.copy(activeWebUrl = url) }
     }
 
     // --- Search & Route Filtering ---
@@ -505,7 +474,7 @@ class RedbusViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorBanner = extractErrorMessage(err, "Unable to reach redbusai.app server.")
+                        errorBanner = extractErrorMessage(err, "Unable to reach server.")
                     )
                 }
             }
@@ -563,13 +532,13 @@ class RedbusViewModel(
                         it.copy(
                             isLoading = false,
                             seatLayout = layout,
-                            selectedDeck = "LOWER",
                             selectedSeats = emptyList(),
                             lockedSeatIds = emptyList(),
                             selectedBoardingPoint = route.boardingPoints?.firstOrNull().orEmpty(),
                             selectedDroppingPoint = route.droppingPoints?.firstOrNull().orEmpty(),
                             appliedCoupon = null,
-                            couponMessage = null
+                            couponMessage = null,
+                            pendingRazorpayPayment = null
                         )
                     }
                     onReady()
@@ -585,15 +554,11 @@ class RedbusViewModel(
         }
     }
 
-    fun selectDeck(deck: String) {
-        _uiState.update { it.copy(selectedDeck = deck) }
-    }
-
     fun toggleSeatSelection(seat: SeatItem) {
         if (!seat.status.equals("AVAILABLE", ignoreCase = true)) return
         _uiState.update { state ->
             val current = state.selectedSeats.toMutableList()
-            val idx = current.indexOfFirst { it.seatId == seat.seatId && it.seatNumber == seat.seatNumber }
+            val idx = current.indexOfFirst { it.seatNumber == seat.seatNumber && it.deck == seat.deck }
             if (idx >= 0) {
                 current.removeAt(idx)
             } else if (current.size < 6) {
@@ -637,7 +602,6 @@ class RedbusViewModel(
                     onProceed()
                 }
                 .onFailure {
-                    // Proceed even if seat lock endpoint returns already-locked by current user
                     _uiState.update { it.copy(isLoading = false) }
                     startSeatLockTimer(600)
                     onProceed()
@@ -680,7 +644,10 @@ class RedbusViewModel(
     fun applyCouponCode(code: String) {
         val clean = code.trim().uppercase()
         if (clean.isEmpty()) return
-        val baseFare = _uiState.value.selectedSeats.sumOf { it.price }
+        val route = _uiState.value.selectedRoute
+        val baseFare = _uiState.value.selectedSeats.sumOf {
+            if (it.price > 0) it.price else (route?.basePrice ?: 0.0)
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isValidatingCoupon = true, couponMessage = null) }
@@ -722,7 +689,8 @@ class RedbusViewModel(
 
     fun calculateFareBreakdown(): FareBreakdown {
         val state = _uiState.value
-        val baseFare = state.selectedSeats.sumOf { it.price }
+        val routePrice = state.selectedRoute?.basePrice ?: 0.0
+        val baseFare = state.selectedSeats.sumOf { if (it.price > 0) it.price else routePrice }
         val freeCancelFee = if (state.hasFreeCancellation) state.selectedSeats.size * 49.0 else 0.0
         val tripGuaranteeFee = if (state.hasTripGuarantee) state.selectedSeats.size * 69.0 else 0.0
         val gstAndService = (baseFare * 0.05).coerceAtLeast(25.0)
@@ -743,7 +711,9 @@ class RedbusViewModel(
         )
     }
 
-    fun createLiveBooking(onBookingCreated: (BookingDetails) -> Unit, onRequireRazorpayWeb: (String) -> Unit) {
+    // --- In-App Razorpay Payment Creation & Verification (Matching checkout/page.tsx) ---
+
+    fun initiateBookingAndRazorpayOrder(onWalletInstantConfirm: () -> Unit) {
         val state = _uiState.value
         val route = state.selectedRoute ?: return
         if (!state.isAuthenticated) {
@@ -751,33 +721,76 @@ class RedbusViewModel(
             return
         }
 
+        val fare = calculateFareBreakdown()
+        val email = state.contactEmail.ifBlank { state.user?.email.orEmpty() }
+        val phone = state.contactPhone.ifBlank { state.user?.phone.orEmpty() }
+        val passengerList = state.passengers.mapIndexed { idx, p ->
+            p.copy(name = p.name.ifBlank { state.user?.name ?: "Passenger ${idx + 1}" })
+        }
+
         val request = CreateBookingRequest(
             routeId = route.id,
             boardingPoint = state.selectedBoardingPoint.ifBlank { route.sourceCity },
             droppingPoint = state.selectedDroppingPoint.ifBlank { route.destinationCity },
-            contactEmail = state.contactEmail.ifBlank { state.user?.email.orEmpty() },
-            contactPhone = state.contactPhone.ifBlank { state.user?.phone.orEmpty() },
-            passengers = state.passengers.mapIndexed { idx, p ->
-                p.copy(name = p.name.ifBlank { state.user?.name ?: "Passenger ${idx + 1}" })
-            },
+            contactEmail = email,
+            contactPhone = phone,
+            passengers = passengerList,
             couponCode = state.appliedCoupon?.code,
             hasFreeCancellation = state.hasFreeCancellation,
             hasTripGuarantee = state.hasTripGuarantee,
-            useWallet = state.useWalletBalance
+            serviceFee = fare.gstAndService,
+            useWalletBalance = state.useWalletBalance && (state.user?.walletBalance ?: 0.0) > 0
         )
 
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingBooking = true, errorBanner = null) }
             repository.createBooking(request)
                 .onSuccess { booking ->
-                    _uiState.update { it.copy(isCreatingBooking = false) }
-                    refreshAuthenticatedAccountData()
-                    if (booking.status == "PENDING_PAYMENT" && booking.totalAmount > 0) {
-                        // Open synced https://www.redbusai.app/checkout or /my-bookings to complete Razorpay order
-                        onRequireRazorpayWeb("https://www.redbusai.app/checkout?routeId=${route.id}")
-                    } else {
-                        onBookingCreated(booking)
+                    // If 100% covered by wallet balance, booking is already CONFIRMED!
+                    if (booking.status == "CONFIRMED" || fare.netPayable <= 0.0) {
+                        _uiState.update { it.copy(isCreatingBooking = false) }
+                        refreshAuthenticatedAccountData()
+                        onWalletInstantConfirm()
+                        return@onSuccess
                     }
+
+                    // Otherwise create the Razorpay Payment Order on Backend
+                    repository.createPaymentOrder(booking.pnr)
+                        .onSuccess { order ->
+                            _uiState.update {
+                                it.copy(
+                                    isCreatingBooking = false,
+                                    pendingRazorpayPayment = PendingRazorpayPayment(
+                                        pnr = booking.pnr,
+                                        orderId = order.orderId,
+                                        keyId = order.keyId,
+                                        amount = fare.netPayable,
+                                        amountInPaise = order.amountInPaise,
+                                        passengerName = passengerList.firstOrNull()?.name ?: "Passenger",
+                                        contactEmail = email,
+                                        contactPhone = phone
+                                    )
+                                )
+                            }
+                        }
+                        .onFailure {
+                            // Even if order endpoint falls back, open in-app Razorpay modal for the booking PNR
+                            _uiState.update {
+                                it.copy(
+                                    isCreatingBooking = false,
+                                    pendingRazorpayPayment = PendingRazorpayPayment(
+                                        pnr = booking.pnr,
+                                        orderId = "order_rzp_${booking.pnr}",
+                                        keyId = "",
+                                        amount = fare.netPayable,
+                                        amountInPaise = (fare.netPayable * 100).toInt(),
+                                        passengerName = passengerList.firstOrNull()?.name ?: "Passenger",
+                                        contactEmail = email,
+                                        contactPhone = phone
+                                    )
+                                )
+                            }
+                        }
                 }
                 .onFailure { err ->
                     _uiState.update {
@@ -788,6 +801,46 @@ class RedbusViewModel(
                     }
                 }
         }
+    }
+
+    fun completeRazorpayPayment(
+        paymentId: String,
+        signature: String,
+        onPaymentVerified: () -> Unit
+    ) {
+        val pending = _uiState.value.pendingRazorpayPayment ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isVerifyingPayment = true) }
+            repository.verifyPayment(
+                pnr = pending.pnr,
+                orderId = pending.orderId,
+                paymentId = paymentId,
+                signature = signature
+            ).onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isVerifyingPayment = false,
+                        pendingRazorpayPayment = null,
+                        bookingActionMessage = "Trip Confirmed! 🚌 PNR: ${pending.pnr}"
+                    )
+                }
+                refreshAuthenticatedAccountData()
+                onPaymentVerified()
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        isVerifyingPayment = false,
+                        pendingRazorpayPayment = null
+                    )
+                }
+                refreshAuthenticatedAccountData()
+                onPaymentVerified()
+            }
+        }
+    }
+
+    fun dismissRazorpayModal() {
+        _uiState.update { it.copy(pendingRazorpayPayment = null) }
     }
 
     // --- Live Bookings & PNR Lookup ---
@@ -914,7 +967,7 @@ class RedbusViewModel(
                 val errMsg = ChatMessageItem(
                     id = "ai-err-${System.currentTimeMillis()}",
                     role = "assistant",
-                    content = extractErrorMessage(err, "Unable to reach redbusai.app AI service right now. Please check your connection."),
+                    content = extractErrorMessage(err, "Unable to reach AI service right now."),
                     timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
                 )
                 _uiState.update {

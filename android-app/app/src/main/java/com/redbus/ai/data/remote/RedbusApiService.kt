@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 interface RedbusApiService {
 
-    // 1. Authentication & Cross-Platform Account Endpoints (same as https://www.redbusai.app)
+    // 1. Authentication & Cross-Platform Account Endpoints
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): AuthResponse
 
@@ -32,7 +32,7 @@ interface RedbusApiService {
     @PUT("auth/profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequest): User
 
-    // 2. Saved Travellers (synced with Web Profile)
+    // 2. Saved Travellers
     @GET("auth/saved-travellers")
     suspend fun getSavedTravellers(): List<SavedTraveller>
 
@@ -78,13 +78,6 @@ interface RedbusApiService {
     @GET("routes/{id}/seats")
     suspend fun getRouteSeats(@Path("id") routeId: Int): SeatLayoutData
 
-    @GET("ml/smart-seat-recommendations")
-    suspend fun getSmartSeatRecommendations(
-        @Query("scheduleId") scheduleId: Int,
-        @Query("userId") userId: Int? = null,
-        @Query("gender") gender: String? = null
-    ): SmartSeatRecommendation
-
     // 5. Real-Time Seat Locking
     @POST("seats/lock")
     suspend fun lockSeats(@Body request: LockSeatsRequest): LockSeatsResponse
@@ -99,9 +92,15 @@ interface RedbusApiService {
     @POST("coupons/validate")
     suspend fun validateCoupon(@Body request: ValidateCouponRequest): CouponValidationResponse
 
-    // 7. Bookings & Cancellation
+    // 7. Bookings, Razorpay Order & Verification
     @POST("bookings")
     suspend fun createBooking(@Body request: CreateBookingRequest): BookingDetails
+
+    @POST("payments/create-order")
+    suspend fun createPaymentOrder(@Body request: CreatePaymentOrderRequest): PaymentOrder
+
+    @POST("payments/verify")
+    suspend fun verifyPayment(@Body request: VerifyPaymentRequest): VerifyPaymentResponse
 
     @GET("bookings/my-bookings")
     suspend fun getMyBookings(

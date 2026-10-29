@@ -32,7 +32,6 @@ sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVe
     data object AiCopilot : ScreenRoute("ai_copilot", "AI Copilot", Icons.Default.AutoAwesome)
     data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
     data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
-    data object WebPortal : ScreenRoute("web_portal", "Web UI", Icons.Default.Language)
     data object SearchResults : ScreenRoute("search_results", "Search Results")
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
     data object Checkout : ScreenRoute("checkout", "Checkout")
@@ -49,8 +48,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         ScreenRoute.Home,
         ScreenRoute.AiCopilot,
         ScreenRoute.MyTrips,
-        ScreenRoute.Profile,
-        ScreenRoute.WebPortal
+        ScreenRoute.Profile
     )
     val showBottomBar = currentRoute in bottomNavTabs.map { it.route }
 
@@ -83,7 +81,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 label = {
                                     Text(
                                         text = tab.label,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
                                     )
                                 },
@@ -154,10 +152,6 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToAccount = {
                             navController.navigate(ScreenRoute.Profile.route)
                         },
-                        onOpenWebPortal = { url ->
-                            viewModel.setWebPortalUrl(url)
-                            navController.navigate(ScreenRoute.WebPortal.route)
-                        },
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
                 }
@@ -179,7 +173,6 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 composable(ScreenRoute.SeatSelection.route) {
                     SeatSelectionScreen(
                         uiState = uiState,
-                        onSelectDeck = viewModel::selectDeck,
                         onToggleSeat = viewModel::toggleSeatSelection,
                         onUpdateBoardingDropping = viewModel::updateBoardingDropping,
                         onProceedToCheckout = {
@@ -204,18 +197,22 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onApplyCoupon = viewModel::applyCouponCode,
                         onRemoveCoupon = viewModel::removeCoupon,
                         onConfirmAndPay = {
-                            viewModel.createLiveBooking(
-                                onBookingCreated = {
+                            viewModel.initiateBookingAndRazorpayOrder(
+                                onWalletInstantConfirm = {
                                     navController.navigate(ScreenRoute.MyTrips.route) {
                                         popUpTo(ScreenRoute.Home.route)
                                     }
-                                },
-                                onRequireRazorpayWeb = { checkoutUrl ->
-                                    viewModel.setWebPortalUrl(checkoutUrl)
-                                    navController.navigate(ScreenRoute.WebPortal.route)
                                 }
                             )
                         },
+                        onCompleteRazorpayPayment = { paymentId, signature ->
+                            viewModel.completeRazorpayPayment(paymentId, signature) {
+                                navController.navigate(ScreenRoute.MyTrips.route) {
+                                    popUpTo(ScreenRoute.Home.route)
+                                }
+                            }
+                        },
+                        onDismissRazorpayModal = viewModel::dismissRazorpayModal,
                         onNavigateToAuth = {
                             navController.navigate(ScreenRoute.Profile.route)
                         },
@@ -256,20 +253,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onAddTraveller = viewModel::addTraveller,
                         onDeleteTraveller = viewModel::deleteTraveller,
                         onRefreshAccount = viewModel::refreshAuthenticatedAccountData,
-                        onOpenWebPortal = { url ->
-                            viewModel.setWebPortalUrl(url)
-                            navController.navigate(ScreenRoute.WebPortal.route)
-                        },
                         onLogout = viewModel::logout,
                         onToggleDarkTheme = viewModel::toggleDarkTheme
-                    )
-                }
-
-                composable(ScreenRoute.WebPortal.route) {
-                    WebPortalScreen(
-                        uiState = uiState,
-                        initialUrl = uiState.activeWebUrl,
-                        onSyncWebSessionToNative = viewModel::syncSessionFromWeb
                     )
                 }
             }

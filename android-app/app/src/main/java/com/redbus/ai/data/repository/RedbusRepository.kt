@@ -5,11 +5,6 @@ import com.redbus.ai.data.remote.RedbusApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * 100% Live API Repository connected to https://redbus-api.duckdns.org/api/v1/
- * (the exact same backend powering https://www.redbusai.app/).
- * Zero fake/mocked user or booking data.
- */
 class RedbusRepository(
     private val api: RedbusApiService = RedbusApiService.create()
 ) {
@@ -96,11 +91,6 @@ class RedbusRepository(
             runCatching { api.lockSeats(LockSeatsRequest(routeId, seatIds, userId)) }
         }
 
-    suspend fun unlockSeats(routeId: Int, seatIds: List<Int>, userId: Int?): Result<Map<String, Boolean>> =
-        withContext(Dispatchers.IO) {
-            runCatching { api.unlockSeats(LockSeatsRequest(routeId, seatIds, userId)) }
-        }
-
     suspend fun getAvailableCoupons(): Result<List<Coupon>> = withContext(Dispatchers.IO) {
         runCatching { api.getAvailableCoupons() }
     }
@@ -114,6 +104,29 @@ class RedbusRepository(
         withContext(Dispatchers.IO) {
             runCatching { api.createBooking(request) }
         }
+
+    suspend fun createPaymentOrder(pnr: String): Result<PaymentOrder> =
+        withContext(Dispatchers.IO) {
+            runCatching { api.createPaymentOrder(CreatePaymentOrderRequest(pnr)) }
+        }
+
+    suspend fun verifyPayment(
+        pnr: String,
+        orderId: String,
+        paymentId: String,
+        signature: String
+    ): Result<VerifyPaymentResponse> = withContext(Dispatchers.IO) {
+        runCatching {
+            api.verifyPayment(
+                VerifyPaymentRequest(
+                    pnr = pnr,
+                    razorpayOrderId = orderId,
+                    razorpayPaymentId = paymentId,
+                    razorpaySignature = signature
+                )
+            )
+        }
+    }
 
     suspend fun getMyBookings(): Result<List<BookingDetails>> = withContext(Dispatchers.IO) {
         runCatching { api.getMyBookings().content.orEmpty() }

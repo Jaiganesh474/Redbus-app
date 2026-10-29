@@ -118,7 +118,7 @@ data class SeatItem(
     val id: Int = 0,
     val seatId: Int = 0,
     val seatNumber: String = "",
-    val seatType: String = "SEATER", // "SEATER" | "SLEEPER"
+    val seatType: String = "SLEEPER", // "SEATER" | "SLEEPER"
     val deck: String = "LOWER", // "LOWER" | "UPPER"
     val rowNum: Int = 1,
     val colNum: Int = 1,
@@ -177,7 +177,34 @@ data class CreateBookingRequest(
     val couponCode: String? = null,
     val hasFreeCancellation: Boolean = false,
     val hasTripGuarantee: Boolean = false,
-    val useWallet: Boolean = false
+    val serviceFee: Double = 25.0,
+    val useWalletBalance: Boolean = false
+)
+
+data class CreatePaymentOrderRequest(
+    val pnr: String
+)
+
+data class PaymentOrder(
+    val orderId: String = "",
+    val currency: String = "INR",
+    val amountInPaise: Int = 0,
+    val amount: Double = 0.0,
+    val keyId: String = "",
+    val pnr: String = ""
+)
+
+data class VerifyPaymentRequest(
+    val pnr: String,
+    val razorpayOrderId: String,
+    val razorpayPaymentId: String,
+    val razorpaySignature: String
+)
+
+data class VerifyPaymentResponse(
+    val success: Boolean = false,
+    val pnr: String = "",
+    val message: String? = null
 )
 
 data class BookingDetails(

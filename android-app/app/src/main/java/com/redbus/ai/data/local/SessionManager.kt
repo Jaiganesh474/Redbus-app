@@ -72,3 +72,4 @@ object SessionManager {
         prefs?.edit()?.putBoolean(KEY_DARK_MODE, enabled)?.apply()
     }
 }
+
