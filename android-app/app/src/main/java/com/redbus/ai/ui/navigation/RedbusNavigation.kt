@@ -19,6 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -62,6 +65,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    var showWalletModal by remember { mutableStateOf(false) }
 
     val bottomNavTabs = listOf(
         ScreenRoute.Home,
@@ -209,6 +213,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToBookings = {
                             navigateToTab(navController, ScreenRoute.MyTrips.route)
                         },
+                        onOpenWallet = { showWalletModal = true },
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
                 }
@@ -325,6 +330,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onChangePassword = viewModel::changePassword,
                         onSendResetOtp = viewModel::sendPasswordResetOtp,
                         onTopUpWallet = viewModel::topUpWallet,
+                        onOpenWallet = { showWalletModal = true },
                         onFetchDeviceSessions = viewModel::fetchDeviceSessions,
                         onRevokeDeviceSession = viewModel::revokeDeviceSession,
                         onRevokeAllOtherSessions = viewModel::revokeAllOtherDeviceSessions,
@@ -334,5 +340,12 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 }
             }
         }
+
+        // Live Dynamic redBus Wallet Modal (opened from Home bar & Account tab)
+        RedbusWalletModal(
+            isOpen = showWalletModal,
+            onDismiss = { showWalletModal = false },
+            uiState = uiState
+        )
     }
 }

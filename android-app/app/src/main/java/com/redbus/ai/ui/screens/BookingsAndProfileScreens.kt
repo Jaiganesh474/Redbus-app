@@ -343,7 +343,10 @@ private fun BookingTicketCard(
     val cardScale = remember { Animatable(0.95f) }
     val cardRotX = remember { Animatable(8f) }
     LaunchedEffect(booking.pnr) {
-        cardScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+        cardScale.animateTo(
+            1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+        )
     }
     LaunchedEffect(booking.pnr) {
         cardRotX.animateTo(0f, tween(340, easing = FastOutSlowInEasing))
@@ -547,10 +550,16 @@ private fun ViewTicketDetailsModal(
     val ticketRotX = remember { Animatable(-16f) }
     val ticketScale = remember { Animatable(0.88f) }
     LaunchedEffect(Unit) {
-        ticketRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+        ticketRotX.animateTo(
+            0f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        )
     }
     LaunchedEffect(Unit) {
-        ticketScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+        ticketScale.animateTo(
+            1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+        )
     }
 
     Dialog(
@@ -928,9 +937,16 @@ private fun ViewTicketDetailsModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         modifier = Modifier.clickable {
-                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                                            clipboard?.setPrimaryClip(ClipData.newPlainText("Ticket Number", ticketNumber))
-                                            Toast.makeText(context, "Ticket #$ticketNumber copied", Toast.LENGTH_SHORT).show()
+                                            val clipboard =
+                                                context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                            clipboard?.setPrimaryClip(
+                                                ClipData.newPlainText(
+                                                    "Ticket Number",
+                                                    ticketNumber
+                                                )
+                                            )
+                                            Toast.makeText(context, "Ticket #$ticketNumber copied", Toast.LENGTH_SHORT)
+                                                .show()
                                         }
                                     ) {
                                         Icon(
@@ -1083,6 +1099,7 @@ private fun calculateDurationLabel(dep: String, arr: String): String {
             if (isAm && h == 12) h = 0
             return h * 60 + m
         }
+
         var diff = toMins(arr) - toMins(dep)
         if (diff <= 0) diff += 24 * 60
         val hrs = diff / 60
@@ -1110,6 +1127,7 @@ fun ProfileAndWalletScreen(
     onChangePassword: (String, String, (Boolean, String) -> Unit) -> Unit = { _, _, _ -> },
     onSendResetOtp: ((Boolean, String) -> Unit) -> Unit = {},
     onTopUpWallet: (Double) -> Unit = {},
+    onOpenWallet: () -> Unit = {},
     onFetchDeviceSessions: () -> Unit = {},
     onRevokeDeviceSession: (Long) -> Unit = {},
     onRevokeAllOtherSessions: () -> Unit = {},
@@ -1329,7 +1347,11 @@ fun ProfileAndWalletScreen(
                             onClick = { showEditProfileDialog = true },
                             colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
                         ) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Edit Profile", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
@@ -1338,9 +1360,10 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 2. Live redBus Wallet Balance Card with "+ Add Money" Top-Up Modal (Matching website)
+        // 2. Live redBus Wallet Balance Card with Activity Modal & Top-Up Modal (Matching website)
         item {
             Card(
+                onClick = onOpenWallet,
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth()
@@ -1385,15 +1408,38 @@ fun ProfileAndWalletScreen(
                         }
                     }
 
-                    Button(
-                        onClick = { showWalletTopUpModal = true },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("+ Add Money to Wallet", fontWeight = FontWeight.Bold)
+                        OutlinedButton(
+                            onClick = onOpenWallet,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Passbook", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+
+                        Button(
+                            onClick = { showWalletTopUpModal = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Add Money", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
                     }
                 }
             }
@@ -1423,7 +1469,11 @@ fun ProfileAndWalletScreen(
                             onClick = { showAddTravellerDialog = true },
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Add Traveller", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
@@ -1598,9 +1648,16 @@ fun ProfileAndWalletScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(imageVector = Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(
+                                imageVector = Icons.Default.Key,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (isSendingOtp) "Dispatching OTP..." else "Send Password Reset OTP to Email", fontSize = 12.sp)
+                            Text(
+                                if (isSendingOtp) "Dispatching OTP..." else "Send Password Reset OTP to Email",
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
@@ -1655,11 +1712,21 @@ fun ProfileAndWalletScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text("This Android Device", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Text("Active Session · Android Mobile App", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        "Active Session · Android Mobile App",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                             Surface(shape = RoundedCornerShape(6.dp), color = RatingEmeraldBg) {
-                                Text("Current", color = RatingEmerald, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                Text(
+                                    "Current",
+                                    color = RatingEmerald,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
                             }
                         }
                     }
@@ -1677,11 +1744,24 @@ fun ProfileAndWalletScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(sess.deviceName.ifBlank { "Browser on Web" }, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    Text("${sess.location ?: "India"} · ${sess.lastActive ?: "Recent"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        sess.deviceName.ifBlank { "Browser on Web" },
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        "${sess.location ?: "India"} · ${sess.lastActive ?: "Recent"}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                                 TextButton(onClick = { onRevokeDeviceSession(sess.id) }) {
-                                    Text("Log Out", color = RedbusCrimson, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Log Out",
+                                        color = RedbusCrimson,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
@@ -1909,7 +1989,10 @@ fun ProfileAndWalletScreen(
             onDismissRequest = { showDeactivateModal = false },
             title = { Text("Deactivate Account?", fontWeight = FontWeight.Black) },
             text = {
-                Text("Your account will be suspended. You can reactivate anytime by logging in again.", fontSize = 13.sp)
+                Text(
+                    "Your account will be suspended. You can reactivate anytime by logging in again.",
+                    fontSize = 13.sp
+                )
             },
             confirmButton = {
                 Button(
@@ -1935,7 +2018,10 @@ fun ProfileAndWalletScreen(
             title = { Text("Delete Account Permanently", fontWeight = FontWeight.Black, color = RedbusCrimson) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("This action is permanent and cannot be undone. All your bookings and wallet credit will be erased.", fontSize = 13.sp)
+                    Text(
+                        "This action is permanent and cannot be undone. All your bookings and wallet credit will be erased.",
+                        fontSize = 13.sp
+                    )
                     Text("Type DELETE to confirm:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = deleteConfirmText,
@@ -1970,10 +2056,16 @@ fun ProfileAndWalletScreen(
         val modalScale = remember { Animatable(0.85f) }
         val modalRotX = remember { Animatable(-14f) }
         LaunchedEffect(Unit) {
-            modalScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+            modalScale.animateTo(
+                1f,
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+            )
         }
         LaunchedEffect(Unit) {
-            modalRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+            modalRotX.animateTo(
+                0f,
+                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+            )
         }
 
         Dialog(
@@ -2169,201 +2261,204 @@ fun ProfileAndWalletScreen(
     }
 }
 
-    if (showLogoutConfirmModal) {
-        val modalScale = remember { Animatable(0.85f) }
-        val modalRotX = remember { Animatable(-14f) }
-        LaunchedEffect(Unit) {
-            modalScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
-        }
-        LaunchedEffect(Unit) {
-            modalRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
-        }
+if (showLogoutConfirmModal) {
+    val modalScale = remember { Animatable(0.85f) }
+    val modalRotX = remember { Animatable(-14f) }
+    LaunchedEffect(Unit) {
+        modalScale.animateTo(
+            1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+        )
+    }
+    LaunchedEffect(Unit) {
+        modalRotX.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+    }
 
-        Dialog(
-            onDismissRequest = { showLogoutConfirmModal = false }
+    Dialog(
+        onDismissRequest = { showLogoutConfirmModal = false }
+    ) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = modalScale.value
+                    scaleY = modalScale.value
+                    rotationX = modalRotX.value
+                    cameraDistance = 14f * density
+                }
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
         ) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = modalScale.value
-                        scaleY = modalScale.value
-                        rotationX = modalRotX.value
-                        cameraDistance = 14f * density
-                    }
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                Surface(
+                    shape = CircleShape,
+                    color = RedbusCrimson.copy(alpha = 0.14f),
+                    modifier = Modifier.size(60.dp)
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = RedbusCrimson.copy(alpha = 0.14f),
-                        modifier = Modifier.size(60.dp)
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "Sign Out",
+                            tint = RedbusCrimson,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Sign Out of redBus AI?",
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Are you sure you want to sign out of ${user.email}? Your wallet balance, saved travellers, and bookings will stay synced when you log back in.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showLogoutConfirmModal = false },
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(vertical = 13.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Logout,
-                                contentDescription = "Sign Out",
-                                tint = RedbusCrimson,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
+                        Text(
+                            text = "Cancel",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
-                    Text(
-                        text = "Sign Out of redBus AI?",
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "Are you sure you want to sign out of ${user.email}? Your wallet balance, saved travellers, and bookings will stay synced when you log back in.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Button(
+                        onClick = {
+                            showLogoutConfirmModal = false
+                            onLogout()
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedbusCrimson,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(vertical = 13.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        OutlinedButton(
-                            onClick = { showLogoutConfirmModal = false },
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(vertical = 13.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = "Cancel",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                showLogoutConfirmModal = false
-                                onLogout()
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = RedbusCrimson,
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(vertical = 13.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = "Yes, Sign Out",
-                                fontWeight = FontWeight.Black
-                            )
-                        }
+                        Text(
+                            text = "Yes, Sign Out",
+                            fontWeight = FontWeight.Black
+                        )
                     }
                 }
             }
         }
     }
+}
 
-    if (showEditProfileDialog) {
-        AlertDialog(
-            onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Edit Profile", fontWeight = FontWeight.Black) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = editName,
-                        onValueChange = { editName = it },
-                        label = { Text("Full Name") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = editPhone,
-                        onValueChange = { editPhone = it },
-                        label = { Text("Phone Number") },
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onUpdateProfile(editName, editPhone, editGender)
-                        showEditProfileDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
-                ) {
-                    Text("Save Changes", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) {
-                    Text("Cancel")
-                }
+if (showEditProfileDialog) {
+    AlertDialog(
+        onDismissRequest = { showEditProfileDialog = false },
+        title = { Text("Edit Profile", fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = { editName = it },
+                    label = { Text("Full Name") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = editPhone,
+                    onValueChange = { editPhone = it },
+                    label = { Text("Phone Number") },
+                    singleLine = true
+                )
             }
-        )
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onUpdateProfile(editName, editPhone, editGender)
+                    showEditProfileDialog = false
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+            ) {
+                Text("Save Changes", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { showEditProfileDialog = false }) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
-    if (showAddTravellerDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddTravellerDialog = false },
-            title = { Text("Add Saved Traveller", fontWeight = FontWeight.Black) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = newTravellerName,
-                        onValueChange = { newTravellerName = it },
-                        label = { Text("Passenger Name") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = newTravellerAge,
-                        onValueChange = { newTravellerAge = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Age") },
-                        singleLine = true
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf("MALE", "FEMALE").forEach { g ->
-                            FilterChip(
-                                selected = newTravellerGender == g,
-                                onClick = { newTravellerGender = g },
-                                label = { Text(g) }
-                            )
-                        }
+if (showAddTravellerDialog) {
+    AlertDialog(
+        onDismissRequest = { showAddTravellerDialog = false },
+        title = { Text("Add Saved Traveller", fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = newTravellerName,
+                    onValueChange = { newTravellerName = it },
+                    label = { Text("Passenger Name") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = newTravellerAge,
+                    onValueChange = { newTravellerAge = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("Age") },
+                    singleLine = true
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("MALE", "FEMALE").forEach { g ->
+                        FilterChip(
+                            selected = newTravellerGender == g,
+                            onClick = { newTravellerGender = g },
+                            label = { Text(g) }
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val ageInt = newTravellerAge.toIntOrNull() ?: 25
-                        if (newTravellerName.isNotBlank()) {
-                            onAddTraveller(newTravellerName, ageInt, newTravellerGender)
-                            newTravellerName = ""
-                            showAddTravellerDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
-                ) {
-                    Text("Save Traveller", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddTravellerDialog = false }) {
-                    Text("Cancel")
-                }
             }
-        )
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val ageInt = newTravellerAge.toIntOrNull() ?: 25
+                    if (newTravellerName.isNotBlank()) {
+                        onAddTraveller(newTravellerName, ageInt, newTravellerGender)
+                        newTravellerName = ""
+                        showAddTravellerDialog = false
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+            ) {
+                Text("Save Traveller", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { showAddTravellerDialog = false }) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 }
 
 /**

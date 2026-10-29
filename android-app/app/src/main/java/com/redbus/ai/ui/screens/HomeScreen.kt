@@ -79,6 +79,7 @@ fun HomeScreen(
     onQuickRouteClick: (RouteItem) -> Unit,
     onNavigateToAccount: () -> Unit,
     onNavigateToBookings: () -> Unit = {},
+    onOpenWallet: () -> Unit = {},
     onToggleDarkTheme: () -> Unit
 ) {
     var showDateModal by remember { mutableStateOf(false) }
@@ -196,7 +197,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Surface(
-                                onClick = onNavigateToAccount,
+                                onClick = onOpenWallet,
                                 shape = RoundedCornerShape(50),
                                 color = Color.White,
                                 shadowElevation = 3.dp
