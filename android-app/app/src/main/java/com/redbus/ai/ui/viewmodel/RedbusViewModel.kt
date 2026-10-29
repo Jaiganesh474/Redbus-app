@@ -636,7 +636,15 @@ class RedbusViewModel(
         if (!seat.status.equals("AVAILABLE", ignoreCase = true)) return
         _uiState.update { state ->
             val current = state.selectedSeats.toMutableList()
-            val idx = current.indexOfFirst { it.seatNumber == seat.seatNumber && it.deck == seat.deck }
+            val targetId = if (seat.seatId != 0) seat.seatId else seat.id
+            val idx = current.indexOfFirst {
+                val curId = if (it.seatId != 0) it.seatId else it.id
+                if (curId != 0 && targetId != 0) {
+                    curId == targetId
+                } else {
+                    it.seatNumber == seat.seatNumber && it.deck == seat.deck
+                }
+            }
             if (idx >= 0) {
                 current.removeAt(idx)
             } else if (current.size < 6) {

@@ -50,26 +50,24 @@ fun SeatSelectionScreen(
     var currentStep by remember { mutableStateOf(SeatModalStep.SELECT_SEATS) }
     var activeDetailTab by remember { mutableStateOf("cancellation") }
 
-    // Partition seats into Lower Deck and Upper Deck (generating 15 lower + 15 upper if backend returns single list)
-    val lowerSeats = remember(layout.seats) {
-        val explicitLower = layout.seats.filter { it.deck.equals("LOWER", ignoreCase = true) }
-        explicitLower.ifEmpty { layout.seats.take(15) }
+    // Check if the bus actually has an upper deck (true for Sleeper coaches, false for Seater 2+2 buses)
+    val hasUpperDeck = remember(layout.seats) {
+        layout.seats.any { it.deck.equals("UPPER", ignoreCase = true) }
     }
-    val upperSeats = remember(layout.seats) {
-        val explicitUpper = layout.seats.filter { it.deck.equals("UPPER", ignoreCase = true) }
-        if (explicitUpper.isNotEmpty()) explicitUpper
-        else if (layout.seats.size > 15) layout.seats.drop(15)
-        else {
-            // Mirror upper deck berths U1..U15 if bus is sleeper and backend only returned lower deck
-            lowerSeats.mapIndexed { idx, s ->
-                s.copy(
-                    id = s.id + 100,
-                    seatId = s.seatId + 100,
-                    seatNumber = "U${idx + 1}",
-                    deck = "UPPER",
-                    seatType = "SLEEPER"
-                )
-            }
+
+    // Partition seats into Lower Deck and Upper Deck without creating duplicate phantom seats
+    val lowerSeats = remember(layout.seats, hasUpperDeck) {
+        if (hasUpperDeck) {
+            layout.seats.filter { it.deck.equals("LOWER", ignoreCase = true) || it.deck.isBlank() }
+        } else {
+            layout.seats
+        }
+    }
+    val upperSeats = remember(layout.seats, hasUpperDeck) {
+        if (hasUpperDeck) {
+            layout.seats.filter { it.deck.equals("UPPER", ignoreCase = true) }
+        } else {
+            emptyList()
         }
     }
 
@@ -351,30 +349,42 @@ fun SeatSelectionScreen(
                             .padding(horizontal = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // LOWER DECK CHASSIS
-                            DeckChassisColumn(
-                                title = "Lower Deck",
-                                isLowerDeck = true,
+                        if (hasUpperDeck) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                // LOWER DECK CHASSIS
+                                DeckChassisColumn(
+                                    title = "Lower Deck",
+                                    isLowerDeck = true,
+                                    deckSeats = lowerSeats,
+                                    basePrice = route.basePrice,
+                                    selectedSeats = uiState.selectedSeats,
+                                    onToggleSeat = onToggleSeat,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                // UPPER DECK CHASSIS
+                                DeckChassisColumn(
+                                    title = "Upper Deck",
+                                    isLowerDeck = false,
+                                    deckSeats = upperSeats,
+                                    basePrice = route.basePrice,
+                                    selectedSeats = uiState.selectedSeats,
+                                    onToggleSeat = onToggleSeat,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        } else {
+                            // Single Deck Chassis for Seater 2+2 / Single-Deck Buses (No duplicates)
+                            SingleDeckChassisColumn(
+                                busType = route.busType,
                                 deckSeats = lowerSeats,
                                 basePrice = route.basePrice,
                                 selectedSeats = uiState.selectedSeats,
                                 onToggleSeat = onToggleSeat,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            // UPPER DECK CHASSIS
-                            DeckChassisColumn(
-                                title = "Upper Deck",
-                                isLowerDeck = false,
-                                deckSeats = upperSeats,
-                                basePrice = route.basePrice,
-                                selectedSeats = uiState.selectedSeats,
-                                onToggleSeat = onToggleSeat,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
@@ -687,6 +697,249 @@ private fun StepTabItem(
     }
 }
 
+private fun isSeatSelected(seat: SeatItem, selectedSeats: List<SeatItem>): Boolean {
+    val targetId = if (seat.seatId != 0) seat.seatId else seat.id
+    return selectedSeats.any {
+        val curId = if (it.seatId != 0) it.seatId else it.id
+        if (curId != 0 && targetId != 0) {
+            curId == targetId
+        } else {
+            it.seatNumber == seat.seatNumber && it.deck == seat.deck
+        }
+    }
+}
+
+@Composable
+private fun SingleDeckChassisColumn(
+    busType: String,
+    deckSeats: List<SeatItem>,
+    basePrice: Double,
+    selectedSeats: List<SeatItem>,
+    onToggleSeat: (SeatItem) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val is2x2 = busType.contains("2+2", ignoreCase = true) ||
+            busType.contains("2x2", ignoreCase = true) ||
+            busType.contains("Seater", ignoreCase = true) ||
+            deckSeats.size > 20
+
+    val rows = remember(deckSeats, is2x2) {
+        val grouped = deckSeats.groupBy { s ->
+            if (s.rowNum > 0) s.rowNum else 1
+        }
+        if (grouped.size > 1) {
+            grouped.toSortedMap().values.toList()
+        } else {
+            deckSeats.chunked(if (is2x2) 4 else 3)
+        }
+    }
+
+    Column(modifier = modifier) {
+        // Deck Header: BUS SEAT LAYOUT + Steering Wheel
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "BUS SEAT LAYOUT (${deckSeats.size} SEATS)",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF1E293B)
+            )
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                modifier = Modifier
+                    .size(26.dp)
+                    .border(1.dp, Color(0xFFE2E8F0), CircleShape)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Support,
+                        contentDescription = "Steering Wheel",
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+        }
+
+        // Rounded White Bus Chassis
+        Surface(
+            color = Color.White,
+            shape = RoundedCornerShape(
+                topStart = 32.dp,
+                topEnd = 32.dp,
+                bottomStart = 20.dp,
+                bottomEnd = 20.dp
+            ),
+            shadowElevation = 3.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.8.dp,
+                    color = Color(0xFFE2E8F0),
+                    shape = RoundedCornerShape(
+                        topStart = 32.dp,
+                        topEnd = 32.dp,
+                        bottomStart = 20.dp,
+                        bottomEnd = 20.dp
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                rows.forEach { rowList ->
+                    if (is2x2) {
+                        // 2 on Left, Aisle, 2 on Right (2+2 Seater matching ZingBus)
+                        val s1 = rowList.getOrNull(0)
+                        val s2 = rowList.getOrNull(1)
+                        val s3 = rowList.getOrNull(2)
+                        val s4 = rowList.getOrNull(3)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left Pair (2 Seats)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (s1 != null) {
+                                    SleeperBerthItem(
+                                        seat = s1,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s1, selectedSeats),
+                                        onClick = { onToggleSeat(s1) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+
+                                if (s2 != null) {
+                                    SleeperBerthItem(
+                                        seat = s2,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s2, selectedSeats),
+                                        onClick = { onToggleSeat(s2) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+                            }
+
+                            // Center Aisle
+                            Box(
+                                modifier = Modifier
+                                    .width(28.dp)
+                                    .height(30.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "· ·",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFCBD5E1),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Right Pair (2 Seats)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (s3 != null) {
+                                    SleeperBerthItem(
+                                        seat = s3,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s3, selectedSeats),
+                                        onClick = { onToggleSeat(s3) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+
+                                if (s4 != null) {
+                                    SleeperBerthItem(
+                                        seat = s4,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s4, selectedSeats),
+                                        onClick = { onToggleSeat(s4) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+                            }
+                        }
+                    } else {
+                        // 1 on Left, Aisle, 2 on Right (2+1 Single Deck Sleeper)
+                        val s1 = rowList.getOrNull(0)
+                        val s2 = rowList.getOrNull(1)
+                        val s3 = rowList.getOrNull(2)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (s1 != null) {
+                                SleeperBerthItem(
+                                    seat = s1,
+                                    fallbackPrice = basePrice,
+                                    isSelected = isSeatSelected(s1, selectedSeats),
+                                    onClick = { onToggleSeat(s1) }
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(42.dp))
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (s2 != null) {
+                                    SleeperBerthItem(
+                                        seat = s2,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s2, selectedSeats),
+                                        onClick = { onToggleSeat(s2) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+
+                                if (s3 != null) {
+                                    SleeperBerthItem(
+                                        seat = s3,
+                                        fallbackPrice = basePrice,
+                                        isSelected = isSeatSelected(s3, selectedSeats),
+                                        onClick = { onToggleSeat(s3) }
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(42.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider(color = Color(0xFFE2E8F0))
+                Text(
+                    text = "▼ EMERGENCY EXIT",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF94A3B8),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun DeckChassisColumn(
     title: String,
@@ -697,7 +950,7 @@ private fun DeckChassisColumn(
     onToggleSeat: (SeatItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Group into 5 rows of 3 seats (1 left + 2 right) just like redbusai.app screenshot
+    // Group into rows of 3 seats (1 left + 2 right) just like redbusai.app screenshot
     val rows = remember(deckSeats) {
         val grouped = deckSeats.groupBy { s ->
             if (s.rowNum > 0) s.rowNum else 1
@@ -795,9 +1048,7 @@ private fun DeckChassisColumn(
                             SleeperBerthItem(
                                 seat = leftSeat,
                                 fallbackPrice = basePrice,
-                                isSelected = selectedSeats.any {
-                                    it.seatNumber == leftSeat.seatNumber && it.deck == leftSeat.deck
-                                },
+                                isSelected = isSeatSelected(leftSeat, selectedSeats),
                                 onClick = { onToggleSeat(leftSeat) }
                             )
                         } else {
@@ -813,9 +1064,7 @@ private fun DeckChassisColumn(
                                 SleeperBerthItem(
                                     seat = rightSeat1,
                                     fallbackPrice = basePrice,
-                                    isSelected = selectedSeats.any {
-                                        it.seatNumber == rightSeat1.seatNumber && it.deck == rightSeat1.deck
-                                    },
+                                    isSelected = isSeatSelected(rightSeat1, selectedSeats),
                                     onClick = { onToggleSeat(rightSeat1) }
                                 )
                             } else {
@@ -826,9 +1075,7 @@ private fun DeckChassisColumn(
                                 SleeperBerthItem(
                                     seat = rightSeat2,
                                     fallbackPrice = basePrice,
-                                    isSelected = selectedSeats.any {
-                                        it.seatNumber == rightSeat2.seatNumber && it.deck == rightSeat2.deck
-                                    },
+                                    isSelected = isSeatSelected(rightSeat2, selectedSeats),
                                     onClick = { onToggleSeat(rightSeat2) }
                                 )
                             } else {

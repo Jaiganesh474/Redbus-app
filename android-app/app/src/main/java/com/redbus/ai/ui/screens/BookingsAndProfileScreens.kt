@@ -564,45 +564,44 @@ private fun ViewTicketDetailsModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backdropColor.copy(alpha = 0.92f))
+                .background(backdropColor.copy(alpha = 0.94f))
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                // Top Circular Close Button (✕) matching Image 5
+                Surface(
+                    onClick = onDismiss,
+                    shape = CircleShape,
+                    color = Color(0xFF2C2C2E),
+                    modifier = Modifier
+                        .size(42.dp)
+                        .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
                 ) {
-                    // Top Circular Close Button (✕) matching Image 5
-                    Surface(
-                        onClick = onDismiss,
-                        shape = CircleShape,
-                        color = Color(0xFF2C2C2E),
-                        modifier = Modifier
-                            .size(44.dp)
-                            .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close Ticket",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Ticket",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
+                // Scrollable Middle Ticket Card Container (Keeps Share Button Always Pinned & Visible at Bottom)
+                Box(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    contentAlignment = Alignment.TopCenter
+                ) {
                     // Main Perforated Ticket Card (Matching Image 5) with 3D Unfold Animation
                     Card(
                         shape = RoundedCornerShape(24.dp),
@@ -994,9 +993,9 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Bottom Full-Width Red Pill Button: "Share your ticket" (Matching Image 5)
+                // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
                 Button(
                     onClick = {
                         val shareText = buildString {
@@ -1024,8 +1023,22 @@ private fun ViewTicketDetailsModal(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .height(52.dp)
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Share your ticket",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        } {
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = null,

@@ -265,50 +265,7 @@ fun HomeScreen(
                         }
                     }
 
-                    // 4 Transport Service Cards Row (Bus, Train, Hotel, Metro - Matching Image 2)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        ServiceCategoryTile(
-                            badgeText = "₹300 off",
-                            title = "Bus",
-                            icon = Icons.Default.DirectionsBus,
-                            iconTint = RedbusCrimson,
-                            selected = true,
-                            modifier = Modifier.weight(1f),
-                            onClick = {}
-                        )
-                        ServiceCategoryTile(
-                            badgeText = "₹300 Off",
-                            title = "Train",
-                            icon = Icons.Default.Train,
-                            iconTint = Color(0xFF0284C7),
-                            selected = false,
-                            modifier = Modifier.weight(1f),
-                            onClick = onSearchBuses
-                        )
-                        ServiceCategoryTile(
-                            badgeText = "Save 70%",
-                            title = "Hotel",
-                            icon = Icons.Default.Hotel,
-                            iconTint = Color(0xFF7C3AED),
-                            selected = false,
-                            modifier = Modifier.weight(1f),
-                            onClick = onSearchBuses
-                        )
-                        ServiceCategoryTile(
-                            badgeText = "20% Off",
-                            title = "Metro",
-                            icon = Icons.Default.Subway,
-                            iconTint = Color(0xFFDC2626),
-                            selected = false,
-                            modifier = Modifier.weight(1f),
-                            onClick = onSearchBuses
-                        )
-                    }
-
-                    // Heading: "Book bus tickets" (Matching Image 2)
+                    // Heading: "Book bus tickets"
                     Text(
                         text = "Book bus tickets",
                         fontSize = 23.sp,
