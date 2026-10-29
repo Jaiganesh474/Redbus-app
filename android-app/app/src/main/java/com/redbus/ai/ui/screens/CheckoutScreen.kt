@@ -615,42 +615,17 @@ private fun RazorpayOfficialTestPageModal(
             <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
             <style>
                 * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-                body {
+                html, body {
                     margin: 0;
                     padding: 0;
-                    background: #0F172A;
-                    color: #FFFFFF;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    text-align: center;
+                    width: 100%;
+                    height: 100%;
+                    background: transparent;
+                    overflow: hidden;
                 }
-                .loader-box {
-                    padding: 24px;
-                    max-width: 320px;
-                }
-                .spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 4px solid rgba(255,255,255,0.2);
-                    border-top-color: #D84E55;
-                    border-radius: 50%;
-                    animation: spin 0.8s linear infinite;
-                    margin: 0 auto 16px auto;
-                }
-                @keyframes spin { to { transform: rotate(360deg); } }
-                .title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
-                .sub { font-size: 12px; color: #94A3B8; }
             </style>
         </head>
         <body>
-            <div class="loader-box" id="statusBox">
-                <div class="spinner"></div>
-                <div class="title">Opening Razorpay Test Gateway...</div>
-                <div class="sub">PNR: ${payment.pnr} • ₹${payment.amount.toInt()}</div>
-            </div>
             <script>
                 function launchRazorpay() {
                     if (typeof window.Razorpay === 'undefined') {
@@ -713,7 +688,7 @@ private fun RazorpayOfficialTestPageModal(
                     }
                 }
                 window.onload = function() {
-                    setTimeout(launchRazorpay, 150);
+                    setTimeout(launchRazorpay, 100);
                 };
             </script>
         </body>
@@ -728,243 +703,216 @@ private fun RazorpayOfficialTestPageModal(
             decorFitsSystemWindows = false
         )
     ) {
-        Surface(
-            color = Color(0xFF0F172A),
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.45f))
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Top Bar with Razorpay Test Mode Indicator & Close Button
-                Surface(
-                    color = Color(0xFF0C2340),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Surface(
-                                color = Color(0xFFF59E0B),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = "TEST MODE",
-                                    color = Color.Black,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "Razorpay Checkout • redBus India",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "PNR: ${payment.pnr} • Payable: ₹${payment.amount.toInt()}",
-                                    color = Color(0xFFCBD5E1),
-                                    fontSize = 11.sp
-                                )
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    val container = FrameLayout(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    }
+
+                    val primaryWebView = WebView(context).apply {
+                        layoutParams = FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                            javaScriptCanOpenWindowsAutomatically = true
+                            setSupportMultipleWindows(true)
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            loadWithOverviewMode = true
+                            useWideViewPort = true
+                        }
+
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+                        addJavascriptInterface(
+                            object {
+                                @JavascriptInterface
+                                fun onGatewayReady() {
+                                    mainHandler.post { isLoadingGateway = false }
+                                }
+
+                                @JavascriptInterface
+                                fun onPaymentSuccess(orderId: String, paymentId: String, signature: String) {
+                                    mainHandler.post {
+                                        onPaymentSuccess(orderId, paymentId, signature)
+                                    }
+                                }
+
+                                @JavascriptInterface
+                                fun onPaymentDismissed() {
+                                    mainHandler.post {
+                                        if (!isVerifying) onDismiss()
+                                    }
+                                }
+
+                                @JavascriptInterface
+                                fun onGatewayError(message: String) {
+                                    mainHandler.post {
+                                        isLoadingGateway = false
+                                        gatewayError = message
+                                    }
+                                }
+                            },
+                            "RazorpayBridge"
+                        )
+
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                return false
                             }
                         }
 
-                        IconButton(
-                            onClick = { if (!isVerifying) onDismiss() }
+                        // Support Razorpay Test Bank Popup Windows (Success / Failure test page)
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onCreateWindow(
+                                view: WebView?,
+                                isDialog: Boolean,
+                                isUserGesture: Boolean,
+                                resultMsg: Message?
+                            ): Boolean {
+                                val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
+                                val popupWebView = WebView(context).apply {
+                                    layoutParams = FrameLayout.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    settings.apply {
+                                        javaScriptEnabled = true
+                                        domStorageEnabled = true
+                                        databaseEnabled = true
+                                        javaScriptCanOpenWindowsAutomatically = true
+                                        setSupportMultipleWindows(true)
+                                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                    }
+                                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                                    webViewClient = WebViewClient()
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onCloseWindow(window: WebView?) {
+                                            mainHandler.post {
+                                                container.removeView(this@apply)
+                                            }
+                                        }
+                                    }
+                                }
+                                container.addView(popupWebView)
+                                transport.webView = popupWebView
+                                resultMsg.sendToTarget()
+                                return true
+                            }
+                        }
+
+                        loadDataWithBaseURL(
+                            "https://www.redbusai.app",
+                            checkoutHtml,
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                    }
+
+                    container.addView(primaryWebView)
+                    container
+                }
+            )
+
+            if (isLoadingGateway && gatewayError == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close Razorpay",
-                                tint = Color.White
+                            CircularProgressIndicator(color = RedbusCrimson)
+                            Text(
+                                text = "Opening Razorpay Test Page...",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp
                             )
                         }
                     }
                 }
+            }
 
-                gatewayError?.let { err ->
-                    Surface(
-                        color = RedbusSoftTint,
-                        modifier = Modifier.fillMaxWidth()
+            gatewayError?.let { err ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
                                 text = err,
                                 color = RedbusCrimson,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            TextButton(onClick = onDismiss) {
-                                Text("Close", color = RedbusCrimson, fontWeight = FontWeight.Bold)
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                            ) {
+                                Text("Close", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
+            }
 
+            if (isVerifying) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.72f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { context ->
-                            val container = FrameLayout(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                            }
-
-                            val primaryWebView = WebView(context).apply {
-                                layoutParams = FrameLayout.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    domStorageEnabled = true
-                                    databaseEnabled = true
-                                    javaScriptCanOpenWindowsAutomatically = true
-                                    setSupportMultipleWindows(true)
-                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                    loadWithOverviewMode = true
-                                    useWideViewPort = true
-                                }
-
-                                CookieManager.getInstance().setAcceptCookie(true)
-                                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-
-                                addJavascriptInterface(
-                                    object {
-                                        @JavascriptInterface
-                                        fun onGatewayReady() {
-                                            mainHandler.post { isLoadingGateway = false }
-                                        }
-
-                                        @JavascriptInterface
-                                        fun onPaymentSuccess(orderId: String, paymentId: String, signature: String) {
-                                            mainHandler.post {
-                                                onPaymentSuccess(orderId, paymentId, signature)
-                                            }
-                                        }
-
-                                        @JavascriptInterface
-                                        fun onPaymentDismissed() {
-                                            mainHandler.post {
-                                                if (!isVerifying) onDismiss()
-                                            }
-                                        }
-
-                                        @JavascriptInterface
-                                        fun onGatewayError(message: String) {
-                                            mainHandler.post {
-                                                isLoadingGateway = false
-                                                gatewayError = message
-                                            }
-                                        }
-                                    },
-                                    "RazorpayBridge"
-                                )
-
-                                webViewClient = object : WebViewClient() {
-                                    override fun shouldOverrideUrlLoading(
-                                        view: WebView?,
-                                        request: WebResourceRequest?
-                                    ): Boolean {
-                                        return false
-                                    }
-                                }
-
-                                // Support Razorpay Test Bank Popup Windows (Success / Failure test page)
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onCreateWindow(
-                                        view: WebView?,
-                                        isDialog: Boolean,
-                                        isUserGesture: Boolean,
-                                        resultMsg: Message?
-                                    ): Boolean {
-                                        val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
-                                        val popupWebView = WebView(context).apply {
-                                            layoutParams = FrameLayout.LayoutParams(
-                                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                                ViewGroup.LayoutParams.MATCH_PARENT
-                                            )
-                                            settings.apply {
-                                                javaScriptEnabled = true
-                                                domStorageEnabled = true
-                                                javaScriptCanOpenWindowsAutomatically = true
-                                                setSupportMultipleWindows(true)
-                                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                                            }
-                                            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                                            webViewClient = WebViewClient()
-                                            webChromeClient = object : WebChromeClient() {
-                                                override fun onCloseWindow(window: WebView?) {
-                                                    container.removeView(this@apply)
-                                                    destroy()
-                                                }
-                                            }
-                                        }
-                                        container.addView(popupWebView)
-                                        transport.webView = popupWebView
-                                        resultMsg.sendToTarget()
-                                        return true
-                                    }
-                                }
-
-                                loadDataWithBaseURL(
-                                    "https://www.redbusai.app",
-                                    checkoutHtml,
-                                    "text/html",
-                                    "UTF-8",
-                                    null
-                                )
-                            }
-
-                            container.addView(primaryWebView)
-                            container
-                        }
-                    )
-
-                    if (isVerifying) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.72f)),
-                            contentAlignment = Alignment.Center
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Card(
-                                shape = RoundedCornerShape(20.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(24.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    CircularProgressIndicator(color = RedbusCrimson)
-                                    Text(
-                                        text = "Verifying Payment & Issuing E-Ticket...",
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
+                            CircularProgressIndicator(color = RedbusCrimson)
+                            Text(
+                                text = "Verifying Payment & Issuing E-Ticket...",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
