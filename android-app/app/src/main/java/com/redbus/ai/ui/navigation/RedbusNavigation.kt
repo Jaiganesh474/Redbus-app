@@ -164,6 +164,9 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToAccount = {
                             navigateToTab(navController, ScreenRoute.Profile.route)
                         },
+                        onNavigateToBookings = {
+                            navigateToTab(navController, ScreenRoute.MyTrips.route)
+                        },
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
                 }

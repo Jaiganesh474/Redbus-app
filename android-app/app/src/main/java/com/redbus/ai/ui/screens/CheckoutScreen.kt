@@ -379,7 +379,7 @@ fun CheckoutScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
+                            RedbusStyledSwitch(
                                 checked = uiState.hasFreeCancellation,
                                 onCheckedChange = onToggleFreeCancellation
                             )
@@ -404,7 +404,7 @@ fun CheckoutScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
+                            RedbusStyledSwitch(
                                 checked = uiState.hasTripGuarantee,
                                 onCheckedChange = onToggleTripGuarantee
                             )

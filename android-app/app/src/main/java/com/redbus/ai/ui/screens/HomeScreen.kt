@@ -1,8 +1,9 @@
 package com.redbus.ai.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
@@ -23,13 +25,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +44,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.redbus.ai.data.model.AiCityItem
 import com.redbus.ai.data.model.Banner
+import com.redbus.ai.data.model.BookingDetails
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
@@ -61,9 +68,14 @@ fun HomeScreen(
     onSearchBuses: () -> Unit,
     onQuickRouteClick: (RouteItem) -> Unit,
     onNavigateToAccount: () -> Unit,
+    onNavigateToBookings: () -> Unit = {},
     onToggleDarkTheme: () -> Unit
 ) {
     var showDateModal by remember { mutableStateOf(false) }
+    var activeCityPickerIsSource by remember { mutableStateOf<Boolean?>(null) }
+    var bookingForWomen by remember { mutableStateOf(false) }
+    var showWomenInfoDialog by remember { mutableStateOf(false) }
+
     var swapRotationCount by remember { mutableIntStateOf(0) }
     val rotationAngle by animateFloatAsState(
         targetValue = swapRotationCount * 180f,
@@ -74,131 +86,500 @@ fun HomeScreen(
     val todayStr = remember { LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) }
     val tomorrowStr = remember { LocalDate.now().plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE) }
 
+    val activePromoCode = uiState.availableCoupons.firstOrNull()?.code ?: "FIRSTBUS"
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
-        // 1. Hero Header & Search Section (Matching HeroSearch.tsx)
+        // 1. Hero Section Matching Image 2 (Warm Cream-to-Sunset Gradient + Search Card + Promo Banner)
         item {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(RedbusCrimson, RedbusCrimsonDark)
+                            colors = if (uiState.isDarkTheme) {
+                                listOf(
+                                    Color(0xFF1E1B2E),
+                                    Color(0xFF2D1B2E),
+                                    Color(0xFF4A1D2F)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0xFFFFF8EE),
+                                    Color(0xFFFFF1DC),
+                                    Color(0xFFFFCA8A),
+                                    Color(0xFFF37042)
+                                )
+                            }
                         )
                     )
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Top App Bar Row with Live Account / Wallet Badge
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Top Row: redBus Logo Badge + Wallet Pill + My Account Pill (Image 2)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color.White.copy(alpha = 0.2f),
-                                modifier = Modifier.size(42.dp)
+                        // Left: redBus stylized bus badge
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White,
+                            shadowElevation = 2.dp,
+                            modifier = Modifier.border(
+                                1.5.dp,
+                                RedbusCrimson,
+                                RoundedCornerShape(12.dp)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.DirectionsBus,
-                                        contentDescription = "redBus AI",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.DirectionsBus,
+                                    contentDescription = "redBus",
+                                    tint = RedbusCrimson,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "redBus",
+                                    color = RedbusCrimson,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black
+                                )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "redBus",
-                                        color = Color.White,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Black
+                        }
+
+                        // Right: Wallet ₹... Pill & My Account Pill
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                onClick = onNavigateToAccount,
+                                shape = RoundedCornerShape(50),
+                                color = Color.White,
+                                shadowElevation = 3.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalanceWallet,
+                                        contentDescription = "Wallet",
+                                        tint = Color(0xFF1E293B),
+                                        modifier = Modifier.size(15.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Wallet",
+                                        color = Color(0xFF1E293B),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                     Surface(
-                                        color = Color.White,
-                                        shape = RoundedCornerShape(6.dp)
+                                        shape = RoundedCornerShape(50),
+                                        color = Color(0xFFF1F5F9)
                                     ) {
                                         Text(
-                                            text = "AI EDITION",
-                                            color = RedbusCrimson,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Black,
+                                            text = "₹${(uiState.user?.walletBalance ?: 0.0).toInt()}",
+                                            color = Color(0xFF0F172A),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
-                                Text(
-                                    text = "Book Bus Tickets with Trust & Confidence",
-                                    color = Color.White.copy(alpha = 0.88f),
-                                    fontSize = 11.sp
-                                )
                             }
-                        }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
                             Surface(
                                 onClick = onNavigateToAccount,
-                                shape = RoundedCornerShape(20.dp),
-                                color = Color.White.copy(alpha = 0.18f)
+                                shape = RoundedCornerShape(50),
+                                color = Color.White,
+                                shadowElevation = 3.dp
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (uiState.isAuthenticated) Icons.Default.AccountBalanceWallet else Icons.Default.Person,
-                                        contentDescription = "Account",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(15.dp)
+                                        imageVector = Icons.Default.PersonOutline,
+                                        contentDescription = "My Account",
+                                        tint = Color(0xFF1E293B),
+                                        modifier = Modifier.size(16.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = if (uiState.isAuthenticated && uiState.user != null) {
-                                            "${uiState.user.name.substringBefore(" ")} • ₹${(uiState.user.walletBalance ?: 0.0).toInt()}"
+                                            uiState.user.name.substringBefore(" ")
                                         } else {
-                                            "Sign In"
+                                            "My Account"
                                         },
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
+                                        color = Color(0xFF1E293B),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
-                            }
-                            IconButton(
-                                onClick = onToggleDarkTheme,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.16f))
-                            ) {
-                                Icon(
-                                    imageVector = if (uiState.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                    contentDescription = "Toggle Theme",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
                             }
                         }
                     }
 
-                    // NLP Natural Language Search Pill (Matching HeroSearch.tsx)
+                    // 4 Transport Service Cards Row (Bus, Train, Hotel, Metro - Matching Image 2)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ServiceCategoryTile(
+                            badgeText = "₹300 off",
+                            title = "Bus",
+                            icon = Icons.Default.DirectionsBus,
+                            iconTint = RedbusCrimson,
+                            selected = true,
+                            modifier = Modifier.weight(1f),
+                            onClick = {}
+                        )
+                        ServiceCategoryTile(
+                            badgeText = "₹300 Off",
+                            title = "Train",
+                            icon = Icons.Default.Train,
+                            iconTint = Color(0xFF0284C7),
+                            selected = false,
+                            modifier = Modifier.weight(1f),
+                            onClick = onSearchBuses
+                        )
+                        ServiceCategoryTile(
+                            badgeText = "Save 70%",
+                            title = "Hotel",
+                            icon = Icons.Default.Hotel,
+                            iconTint = Color(0xFF7C3AED),
+                            selected = false,
+                            modifier = Modifier.weight(1f),
+                            onClick = onSearchBuses
+                        )
+                        ServiceCategoryTile(
+                            badgeText = "20% Off",
+                            title = "Metro",
+                            icon = Icons.Default.Subway,
+                            iconTint = Color(0xFFDC2626),
+                            selected = false,
+                            modifier = Modifier.weight(1f),
+                            onClick = onSearchBuses
+                        )
+                    }
+
+                    // Heading: "Book bus tickets" (Matching Image 2)
+                    Text(
+                        text = "Book bus tickets",
+                        fontSize = 23.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (uiState.isDarkTheme) Color.White else Color(0xFF111827)
+                    )
+
+                    // Main Search Card with Navy "Lowest price guaranteed*" Header (Matching Image 2)
+                    Card(
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF17377B) // Navy header background
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Top Navy Strip: "Lowest price guaranteed*"
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Lowest price guaranteed*",
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // White Inner Card Body
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    // From & To Section with Overlapping Dark Swap Circle Button
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                            // FROM Row
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        activeCityPickerIsSource = true
+                                                        onSearchCities("", true)
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DirectionsBus,
+                                                    contentDescription = "From",
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(14.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "From",
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = uiState.sourceCity.ifBlank { "Select departure city" },
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+
+                                            HorizontalDivider(
+                                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                                thickness = 1.dp
+                                            )
+
+                                            // TO Row
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        activeCityPickerIsSource = false
+                                                        onSearchCities("", false)
+                                                    }
+                                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DirectionsBus,
+                                                    contentDescription = "To",
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(14.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "To",
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = uiState.destinationCity.ifBlank { "Select destination city" },
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = if (uiState.destinationCity.isBlank()) {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Overlapping Dark Circular Swap Button on the Right (Matching Image 2)
+                                        Surface(
+                                            onClick = {
+                                                swapRotationCount++
+                                                onSwapCities()
+                                            },
+                                            shape = CircleShape,
+                                            color = Color(0xFF4B5563),
+                                            shadowElevation = 4.dp,
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(end = 20.dp)
+                                                .size(42.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.SwapVert,
+                                                    contentDescription = "Swap Cities",
+                                                    tint = Color.White,
+                                                    modifier = Modifier
+                                                        .size(22.dp)
+                                                        .rotate(rotationAngle)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                        thickness = 1.dp
+                                    )
+
+                                    // Date of Journey Row with Today & Tomorrow Pink Pills (Matching Image 2)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { showDateModal = true }
+                                            .padding(horizontal = 16.dp, vertical = 13.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DateRange,
+                                                contentDescription = "Date of Journey",
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column {
+                                                Text(
+                                                    text = "Date of Journey",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = formatShortDateDisplay(uiState.travelDate),
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            PinkDatePill(
+                                                label = "Today",
+                                                selected = uiState.travelDate == todayStr,
+                                                onClick = { onSelectDate(todayStr) }
+                                            )
+                                            PinkDatePill(
+                                                label = "Tomorrow",
+                                                selected = uiState.travelDate == tomorrowStr,
+                                                onClick = { onSelectDate(tomorrowStr) }
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                        thickness = 1.dp
+                                    )
+
+                                    // Booking for women Row with Custom Pill Toggle Switch (Matching Image 2)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 13.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Face3,
+                                                contentDescription = "Booking for women",
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column {
+                                                Text(
+                                                    text = "Booking for women",
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "Know more",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color(0xFF2563EB),
+                                                    textDecoration = TextDecoration.Underline,
+                                                    modifier = Modifier.clickable { showWomenInfoDialog = true }
+                                                )
+                                            }
+                                        }
+
+                                        RedbusStyledSwitch(
+                                            checked = bookingForWomen,
+                                            onCheckedChange = { bookingForWomen = it }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Full-Width Pill "Search buses" Button (Matching Image 2)
+                    Button(
+                        onClick = onSearchBuses,
+                        enabled = uiState.sourceCity.isNotBlank() &&
+                            uiState.destinationCity.isNotBlank() &&
+                            !uiState.sourceCity.equals(uiState.destinationCity, ignoreCase = true),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .shadow(6.dp, RoundedCornerShape(50)),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedbusCrimson,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = "Search buses",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // AI Smart NLP Search Bar Pill
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 4.dp,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        shadowElevation = 3.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -247,289 +628,111 @@ fun HomeScreen(
                                     contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
-                                    text = "AI Search",
+                                    text = "AI Go",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    imageVector = Icons.Default.ArrowForward,
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }
                     }
 
-                    // Standard Search Card (Matching HeroSearch.tsx + AiCityDropdown.tsx + SelectDateModal.tsx)
-                    Card(
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    // Promo Code Badge in Sunset Footer (Matching Image 2 "Use code: EARLY2027")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 2.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.padding(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF0284C7),
+                            modifier = Modifier.border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(8.dp))
                         ) {
-                            // FROM CITY (Dynamic Searchable AiCityDropdown excluding To City)
-                            AiCityDropdownField(
-                                label = "From",
-                                value = uiState.sourceCity,
-                                excludeCity = uiState.destinationCity,
-                                placeholder = "Select departure city",
-                                suggestions = uiState.fromCitySuggestions,
-                                isSearching = uiState.isSearchingCities,
-                                onQueryChanged = { query ->
-                                    onSearchCities(query, true)
-                                },
-                                onCitySelected = { selectedCity ->
-                                    onSelectSourceCity(selectedCity)
-                                }
+                            Text(
+                                text = "Use code: $activePromoCode",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                             )
-
-                            // Swap Cities Button Pill (Matching HeroSearch.tsx mobile swap button)
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-                                )
-                                Surface(
-                                    onClick = {
-                                        swapRotationCount++
-                                        onSwapCities()
-                                    },
-                                    shape = RoundedCornerShape(50),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                        RoundedCornerShape(50)
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.SwapVert,
-                                            contentDescription = "Swap Cities",
-                                            tint = RedbusCrimson,
-                                            modifier = Modifier
-                                                .size(15.dp)
-                                                .rotate(rotationAngle)
-                                        )
-                                        Text(
-                                            text = "Swap Cities",
-                                            color = RedbusCrimson,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-
-                            // TO CITY (Dynamic Searchable AiCityDropdown strictly excluding From City)
-                            AiCityDropdownField(
-                                label = "To",
-                                value = uiState.destinationCity,
-                                excludeCity = uiState.sourceCity,
-                                placeholder = "Select destination city",
-                                suggestions = uiState.toCitySuggestions,
-                                isSearching = uiState.isSearchingCities,
-                                onQueryChanged = { query ->
-                                    onSearchCities(query, false)
-                                },
-                                onCitySelected = { selectedCity ->
-                                    onSelectDestinationCity(selectedCity)
-                                }
-                            )
-
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-                            )
-
-                            // Travel Date Box (Matching HeroSearch.tsx lines 203-257)
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.CalendarMonth,
-                                            contentDescription = "Date",
-                                            tint = RedbusCrimson,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "Date",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        DateQuickPill(
-                                            label = "Today",
-                                            selected = uiState.travelDate == todayStr,
-                                            onClick = { onSelectDate(todayStr) }
-                                        )
-                                        DateQuickPill(
-                                            label = "Tomorrow",
-                                            selected = uiState.travelDate == tomorrowStr,
-                                            onClick = { onSelectDate(tomorrowStr) }
-                                        )
-                                    }
-                                }
-
-                                // Clickable Date Selector Box opening SelectDateModal
-                                Surface(
-                                    onClick = { showDateModal = true },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-                                            RoundedCornerShape(14.dp)
-                                        )
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 13.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.CalendarToday,
-                                                contentDescription = null,
-                                                tint = RedbusCrimson,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = formatShortDateDisplay(uiState.travelDate),
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                        Text(
-                                            text = "Change",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = RedbusCrimson
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // SEARCH BUSES Button
-                            Button(
-                                onClick = onSearchBuses,
-                                enabled = uiState.sourceCity.isNotBlank() &&
-                                    uiState.destinationCity.isNotBlank() &&
-                                    !uiState.sourceCity.equals(uiState.destinationCity, ignoreCase = true),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = RedbusCrimson,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (uiState.isLoading) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                } else {
-                                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                }
-                                Text(
-                                    text = "SEARCH BUSES",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
                         }
                     }
+                }
 
-                    // Popular Route Quick Badges (Matching HeroSearch.tsx lines 273-295)
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Bottom Navy Partner Strip ("IRCTC AUTHORISED PARTNER" - Matching Image 2)
+                Surface(
+                    color = Color(0xFF172554),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        item {
-                            Text(
-                                text = "Popular:",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        val quickPairs = listOf(
-                            "Bangalore" to "Chennai",
-                            "Mumbai" to "Pune",
-                            "Delhi" to "Jaipur",
-                            "Hyderabad" to "Bangalore"
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(13.dp)
                         )
-                        items(quickPairs) { (fromCity, toCity) ->
-                            Surface(
-                                onClick = {
-                                    onSelectCities(fromCity, toCity)
-                                },
-                                shape = RoundedCornerShape(50),
-                                color = Color.White.copy(alpha = 0.14f),
-                                modifier = Modifier.border(
-                                    1.dp,
-                                    Color.White.copy(alpha = 0.25f),
-                                    RoundedCornerShape(50)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(text = fromCity, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                    Text(text = "➔", color = Color(0xFFFCD34D), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    Text(text = toCity, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                }
-                            }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "IRCTC AUTHORISED & AI VERIFIED PARTNER",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. "Upcoming trips" Section (Matching Image 2 bottom section)
+        val upcomingTrips = uiState.myBookings.filter { it.status == "CONFIRMED" }
+        if (upcomingTrips.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(top = 20.dp)) {
+                    Text(
+                        text = "Upcoming trips",
+                        fontSize = 21.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(upcomingTrips) { trip ->
+                            UpcomingTripCard(
+                                booking = trip,
+                                todayStr = todayStr,
+                                tomorrowStr = tomorrowStr,
+                                onClick = onNavigateToBookings
+                            )
                         }
                     }
                 }
             }
         }
 
-        // 2. Live Banners from Backend (/banners)
+        // 3. Live Banners from Backend (/banners)
         if (uiState.banners.isNotEmpty()) {
             item {
-                Column(modifier = Modifier.padding(top = 20.dp)) {
+                Column(modifier = Modifier.padding(top = 22.dp)) {
                     Text(
                         text = "AI Curated Fleet & Live Offers",
                         style = MaterialTheme.typography.titleLarge,
@@ -562,7 +765,7 @@ fun HomeScreen(
             }
         }
 
-        // 3. Live AI Recommendations (/ai/recommendations) or Live Routes
+        // 4. Live AI Recommendations (/ai/recommendations) or Live Routes
         val recommendedList = uiState.aiRecommendedRoutes.ifEmpty { uiState.routes }
         if (recommendedList.isNotEmpty()) {
             item {
@@ -601,63 +804,6 @@ fun HomeScreen(
                                 route = route,
                                 onClick = { onQuickRouteClick(route) }
                             )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Live Available Coupons (/coupons/available)
-        if (uiState.availableCoupons.isNotEmpty()) {
-            item {
-                Column(modifier = Modifier.padding(top = 22.dp)) {
-                    Text(
-                        text = "Active Promo Codes",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(uiState.availableCoupons) { coupon ->
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                modifier = Modifier.width(265.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Surface(
-                                        color = AiViolet,
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            text = coupon.code,
-                                            color = Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Black,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = coupon.title ?: "${coupon.discountPercentage}% OFF up to ₹${coupon.maxDiscountAmount.toInt()}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Text(
-                                        text = coupon.description ?: "Min booking ₹${coupon.minBookingAmount.toInt()}",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -753,6 +899,27 @@ fun HomeScreen(
         }
     }
 
+    // Dynamic Searchable City Picker Modal (Strictly excluding the opposite selected city)
+    activeCityPickerIsSource?.let { isSource ->
+        DynamicCitySearchDialog(
+            isSource = isSource,
+            currentValue = if (isSource) uiState.sourceCity else uiState.destinationCity,
+            excludeCity = if (isSource) uiState.destinationCity else uiState.sourceCity,
+            suggestions = if (isSource) uiState.fromCitySuggestions else uiState.toCitySuggestions,
+            isSearching = uiState.isSearchingCities,
+            onQueryChanged = { query -> onSearchCities(query, isSource) },
+            onSelectCity = { selectedCity ->
+                if (isSource) {
+                    onSelectSourceCity(selectedCity)
+                } else {
+                    onSelectDestinationCity(selectedCity)
+                }
+                activeCityPickerIsSource = null
+            },
+            onDismiss = { activeCityPickerIsSource = null }
+        )
+    }
+
     // Select Date Modal Popup (Matching frontend/src/components/SelectDateModal.tsx)
     if (showDateModal) {
         SelectDateModal(
@@ -764,253 +931,374 @@ fun HomeScreen(
             }
         )
     }
+
+    if (showWomenInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showWomenInfoDialog = false },
+            title = { Text("Booking for Women", fontWeight = FontWeight.Black) },
+            text = {
+                Text(
+                    "When enabled, redBus AI highlights women-friendly buses, verified safety ratings, and adjacent female-reserved sleeper/seater berths.",
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showWomenInfoDialog = false }) {
+                    Text("Got it", color = RedbusCrimson, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 }
 
 /**
- * Dynamic Searchable City Dropdown Input matching frontend/src/components/AiCityDropdown.tsx.
- * Fetches live city suggestions from /api/v1/ai/cities/search and strictly excludes `excludeCity`.
+ * High-contrast, sleek pill toggle switch matching Image 2 (and fixing the washed-out toggle in Image 4).
  */
 @Composable
-private fun AiCityDropdownField(
+fun RedbusStyledSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val thumbOffset by animateDpAsState(
+        targetValue = if (checked) 24.dp else 4.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "switchThumbOffset"
+    )
+    val trackColor = if (checked) RedbusCrimson else Color(0xFFE2E8F0)
+    val borderColor = if (checked) RedbusCrimson else Color(0xFF475569)
+    val thumbColor = if (checked) Color.White else Color(0xFF334155)
+
+    Box(
+        modifier = modifier
+            .width(52.dp)
+            .height(30.dp)
+            .clip(RoundedCornerShape(50))
+            .background(trackColor)
+            .border(1.5.dp, borderColor, RoundedCornerShape(50))
+            .clickable { onCheckedChange(!checked) },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = thumbOffset)
+                .size(20.dp)
+                .shadow(2.dp, CircleShape)
+                .clip(CircleShape)
+                .background(thumbColor)
+        )
+    }
+}
+
+@Composable
+private fun ServiceCategoryTile(
+    badgeText: String,
+    title: String,
+    icon: ImageVector,
+    iconTint: Color,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        shadowElevation = if (selected) 5.dp else 2.dp,
+        modifier = modifier.border(
+            width = if (selected) 1.5.dp else 1.dp,
+            color = if (selected) RedbusCrimson.copy(alpha = 0.5f) else Color(0xFFE2E8F0),
+            shape = RoundedCornerShape(16.dp)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = Color(0xFFBBF7D0)
+            ) {
+                Text(
+                    text = badgeText,
+                    color = Color(0xFF14532D),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = iconTint,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Text(
+                text = title,
+                color = Color(0xFF111827),
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun PinkDatePill(
     label: String,
-    value: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) RedbusCrimson else Color(0xFFFFE4E6)
+    ) {
+        Text(
+            text = label,
+            color = if (selected) Color.White else Color(0xFF111827),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp)
+        )
+    }
+}
+
+@Composable
+private fun UpcomingTripCard(
+    booking: BookingDetails,
+    todayStr: String,
+    tomorrowStr: String,
+    onClick: () -> Unit
+) {
+    val badgeLabel = when (booking.travelDate) {
+        todayStr -> "Today"
+        tomorrowStr -> "Tomorrow"
+        else -> formatShortDateDisplay(booking.travelDate)
+    }
+
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .width(270.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color.White,
+                    modifier = Modifier.border(1.dp, RedbusCrimson, RoundedCornerShape(8.dp))
+                ) {
+                    Text(
+                        text = "redBus",
+                        color = RedbusCrimson,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFFFEDD5)
+                ) {
+                    Text(
+                        text = badgeLabel,
+                        color = Color(0xFF111827),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "${booking.sourceCity} → ${booking.destinationCity}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${booking.departureTime} · ${formatShortDateDisplay(booking.travelDate)}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Dynamic Searchable City Picker Modal powered by /api/v1/ai/cities/search
+ * Strictly excludes `excludeCity` so the city selected in From never reflects in To (and vice versa).
+ */
+@Composable
+private fun DynamicCitySearchDialog(
+    isSource: Boolean,
+    currentValue: String,
     excludeCity: String,
-    placeholder: String,
     suggestions: List<AiCityItem>,
     isSearching: Boolean,
     onQueryChanged: (String) -> Unit,
-    onCitySelected: (String) -> Unit
+    onSelectCity: (String) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var isOpen by remember { mutableStateOf(false) }
-    var inputValue by remember(value) { mutableStateOf(value) }
+    var query by remember { mutableStateOf("") }
 
-    // Strictly exclude `excludeCity` so the city selected in From never appears in To (and vice versa)
-    val filteredSuggestions = remember(suggestions, inputValue, excludeCity) {
+    val filteredCities = remember(suggestions, query, excludeCity) {
         suggestions
             .filterNot { excludeCity.isNotBlank() && it.name.equals(excludeCity.trim(), ignoreCase = true) }
             .filter {
-                val q = inputValue.trim()
+                val q = query.trim()
                 q.isEmpty() ||
-                    q.equals(value.trim(), ignoreCase = true) ||
                     it.name.contains(q, ignoreCase = true) ||
                     it.state.contains(q, ignoreCase = true) ||
                     it.aliases.orEmpty().any { alias -> alias.contains(q, ignoreCase = true) }
             }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Label
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.LocationOn,
-                contentDescription = label,
-                tint = RedbusCrimson,
-                modifier = Modifier.size(15.dp)
-            )
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        // Direct Searchable Input Box
-        Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = if (isOpen) {
-                MaterialTheme.colorScheme.surface
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-            },
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = if (isOpen) 1.5.dp else 1.dp,
-                    color = if (isOpen) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(14.dp)
-                )
-                .clickable {
-                    if (!isOpen) {
-                        isOpen = true
-                        onQueryChanged("")
-                    }
-                }
+                .fillMaxWidth(0.94f)
+                .heightIn(max = 560.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        tint = RedbusCrimson,
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        text = if (isSource) "Select Departure City (From)" else "Select Destination City (To)",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    BasicTextField(
-                        value = inputValue,
-                        onValueChange = { newText ->
-                            inputValue = newText
-                            if (!isOpen) isOpen = true
-                            onQueryChanged(newText)
-                        },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        cursorBrush = SolidColor(RedbusCrimson),
-                        modifier = Modifier.fillMaxWidth(),
-                        decorationBox = { innerTextField ->
-                            if (inputValue.isEmpty()) {
-                                Text(
-                                    text = placeholder,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (inputValue.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                inputValue = ""
-                                isOpen = true
-                                onQueryChanged("")
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear city",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
-                    IconButton(
-                        onClick = {
-                            isOpen = !isOpen
-                            if (isOpen) onQueryChanged("")
-                        },
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Toggle city dropdown",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
                     }
                 }
-            }
-        }
 
-        // Expandable Live City Suggestions List (Matching AiCityDropdown.tsx lines 154-236)
-        AnimatedVisibility(visible = isOpen) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        RoundedCornerShape(16.dp)
-                    )
-            ) {
-                if (isSearching && filteredSuggestions.isEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            color = RedbusCrimson,
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        onQueryChanged(it)
+                    },
+                    placeholder = {
                         Text(
-                            text = "Searching routes & cities...",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (isSource) "Search departure city..." else "Search destination city...",
+                            fontSize = 13.sp
                         )
-                    }
-                } else if (filteredSuggestions.isNotEmpty()) {
-                    Column(
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = RedbusCrimson
+                        )
+                    },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = {
+                                query = ""
+                                onQueryChanged("")
+                            }) {
+                                Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (excludeCity.isNotBlank()) {
+                    Text(
+                        text = "Note: \"$excludeCity\" is already selected as ${if (isSource) "Destination" else "Departure"} and excluded here.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (isSearching && filteredCities.isEmpty()) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        filteredSuggestions.take(7).forEach { city ->
-                            val isSelected = value.equals(city.name, ignoreCase = true)
+                        CircularProgressIndicator(color = RedbusCrimson, modifier = Modifier.size(28.dp))
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        items(filteredCities, key = { it.name }) { city ->
+                            val isSelected = currentValue.equals(city.name, ignoreCase = true)
                             Surface(
-                                onClick = {
-                                    inputValue = city.name
-                                    onCitySelected(city.name)
-                                    isOpen = false
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) {
-                                    RedbusSoftTint
-                                } else {
-                                    Color.Transparent
-                                },
+                                onClick = { onSelectCity(city.name) },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) RedbusSoftTint else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 9.dp),
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Surface(
-                                            shape = RoundedCornerShape(8.dp),
+                                            shape = RoundedCornerShape(10.dp),
                                             color = if (city.activeRoutesCount > 0) RatingEmeraldBg else RedbusSoftTint,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(36.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.DirectionsBus,
                                                     contentDescription = null,
                                                     tint = if (city.activeRoutesCount > 0) RatingEmerald else RedbusCrimson,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
-
                                         Column {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -1018,7 +1306,7 @@ private fun AiCityDropdownField(
                                             ) {
                                                 Text(
                                                     text = city.name,
-                                                    fontSize = 14.sp,
+                                                    fontSize = 15.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
@@ -1030,80 +1318,26 @@ private fun AiCityDropdownField(
                                                     )
                                                 }
                                             }
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                if (city.tag.isNotBlank()) {
-                                                    Surface(
-                                                        color = if (city.activeRoutesCount > 0) {
-                                                            RatingEmeraldBg
-                                                        } else {
-                                                            MaterialTheme.colorScheme.surfaceVariant
-                                                        },
-                                                        shape = RoundedCornerShape(4.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = city.tag,
-                                                            fontSize = 9.sp,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                            color = if (city.activeRoutesCount > 0) {
-                                                                RatingEmerald
-                                                            } else {
-                                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                                            },
-                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                                        )
-                                                    }
-                                                }
-                                                val aliases = city.aliases.orEmpty().take(2)
-                                                if (aliases.isNotEmpty()) {
-                                                    Text(
-                                                        text = "• ${aliases.joinToString(", ")}",
-                                                        fontSize = 10.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
+                                            if (city.tag.isNotBlank()) {
+                                                Text(
+                                                    text = city.tag,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = if (city.activeRoutesCount > 0) RatingEmerald else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                         }
                                     }
 
                                     if (isSelected) {
                                         Icon(
-                                            imageVector = Icons.Default.Check,
+                                            imageVector = Icons.Default.CheckCircle,
                                             contentDescription = "Selected",
                                             tint = RedbusCrimson,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
-                            }
-                        }
-                    }
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "No cities found matching \"$inputValue\"",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (inputValue.trim().isNotEmpty() && !inputValue.trim().equals(excludeCity.trim(), ignoreCase = true)) {
-                            TextButton(
-                                onClick = {
-                                    onCitySelected(inputValue.trim())
-                                    isOpen = false
-                                }
-                            ) {
-                                Text("Use \"${inputValue.trim()}\"", color = RedbusCrimson, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1145,7 +1379,6 @@ private fun SelectDateModal(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header: "Select date" + Circular Close Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1176,7 +1409,6 @@ private fun SelectDateModal(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
 
-                // Weekdays Strip (Mon .. Sun)
                 Row(modifier = Modifier.fillMaxWidth()) {
                     weekdays.forEach { wd ->
                         Text(
@@ -1190,7 +1422,6 @@ private fun SelectDateModal(
                     }
                 }
 
-                // Month & Year Navigation: ← Month Year →
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1226,9 +1457,8 @@ private fun SelectDateModal(
                     }
                 }
 
-                // Days Grid (Monday = 0 .. Sunday = 6)
                 val daysInMonth = currentYearMonth.lengthOfMonth()
-                val firstDayMondayBased = currentYearMonth.atDay(1).dayOfWeek.value - 1 // 0..6
+                val firstDayMondayBased = currentYearMonth.atDay(1).dayOfWeek.value - 1
                 val totalCells = firstDayMondayBased + daysInMonth
                 val rows = (totalCells + 6) / 7
 
@@ -1302,9 +1532,6 @@ private fun SelectDateModal(
     }
 }
 
-/**
- * Formats YYYY-MM-DD into "Thu 29-Oct" matching formatShortDateDisplay() in frontend/src/lib/dateUtils.ts.
- */
 private fun formatShortDateDisplay(dateStr: String): String {
     return try {
         val date = LocalDate.parse(dateStr)
@@ -1313,32 +1540,6 @@ private fun formatShortDateDisplay(dateStr: String): String {
         "$weekday ${date.dayOfMonth}-$month"
     } catch (_: Exception) {
         dateStr
-    }
-}
-
-@Composable
-private fun DateQuickPill(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = if (selected) RedbusSoftTint else MaterialTheme.colorScheme.surfaceVariant,
-        modifier = if (selected) {
-            Modifier.border(1.dp, RedbusCrimson.copy(alpha = 0.45f), RoundedCornerShape(50))
-        } else {
-            Modifier
-        }
-    ) {
-        Text(
-            text = label,
-            color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
     }
 }
 
