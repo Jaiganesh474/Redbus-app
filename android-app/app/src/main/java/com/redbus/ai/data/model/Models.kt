@@ -1,5 +1,7 @@
 package com.redbus.ai.data.model
 
+import com.google.gson.JsonElement
+
 data class User(
     val id: Int = 0,
     val name: String = "",
@@ -321,6 +323,7 @@ data class AiChatResponse(
     val sessionId: String? = null,
     val reply: String = "",
     val toolExecuted: String? = null,
+    val toolData: JsonElement? = null,
     val suggestedPrompts: List<String>? = null
 )
 
@@ -329,7 +332,8 @@ data class ChatMessageItem(
     val role: String,
     val content: String,
     val suggestedPrompts: List<String> = emptyList(),
-    val timestamp: String
+    val timestamp: String,
+    val routes: List<RouteItem>? = null
 )
 
 data class SmartSeatRecommendation(

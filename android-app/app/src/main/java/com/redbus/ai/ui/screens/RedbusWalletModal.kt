@@ -58,13 +58,14 @@ private data class WalletTxItem(
 fun RedbusWalletModal(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    uiState: RedbusUiState
+    uiState: RedbusUiState,
+    onNavigateToLogin: () -> Unit = {}
 ) {
     if (!isOpen) return
 
     val context = LocalContext.current
     val user = uiState.user
-    val walletBalance = user?.walletBalance ?: 2058.90
+    val walletBalance = user?.walletBalance ?: 0.0
     var activeFilter by remember { mutableStateOf("ALL") }
     var showFaq by remember { mutableStateOf(false) }
 
@@ -242,8 +243,69 @@ fun RedbusWalletModal(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // CARD 1: MAIN WALLET BALANCE (Matching Screenshot UI)
-                        item {
+                        if (user == null || !uiState.isAuthenticated) {
+                            item {
+                                Card(
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFFFEF2F2),
+                                            modifier = Modifier.size(64.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                                    contentDescription = null,
+                                                    tint = RedbusCrimson,
+                                                    modifier = Modifier.size(32.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Log In to Access Your Wallet",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF111827),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        )
+                                        Text(
+                                            text = "Sign in with your redBus AI account to view your live wallet balance, offer cash validity, instant refund credits, and recent transaction history.",
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF64748B),
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            lineHeight = 18.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Button(
+                                            onClick = {
+                                                onDismiss()
+                                                onNavigateToLogin()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(48.dp)
+                                        ) {
+                                            Text("SIGN IN / LOG IN", fontWeight = FontWeight.Bold, color = Color.White)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // CARD 1: MAIN WALLET BALANCE (Matching Screenshot UI)
+                            item {
                             Card(
                                 shape = RoundedCornerShape(24.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -643,6 +705,7 @@ fun RedbusWalletModal(
                         }
                     }
                 }
+            }
             }
         }
     }

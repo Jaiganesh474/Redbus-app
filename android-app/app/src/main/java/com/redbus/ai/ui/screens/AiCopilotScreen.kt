@@ -1,6 +1,8 @@
 package com.redbus.ai.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,7 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,17 +23,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.redbus.ai.data.model.ChatMessageItem
+import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
+import java.util.Locale
 
 @Composable
 fun AiCopilotScreen(
     uiState: RedbusUiState,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    onSelectRoute: (RouteItem) -> Unit = {}
 ) {
     var inputText by remember { mutableStateOf("") }
 
@@ -85,12 +97,13 @@ fun AiCopilotScreen(
                 .weight(1f)
                 .fillMaxWidth(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             items(uiState.chatMessages, key = { it.id }) { msg ->
                 ChatBubble(
                     message = msg,
-                    onPromptClick = { prompt -> onSendMessage(prompt) }
+                    onPromptClick = { prompt -> onSendMessage(prompt) },
+                    onSelectRoute = onSelectRoute
                 )
             }
 
@@ -159,10 +172,31 @@ fun AiCopilotScreen(
     }
 }
 
+/**
+ * Formats AI markdown content by cleanly stripping raw `**` asterisks and rendering
+ * the enclosed phrases in bold text.
+ */
+private fun formatAiMarkdownText(content: String): AnnotatedString {
+    val parts = content.split("**")
+    return buildAnnotatedString {
+        parts.forEachIndexed { index, part ->
+            if (index % 2 == 1) {
+                // Odd index is bold
+                withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)) {
+                    append(part)
+                }
+            } else {
+                append(part)
+            }
+        }
+    }
+}
+
 @Composable
 private fun ChatBubble(
     message: ChatMessageItem,
-    onPromptClick: (String) -> Unit
+    onPromptClick: (String) -> Unit,
+    onSelectRoute: (RouteItem) -> Unit
 ) {
     val isUser = message.role == "user"
     Column(
@@ -179,7 +213,7 @@ private fun ChatBubble(
             color = if (isUser) RedbusCrimson else MaterialTheme.colorScheme.surface,
             tonalElevation = 2.dp,
             shadowElevation = 2.dp,
-            modifier = Modifier.widthIn(max = 310.dp)
+            modifier = Modifier.widthIn(max = 340.dp)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 if (!isUser) {
@@ -200,17 +234,36 @@ private fun ChatBubble(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                 }
+
+                // Render clean formatted text without raw markdown asterisks
                 Text(
-                    text = message.content,
+                    text = if (isUser) AnnotatedString(message.content) else formatAiMarkdownText(message.content),
                     color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = message.timestamp,
                     fontSize = 10.sp,
                     color = if (isUser) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        // Render live searched bus route cards directly in the chat stream (Matching Image 4 & 5)
+        if (!message.routes.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                message.routes.forEach { route ->
+                    AiChatBusRouteCard(route = route, onSelectRoute = onSelectRoute)
+                }
             }
         }
 
@@ -228,6 +281,169 @@ private fun ChatBubble(
                             )
                         }
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Beautiful Bus Route Card inside AI Copilot Chat matching the RAY assistant UI in Image 4 (`media_1793344300188_c47c939c.jpg`).
+ */
+@Composable
+private fun AiChatBusRouteCard(
+    route: RouteItem,
+    onSelectRoute: (RouteItem) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Row 1: Operator Name, Rating Badge, Time, Price
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = route.operatorName,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = route.busType,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Star Rating Pill
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = RatingEmerald
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = String.format(Locale.US, "%.1f", route.rating),
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Price
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "₹${route.fare.toInt()}",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Onwards",
+                            fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Row 2: Timing, duration, and seats available
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${route.departureTime.take(5)} - ${route.arrivalTime.take(5)}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${route.availableSeats} seats left",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp,
+                    color = RatingEmerald
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+            // Row 3: Live Tracking tag + "Select Seats >" Action Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = RatingEmerald,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "Live Tracking & Free Cancellation",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = RatingEmerald
+                    )
+                }
+
+                Surface(
+                    onClick = { onSelectRoute(route) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = RedbusCrimson.copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(
+                            text = "Select Seats",
+                            color = RedbusCrimson,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = RedbusCrimson,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
         }

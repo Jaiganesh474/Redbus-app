@@ -7,6 +7,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import kotlinx.coroutines.delay
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -760,10 +766,15 @@ fun SearchResultsScreen(
                                     value = aiFilterQuery,
                                     onValueChange = { aiFilterQuery = it },
                                     placeholder = {
-                                        Text(
-                                            text = "Search 'AC sleeper under 1000', 'morning', 'Primo'...",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        AutoTypingMovingPlaceholder(
+                                            phrases = listOf(
+                                                "Search 'AC sleeper under 1000'...",
+                                                "Search 'Primo bus with live tracking'...",
+                                                "Search 'Morning bus before 11 AM'...",
+                                                "Search 'Night AC Sleeper with GPS'...",
+                                                "Search 'Free cancellation buses'...",
+                                                "Search 'Volvo multi-axle AC'..."
+                                            )
                                         )
                                     },
                                     leadingIcon = {
@@ -1909,5 +1920,79 @@ private fun parseHour(timeStr: String): Int {
         h
     } catch (_: Exception) {
         12
+    }
+}
+
+/**
+ * Animated moving / auto-typing text placeholder that smoothly cycles through
+ * search queries character-by-character with a realistic blinking cursor.
+ */
+@Composable
+fun AutoTypingMovingPlaceholder(
+    phrases: List<String> = listOf(
+        "Search 'AC sleeper under 1000'...",
+        "Search 'Primo bus with live tracking'...",
+        "Search 'Morning bus before 11 AM'...",
+        "Search 'Night AC Sleeper with GPS'...",
+        "Search 'Free cancellation buses'...",
+        "Search 'Volvo multi-axle AC'..."
+    ),
+    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor: Color = AiViolet
+) {
+    var phraseIndex by remember { mutableIntStateOf(0) }
+    var displayedLength by remember { mutableIntStateOf(0) }
+    var isDeleting by remember { mutableStateOf(false) }
+
+    val currentPhrase = phrases.getOrElse(phraseIndex) { phrases.first() }
+
+    LaunchedEffect(phraseIndex, isDeleting) {
+        if (!isDeleting) {
+            // Typing forward
+            while (displayedLength < currentPhrase.length) {
+                delay(45)
+                displayedLength++
+            }
+            // Pause before deleting
+            delay(1600)
+            isDeleting = true
+        } else {
+            // Deleting backward
+            while (displayedLength > 0) {
+                delay(22)
+                displayedLength--
+            }
+            isDeleting = false
+            phraseIndex = (phraseIndex + 1) % phrases.size
+        }
+    }
+
+    // Blinking cursor
+    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+    val cursorAlpha by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(450, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursorBlink"
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = currentPhrase.take(displayedLength),
+            fontSize = 12.sp,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Box(
+            modifier = Modifier
+                .padding(start = 2.dp)
+                .width(1.5.dp)
+                .height(13.dp)
+                .background(cursorColor.copy(alpha = cursorAlpha))
+        )
     }
 }

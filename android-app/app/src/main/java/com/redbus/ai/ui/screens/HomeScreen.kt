@@ -611,12 +611,15 @@ fun HomeScreen(
                                     .padding(vertical = 8.dp),
                                 decorationBox = { innerTextField ->
                                     if (uiState.nlpQuery.isEmpty()) {
-                                        Text(
-                                            text = "Ask AI: 'AC sleeper Bangalore to Chennai tomorrow'...",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 12.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                        AutoTypingMovingPlaceholder(
+                                            phrases = listOf(
+                                                "Ask AI: 'AC sleeper Bangalore to Chennai tomorrow'...",
+                                                "Ask AI: 'Morning Volvo bus under 1000'...",
+                                                "Ask AI: 'Buses with live tracking and free cancellation'...",
+                                                "Ask AI: 'Primo certified sleeper buses'..."
+                                            ),
+                                            textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            cursorColor = RedbusCrimson
                                         )
                                     }
                                     innerTextField()

@@ -547,14 +547,7 @@ private fun ViewTicketDetailsModal(
         }
     }
 
-    val ticketRotX = remember { Animatable(-16f) }
-    val ticketScale = remember { Animatable(0.88f) }
-    LaunchedEffect(Unit) {
-        ticketRotX.animateTo(
-            0f,
-            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-        )
-    }
+    val ticketScale = remember { Animatable(0.94f) }
     LaunchedEffect(Unit) {
         ticketScale.animateTo(
             1f,
@@ -566,17 +559,16 @@ private fun ViewTicketDetailsModal(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = true
+            decorFitsSystemWindows = false
         )
     ) {
-        val backdropColor = Color(0xFF1C1C1E)
+        val backdropColor = Color(0xFF141416)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backdropColor.copy(alpha = 0.94f))
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .background(backdropColor.copy(alpha = 0.92f))
+                .windowInsetsPadding(WindowInsets.systemBars)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -602,28 +594,27 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Scrollable Middle Ticket Card Container (fill = true guarantees middle height is constrained so Share Button is ALWAYS visible)
+                // Scrollable Middle Ticket Card Container (Properly bounded so bottom Share button is ALWAYS completely visible)
                 Box(
                     modifier = Modifier
                         .weight(1f, fill = true)
                         .fillMaxWidth()
+                        .widthIn(max = 420.dp)
                         .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopCenter
                 ) {
-                    // Main Perforated Ticket Card (Matching Image 5) with 3D Unfold Animation
+                    // Main Perforated Ticket Card (Matching Image 5) with smooth entry animation
                     Card(
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer {
-                                rotationX = ticketRotX.value
                                 scaleX = ticketScale.value
                                 scaleY = ticketScale.value
-                                cameraDistance = 16f * density
                             }
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {

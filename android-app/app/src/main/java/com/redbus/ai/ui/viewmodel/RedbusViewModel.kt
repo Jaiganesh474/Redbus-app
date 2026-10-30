@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -1212,12 +1214,30 @@ class RedbusViewModel(
                 destination = state.destinationCity,
                 date = state.travelDate
             ).onSuccess { response ->
+                val parsedRoutes: List<RouteItem>? = try {
+                    if (response.toolData != null && response.toolData.isJsonArray) {
+                        val type = object : TypeToken<List<RouteItem>>() {}.type
+                        Gson().fromJson<List<RouteItem>>(response.toolData, type)
+                    } else if (response.reply.contains("buses connecting", ignoreCase = true) ||
+                        response.toolExecuted.equals("searchRoutes", ignoreCase = true)
+                    ) {
+                        if (_uiState.value.searchResults.isNotEmpty()) {
+                            _uiState.value.searchResults.take(3)
+                        } else null
+                    } else null
+                } catch (_: Exception) {
+                    if (_uiState.value.searchResults.isNotEmpty() && response.reply.contains("buses connecting", ignoreCase = true)) {
+                        _uiState.value.searchResults.take(3)
+                    } else null
+                }
+
                 val aiMsg = ChatMessageItem(
                     id = "ai-${System.currentTimeMillis()}",
                     role = "assistant",
                     content = response.reply,
                     suggestedPrompts = response.suggestedPrompts.orEmpty(),
-                    timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    routes = parsedRoutes
                 )
                 _uiState.update {
                     it.copy(

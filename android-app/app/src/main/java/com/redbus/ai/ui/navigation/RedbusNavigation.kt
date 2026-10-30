@@ -66,6 +66,15 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     var showWalletModal by remember { mutableStateOf(false) }
+    var showWalletLoginPrompt by remember { mutableStateOf(false) }
+
+    val handleOpenWallet: () -> Unit = {
+        if (!uiState.isAuthenticated || uiState.user == null) {
+            showWalletLoginPrompt = true
+        } else {
+            showWalletModal = true
+        }
+    }
 
     val bottomNavTabs = listOf(
         ScreenRoute.Home,
@@ -213,7 +222,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToBookings = {
                             navigateToTab(navController, ScreenRoute.MyTrips.route)
                         },
-                        onOpenWallet = { showWalletModal = true },
+                        onOpenWallet = handleOpenWallet,
                         onToggleDarkTheme = viewModel::toggleDarkTheme
                     )
                 }
@@ -294,7 +303,12 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 composable(ScreenRoute.AiCopilot.route) {
                     AiCopilotScreen(
                         uiState = uiState,
-                        onSendMessage = viewModel::sendAiMessage
+                        onSendMessage = viewModel::sendAiMessage,
+                        onSelectRoute = { route ->
+                            viewModel.selectRouteForSeats(route) {
+                                navController.navigate(ScreenRoute.SeatSelection.route)
+                            }
+                        }
                     )
                 }
 
@@ -330,7 +344,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onChangePassword = viewModel::changePassword,
                         onSendResetOtp = viewModel::sendPasswordResetOtp,
                         onTopUpWallet = viewModel::topUpWallet,
-                        onOpenWallet = { showWalletModal = true },
+                        onOpenWallet = handleOpenWallet,
                         onFetchDeviceSessions = viewModel::fetchDeviceSessions,
                         onRevokeDeviceSession = viewModel::revokeDeviceSession,
                         onRevokeAllOtherSessions = viewModel::revokeAllOtherDeviceSessions,
@@ -345,7 +359,67 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         RedbusWalletModal(
             isOpen = showWalletModal,
             onDismiss = { showWalletModal = false },
-            uiState = uiState
+            uiState = uiState,
+            onNavigateToLogin = { navigateToTab(navController, ScreenRoute.Profile.route) }
         )
+
+        // Login Required Prompt Dialog when accessing Wallet without being logged in
+        if (showWalletLoginPrompt) {
+            AlertDialog(
+                onDismissRequest = { showWalletLoginPrompt = false },
+                icon = {
+                    Surface(
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = RedbusCrimson.copy(alpha = 0.12f),
+                        modifier = Modifier.size(54.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = RedbusCrimson,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                },
+                title = {
+                    Text(
+                        text = "Sign In Required",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Please log in to your redBus account to access your redBus Wallet, view balance and cashback history.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showWalletLoginPrompt = false
+                            navigateToTab(navController, ScreenRoute.Profile.route)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Log In / Sign Up", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showWalletLoginPrompt = false }) {
+                        Text("Cancel", fontWeight = FontWeight.Medium)
+                    }
+                }
+            )
+        }
     }
 }
