@@ -16,6 +16,8 @@ val AiSoftPurple = Color(0xFFF5F3FF)
 // Semantic Status Colors
 val RatingEmerald = Color(0xFF059669)
 val RatingEmeraldBg = Color(0xFFECFDF5)
+val RatingAmber = Color(0xFFF59E0B)
+val RatingAmberBg = Color(0xFFFEF3C7)
 val WarningAmber = Color(0xFFD97706)
 val WarningAmberBg = Color(0xFFFFFBEB)
 val FemaleSeatPink = Color(0xFFEC4899)

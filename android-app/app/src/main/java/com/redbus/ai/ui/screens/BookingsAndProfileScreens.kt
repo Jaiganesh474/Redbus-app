@@ -1250,6 +1250,7 @@ private fun ViewTicketDetailsModal(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RateJourneyModal(
     booking: BookingDetails,
@@ -1396,7 +1397,6 @@ private fun RateJourneyModal(
                     // 3. Experience & Hygiene Tags
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text("What went well?", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        OptIn(ExperimentalLayoutApi::class)
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
