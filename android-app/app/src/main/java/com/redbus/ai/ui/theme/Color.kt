@@ -7,6 +7,8 @@ val RedbusCrimson = Color(0xFFD84E55)
 val RedbusCrimsonDark = Color(0xFFB91C1C)
 val RedbusRose = Color(0xFFF43F5E)
 val RedbusSoftTint = Color(0xFFFFF1F2)
+val RedbusBlue = Color(0xFF2563EB)
+val RedbusBlueBg = Color(0xFFEFF6FF)
 
 // AI Accent Palette
 val AiViolet = Color(0xFF7C3AED)

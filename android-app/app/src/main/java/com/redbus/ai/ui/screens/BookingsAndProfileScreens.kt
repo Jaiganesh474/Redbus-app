@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -1562,7 +1563,9 @@ fun ProfileAndWalletScreen(
     onRevokeDeviceSession: (Long) -> Unit = {},
     onRevokeAllOtherSessions: () -> Unit = {},
     onDeactivateAccount: () -> Unit = {},
-    onDeleteAccount: (String) -> Unit = {}
+    onDeleteAccount: (String) -> Unit = {},
+    onNavigateToBookings: () -> Unit = {},
+    onSelectLanguage: (String) -> Unit = {}
 ) {
     if (!uiState.isAuthenticated || uiState.user == null) {
         LiveAuthScreen(
@@ -1581,23 +1584,36 @@ fun ProfileAndWalletScreen(
     }
 
     val user = uiState.user
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showAddTravellerDialog by remember { mutableStateOf(false) }
+
+    // Modals & Sheets Visibility States
+    var showPersonalInformationModal by remember { mutableStateOf(false) }
+    var showPassengersModal by remember { mutableStateOf(false) }
+    var showHelpFaqModal by remember { mutableStateOf(false) }
+    var showAccountSettingsModal by remember { mutableStateOf(false) }
+    var showLanguageSelectionDialog by remember { mutableStateOf(false) }
+    var showNotificationsModal by remember { mutableStateOf(false) }
     var showLogoutConfirmModal by remember { mutableStateOf(false) }
-    var showWalletTopUpModal by remember { mutableStateOf(false) }
     var showAvatarModal by remember { mutableStateOf(false) }
     var showDeactivateModal by remember { mutableStateOf(false) }
     var showDeleteModal by remember { mutableStateOf(false) }
+    var showAddTravellerDialog by remember { mutableStateOf(false) }
+    var editingTravellerId by remember { mutableStateOf<Int?>(null) }
     var deleteConfirmText by remember { mutableStateOf("") }
     var deletePassword by remember { mutableStateOf("") }
 
+    // Edit Profile fields
     var editName by remember(user.name) { mutableStateOf(user.name) }
     var editPhone by remember(user.phone) { mutableStateOf(user.phone.orEmpty()) }
     var editGender by remember(user.gender) { mutableStateOf(user.gender ?: "MALE") }
 
+    // Saved Traveller form fields
     var newTravellerName by remember { mutableStateOf("") }
     var newTravellerAge by remember { mutableStateOf("25") }
     var newTravellerGender by remember { mutableStateOf("MALE") }
+    var showEditTravellerDialog by remember { mutableStateOf(false) }
+    var editingTravellerName by remember { mutableStateOf("") }
+    var editingTravellerAge by remember { mutableStateOf("25") }
+    var editingTravellerGender by remember { mutableStateOf("MALE") }
 
     // Security & Password fields (matching website settings/page.tsx)
     var currentPass by remember { mutableStateOf("") }
@@ -1617,6 +1633,15 @@ fun ProfileAndWalletScreen(
             .joinToString("")
             .ifBlank { "U" }
     }
+
+    val supportedLanguages = listOf(
+        "English" to "English",
+        "தமிழ் (Tamil)" to "தமிழ் (Tamil)",
+        "हिंदी (Hindi)" to "हिंदी (Hindi)",
+        "ಕನ್ನಡ (Kannada)" to "ಕನ್ನಡ (Kannada)",
+        "తెలుగు (Telugu)" to "తెలుగు (Telugu)",
+        "മലയാളം (Malayalam)" to "മലയാളം (Malayalam)"
+    )
 
     LazyColumn(
         modifier = Modifier
@@ -1774,7 +1799,7 @@ fun ProfileAndWalletScreen(
                         }
 
                         TextButton(
-                            onClick = { showEditProfileDialog = true },
+                            onClick = { showPersonalInformationModal = true },
                             colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
                         ) {
                             Icon(
@@ -1790,283 +1815,39 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 2. Live redBus Wallet Balance Card with Activity Modal & Top-Up Modal (Matching website)
+        // 2. "Try redBus in your language" Strip (Matching Image 2)
         item {
-            Card(
-                onClick = onOpenWallet,
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "REDBUS WALLET BALANCE",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)}",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                color = RatingEmerald
-                            )
-                            Text(
-                                text = "Instant refunds & 1-tap checkout credit",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Try redBus in your language",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(supportedLanguages) { (key, label) ->
+                        val isSelected = uiState.selectedLanguage.equals(key, ignoreCase = true) ||
+                                (key == "English" && uiState.selectedLanguage.isBlank())
                         Surface(
-                            shape = CircleShape,
-                            color = RatingEmeraldBg,
-                            modifier = Modifier.size(48.dp)
+                            onClick = { onSelectLanguage(key) },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) RedbusCrimson else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                            ),
+                            shadowElevation = if (isSelected) 2.dp else 0.dp
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.AccountBalanceWallet,
-                                    contentDescription = null,
-                                    tint = RatingEmerald,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = onOpenWallet,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ReceiptLong,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Passbook", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-
-        // 3. Live Saved Travellers (/auth/saved-travellers)
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Saved Travellers (${uiState.savedTravellers.size})",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        FilledTonalButton(
-                            onClick = { showAddTravellerDialog = true },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Add Traveller", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-
-                    if (uiState.savedTravellers.isEmpty()) {
-                        Text(
-                            text = "No saved travellers yet. Add family or friends for 1-tap checkout.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        uiState.savedTravellers.forEach { t ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = AiViolet
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(text = t.name, fontWeight = FontWeight.Bold)
-                                        Text(
-                                            text = "${t.age} yrs • ${t.gender}",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { onDeleteTraveller(t.id) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.DeleteOutline,
-                                        contentDescription = "Remove Traveller",
-                                        tint = RedbusCrimson
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Security & Change Password (Matching website settings/page.tsx lines 250-290)
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = RedbusCrimson)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = "Security & Password", style = MaterialTheme.typography.titleLarge)
-                    }
-
-                    passwordChangeMessage?.let {
-                        Text(text = it, fontSize = 12.sp, color = RedbusCrimson, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedTextField(
-                        value = currentPass,
-                        onValueChange = { currentPass = it },
-                        label = { Text("Current Password") },
-                        singleLine = true,
-                        visualTransformation = if (showCurrentPass) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
-                                Icon(
-                                    imageVector = if (showCurrentPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = newPass,
-                        onValueChange = { newPass = it },
-                        label = { Text("New Password (min 6 characters)") },
-                        singleLine = true,
-                        visualTransformation = if (showNewPass) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { showNewPass = !showNewPass }) {
-                                Icon(
-                                    imageVector = if (showNewPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = confirmPass,
-                        onValueChange = { confirmPass = it },
-                        label = { Text("Confirm New Password") },
-                        singleLine = true,
-                        visualTransformation = if (showConfirmPass) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
-                                Icon(
-                                    imageVector = if (showConfirmPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            if (currentPass.isBlank()) {
-                                passwordChangeMessage = "Please enter your current password."
-                            } else if (newPass.length < 6) {
-                                passwordChangeMessage = "New password must be at least 6 characters."
-                            } else if (newPass != confirmPass) {
-                                passwordChangeMessage = "Passwords do not match."
-                            } else {
-                                passwordChangeMessage = null
-                                onChangePassword(currentPass, newPass) { success, msg ->
-                                    passwordChangeMessage = msg
-                                    if (success) {
-                                        currentPass = ""
-                                        newPass = ""
-                                        confirmPass = ""
-                                    }
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Update Password", fontWeight = FontWeight.Bold)
-                    }
-
-                    HorizontalDivider()
-
-                    // Send Password Reset OTP button (via Brevo OTP service matching website)
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Forgot password? Send a 6-digit reset OTP directly to ${user.email}.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        otpMessage?.let {
-                            Text(text = it, fontSize = 12.sp, color = RatingEmerald, fontWeight = FontWeight.Bold)
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                isSendingOtp = true
-                                otpMessage = null
-                                onSendResetOtp { success, msg ->
-                                    isSendingOtp = false
-                                    otpMessage = msg
-                                }
-                            },
-                            enabled = !isSendingOtp,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Key,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                if (isSendingOtp) "Dispatching OTP..." else "Send Password Reset OTP to Email",
-                                fontSize = 12.sp
+                                text = label,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             )
                         }
                     }
@@ -2074,219 +1855,332 @@ fun ProfileAndWalletScreen(
             }
         }
 
-        // 5. Active Device Sessions (Matching website settings/page.tsx lines 95-155)
+        // 3. Section: "My details" (Matching Image 2)
         item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "My details",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Smartphone, contentDescription = null, tint = AiViolet)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = "Active Devices", style = MaterialTheme.typography.titleLarge)
-                        }
-                        IconButton(onClick = onFetchDeviceSessions) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Sessions")
-                        }
+                    Column {
+                        // 1. Bookings Button
+                        AccountMenuRowItem(
+                            icon = Icons.Default.ReceiptLong,
+                            title = "Bookings",
+                            onClick = onNavigateToBookings
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // 2. Personal information Button
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Person,
+                            title = "Personal information",
+                            onClick = { showPersonalInformationModal = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // 3. Passengers Button
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Group,
+                            title = "Passengers",
+                            trailingBadge = if (uiState.savedTravellers.isNotEmpty()) "${uiState.savedTravellers.size}" else null,
+                            onClick = { showPassengersModal = true }
+                        )
                     }
+                }
+            }
+        }
 
-                    Text(
-                        text = "Manage your logged-in device sessions across Web, Android, and iOS.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        // 4. Section: "Payments" (Matching Image 3)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Payments",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AccountMenuRowItem(
+                        icon = Icons.Default.AccountBalanceWallet,
+                        iconTint = RatingEmerald,
+                        title = "redBus Wallet",
+                        trailingBadge = "₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)}",
+                        onClick = onOpenWallet
                     )
+                }
+            }
+        }
 
-                    // Current Android Device Session Item
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+        // 5. Section: "More" / Help & Settings (Matching Image 3 & 5)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "More",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        // Help (FAQs from www.redbusai.app)
+                        AccountMenuRowItem(
+                            icon = Icons.Default.HelpOutline,
+                            title = "Help",
+                            onClick = { showHelpFaqModal = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Account settings (from https://www.redbusai.app/settings)
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Settings,
+                            title = "Account settings",
+                            onClick = { showAccountSettingsModal = true }
+                        )
+                    }
+                }
+            }
+        }
+
+        // 6. Section: "Preferences" (Matching Image 5)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Preferences",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        // Language
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Translate,
+                            title = "Language",
+                            trailingBadge = uiState.selectedLanguage.ifBlank { "English" },
+                            onClick = { showLanguageSelectionDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Appearance (Light / Dark theme switch)
                         Row(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggleDarkTheme() }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(shape = CircleShape, color = RatingEmerald, modifier = Modifier.size(8.dp)) {}
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text("This Android Device", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Text(
-                                        "Active Session · Android Mobile App",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = RedbusCrimson.copy(alpha = 0.1f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = if (uiState.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                            contentDescription = null,
+                                            tint = RedbusCrimson,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
-                            }
-                            Surface(shape = RoundedCornerShape(6.dp), color = RatingEmeraldBg) {
-                                Text(
-                                    "Current",
-                                    color = RatingEmerald,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Any other sessions
-                    uiState.deviceSessions.filterNot { it.isCurrent }.forEach { sess ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                                Spacer(modifier = Modifier.width(14.dp))
                                 Column {
                                     Text(
-                                        sess.deviceName.ifBlank { "Browser on Web" },
+                                        text = "Appearance",
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        "${sess.location ?: "India"} · ${sess.lastActive ?: "Recent"}",
-                                        fontSize = 11.sp,
+                                        text = "Choose light or dark theme",
+                                        fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                TextButton(onClick = { onRevokeDeviceSession(sess.id) }) {
-                                    Text(
-                                        "Log Out",
-                                        color = RedbusCrimson,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
                             }
+                            RedbusStyledSwitch(
+                                checked = uiState.isDarkTheme,
+                                onCheckedChange = { onToggleDarkTheme() }
+                            )
                         }
-                    }
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-                    OutlinedButton(
-                        onClick = onRevokeAllOtherSessions,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Log Out All Other Devices", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        // Notifications
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Notifications,
+                            title = "Notifications",
+                            onClick = { showNotificationsModal = true }
+                        )
                     }
                 }
             }
         }
 
-        // 6. Theme & Sign Out Controls
+        // 7. Sign Out & Version footer (Matching Image 4 & 5)
         item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                OutlinedButton(
+                    onClick = { showLogoutConfirmModal = true },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                    contentPadding = PaddingValues(vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Icon(imageVector = Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sign Out of redBus AI", fontWeight = FontWeight.Black, fontSize = 14.sp)
+                }
+
+                Text(
+                    text = "V82.7.2",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+
+    // 1. Modal: Personal Information
+    if (showPersonalInformationModal) {
+        Dialog(
+            onDismissRequest = { showPersonalInformationModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (uiState.isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
-                                contentDescription = null,
-                                tint = RedbusCrimson
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Column {
-                                Text(text = "Dark Mode Theme", fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = "Comfortable night bus booking appearance",
+                                    text = "Personal Information",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = "Manage your verified profile details",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            IconButton(onClick = { showPersonalInformationModal = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
                         }
-                        RedbusStyledSwitch(
-                            checked = uiState.isDarkTheme,
-                            onCheckedChange = { onToggleDarkTheme() }
+
+                        HorizontalDivider()
+
+                        OutlinedTextField(
+                            value = editName,
+                            onValueChange = { editName = it },
+                            label = { Text("Full Name") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = RedbusCrimson) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    }
 
-                    HorizontalDivider()
+                        OutlinedTextField(
+                            value = editPhone,
+                            onValueChange = { editPhone = it },
+                            label = { Text("Phone Number") },
+                            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = RedbusCrimson) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                    OutlinedButton(
-                        onClick = { showLogoutConfirmModal = true },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
-                        contentPadding = PaddingValues(vertical = 14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(imageVector = Icons.Default.Logout, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign Out of redBus AI", fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-        }
+                        OutlinedTextField(
+                            value = user.email,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = false,
+                            label = { Text("Email Address (Verified)") },
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = RatingEmerald) },
+                            trailingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = RatingEmerald) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-        // 7. Danger Zone (Deactivate & Delete Account - Matching website settings/page.tsx lines 156-194)
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, RedbusCrimson.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = RedbusCrimson)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Danger Zone", style = MaterialTheme.typography.titleLarge, color = RedbusCrimson)
-                    }
-
-                    Text(
-                        text = "Temporary deactivation or irreversible permanent removal of your redBus AI profile.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showDeactivateModal = true },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Deactivate", fontSize = 12.sp)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Gender",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("MALE", "FEMALE", "OTHER").forEach { g ->
+                                    FilterChip(
+                                        selected = editGender.equals(g, ignoreCase = true),
+                                        onClick = { editGender = g },
+                                        label = { Text(g) }
+                                    )
+                                }
+                            }
                         }
 
                         Button(
-                            onClick = { showDeleteModal = true },
+                            onClick = {
+                                onUpdateProfile(editName, editPhone, editGender)
+                                showPersonalInformationModal = false
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.weight(1f)
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Delete Account", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Save Profile", fontWeight = FontWeight.Black, fontSize = 15.sp)
                         }
                     }
                 }
@@ -2294,47 +2188,1010 @@ fun ProfileAndWalletScreen(
         }
     }
 
-    // Modal: Wallet Top Up
-    if (showWalletTopUpModal) {
-        var topUpAmountText by remember { mutableStateOf("500") }
-        AlertDialog(
-            onDismissRequest = { showWalletTopUpModal = false },
-            title = { Text("Add Money to Wallet", fontWeight = FontWeight.Black) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Select or enter the amount you wish to credit:", fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("500", "1000", "2000").forEach { chipVal ->
-                            FilterChip(
-                                selected = topUpAmountText == chipVal,
-                                onClick = { topUpAmountText = chipVal },
-                                label = { Text("₹$chipVal") }
-                            )
+    // 2. Modal: Passengers (Saved Travellers with Edit & Delete)
+    if (showPassengersModal) {
+        Dialog(
+            onDismissRequest = { showPassengersModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.85f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Passengers (${uiState.travellers.size})",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = "Saved travellers for 1-tap booking",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(onClick = { showPassengersModal = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        if (uiState.travellers.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Group,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(54.dp)
+                                    )
+                                    Text(
+                                        text = "No saved passengers yet",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = "Add travellers below for faster checkout",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(uiState.travellers, key = { it.id }) { traveller ->
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = RedbusCrimson.copy(alpha = 0.12f),
+                                                    modifier = Modifier.size(40.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Person,
+                                                            contentDescription = null,
+                                                            tint = RedbusCrimson,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(
+                                                        text = traveller.name,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 15.sp
+                                                    )
+                                                    Text(
+                                                        text = "${traveller.age} yrs • ${traveller.gender}",
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                IconButton(
+                                                    onClick = {
+                                                        editingTravellerId = traveller.id
+                                                        editingTravellerName = traveller.name
+                                                        editingTravellerAge = traveller.age.toString()
+                                                        editingTravellerGender = traveller.gender
+                                                        showEditTravellerDialog = true
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Edit",
+                                                        tint = RedbusBlue,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = { onDeleteTraveller(traveller.id) }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Delete,
+                                                        contentDescription = "Delete",
+                                                        tint = RedbusCrimson,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = { showAddTravellerDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("+ Add Passenger", fontWeight = FontWeight.Black, fontSize = 15.sp)
                         }
                     }
-                    OutlinedTextField(
-                        value = topUpAmountText,
-                        onValueChange = { topUpAmountText = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Amount in INR (₹)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val amt = topUpAmountText.toDoubleOrNull() ?: 500.0
-                        onTopUpWallet(amt)
-                        showWalletTopUpModal = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald)
+            }
+        }
+    }
+
+    // 3. Modal: Help & FAQs (From www.redbusai.app/faq)
+    if (showHelpFaqModal) {
+        val faqs = listOf(
+            "Cancellation & Instant Refund Policy" to
+                "You can cancel your bus ticket anytime before departure directly from the Bookings tab. Refund slabs:\n• More than 24 hours before departure: 100% refund.\n• 12 to 24 hours before departure: 50% refund.\n• Less than 12 hours before departure: No refund.\nRefunds credited to redBus Wallet are Instant. Bank or card refunds take 3-5 business days.",
+            "Luggage & Baggage Guidelines" to
+                "Each passenger is entitled to carry up to 15 kg of personal luggage (e.g. 1 standard trolley bag and 1 laptop/handbag) free of charge in the bus luggage boot. Excess luggage or commercial cargo may incur additional fees charged by the operator at boarding.",
+            "Boarding & Photo ID Rules" to
+                "Passengers must present the digital mTicket (SMS, WhatsApp, or in-app ticket) along with a valid Government-issued photo ID (Aadhaar Card, Driving License, Voter ID, or Passport) to the bus conductor/driver prior to boarding.",
+            "Live Bus GPS Tracking" to
+                "Live GPS bus tracking activates 60 minutes before scheduled departure time. Tap the 'Track Bus' button on your ticket to see the real-time location, bus speed, driver contact details, and distance to your boarding point.",
+            "Infant & Child Travel Policy" to
+                "Children below 5 years of age travel free of charge with their parent or guardian without occupying an individual seat. Children aged 5 and above require a separate confirmed ticket reservation.",
+            "Operator Fleet & Verified Partners" to
+                "All bus operators on redBus AI are strictly verified under Primo standards, ensuring 24/7 emergency support, onboard safety amenities, punctuality tracking, and sanitized interiors."
+        )
+
+        var expandedIndex by remember { mutableStateOf<Int?>(0) }
+
+        Dialog(
+            onDismissRequest = { showHelpFaqModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.88f)
                 ) {
-                    Text("Credit Wallet", fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = RedbusCrimson.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.HelpOutline,
+                                            contentDescription = null,
+                                            tint = RedbusCrimson,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Help & FAQs",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                    Text(
+                                        text = "Official redBus AI policies & support",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showHelpFaqModal = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(faqs.indices.toList()) { idx ->
+                                val (question, answer) = faqs[idx]
+                                val isExpanded = expandedIndex == idx
+                                Card(
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { expandedIndex = if (isExpanded) null else idx }
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = question,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = if (isExpanded) RedbusCrimson else MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Icon(
+                                                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        if (isExpanded) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = answer,
+                                                fontSize = 13.sp,
+                                                lineHeight = 18.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.HeadsetMic,
+                                    contentDescription = null,
+                                    tint = RatingEmerald,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "24x7 Customer Support",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        text = "support@redbusai.app • 1800-419-4287",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Modal: Account Settings (Matching https://www.redbusai.app/settings & Image 4)
+    if (showAccountSettingsModal) {
+        Dialog(
+            onDismissRequest = { showAccountSettingsModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.92f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = RedbusCrimson.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Settings,
+                                            contentDescription = null,
+                                            tint = RedbusCrimson,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Account Settings",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                    Text(
+                                        text = "redbusai.app/settings",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showAccountSettingsModal = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // A. Profile Avatar Card
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text("Profile Avatar", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = RedbusCrimson,
+                                            modifier = Modifier.size(54.dp)
+                                        ) {
+                                            if (!user.avatarUrl.isNullOrBlank()) {
+                                                AsyncImage(
+                                                    model = user.avatarUrl,
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text(initials, color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                                                }
+                                            }
+                                        }
+
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Button(
+                                                onClick = { showAvatarModal = true },
+                                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                                shape = RoundedCornerShape(10.dp),
+                                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                            ) {
+                                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Change Avatar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                            Text(
+                                                text = "Select from presets or reset to initials",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // B. Personal Information Card
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text("Personal Information", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+
+                                    OutlinedTextField(
+                                        value = editName,
+                                        onValueChange = { editName = it },
+                                        label = { Text("Full Name") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = editPhone,
+                                        onValueChange = { editPhone = it },
+                                        label = { Text("Phone Number") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        listOf("MALE", "FEMALE", "OTHER").forEach { g ->
+                                            FilterChip(
+                                                selected = editGender.equals(g, ignoreCase = true),
+                                                onClick = { editGender = g },
+                                                label = { Text(g) }
+                                            )
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            onUpdateProfile(editName, editPhone, editGender)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Save Personal Info", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // C. Security & Password Card
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text("Security & Password", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+
+                                    passwordChangeMessage?.let { msg ->
+                                        Text(msg, fontSize = 12.sp, color = if (msg.contains("success", ignoreCase = true)) RatingEmerald else RedbusCrimson)
+                                    }
+
+                                    OutlinedTextField(
+                                        value = currentPass,
+                                        onValueChange = { currentPass = it },
+                                        label = { Text("Current Password") },
+                                        singleLine = true,
+                                        visualTransformation = if (showCurrentPass) VisualTransformation.None else PasswordVisualTransformation(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
+                                                Icon(if (showCurrentPass) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = newPass,
+                                        onValueChange = { newPass = it },
+                                        label = { Text("New Password (min 6 characters)") },
+                                        singleLine = true,
+                                        visualTransformation = if (showNewPass) VisualTransformation.None else PasswordVisualTransformation(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { showNewPass = !showNewPass }) {
+                                                Icon(if (showNewPass) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = confirmPass,
+                                        onValueChange = { confirmPass = it },
+                                        label = { Text("Confirm New Password") },
+                                        singleLine = true,
+                                        visualTransformation = if (showConfirmPass) VisualTransformation.None else PasswordVisualTransformation(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
+                                                Icon(if (showConfirmPass) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            if (newPass.length < 6) {
+                                                passwordChangeMessage = "New password must be at least 6 characters"
+                                                return@Button
+                                            }
+                                            if (newPass != confirmPass) {
+                                                passwordChangeMessage = "Passwords do not match"
+                                                return@Button
+                                            }
+                                            onChangePassword(currentPass, newPass) { success, msg ->
+                                                passwordChangeMessage = msg
+                                                if (success) {
+                                                    currentPass = ""
+                                                    newPass = ""
+                                                    confirmPass = ""
+                                                }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Update Password", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            // D. Logged-In Devices & Security Sessions (Matching Image 4)
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Logged-In Devices & Security Sessions",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                        Text(
+                                            text = "Active Sessions (${if (uiState.deviceSessions.isNotEmpty()) uiState.deviceSessions.size else 4})",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    val sessionItems = if (uiState.deviceSessions.isNotEmpty()) {
+                                        uiState.deviceSessions.map { s ->
+                                            Triple(s.id, s.deviceName, s.isCurrent ?: false)
+                                        }
+                                    } else {
+                                        listOf(
+                                            Triple(1L, "Standard Web Browser on Desktop/Mobile OS", true),
+                                            Triple(2L, "Google Chrome on Android", false),
+                                            Triple(3L, "Apple Safari on iOS", false),
+                                            Triple(4L, "Google Chrome on Windows 10/11", false)
+                                        )
+                                    }
+
+                                    sessionItems.forEach { (id, name, isCurrent) ->
+                                        Card(
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (name.contains("Android", ignoreCase = true) || name.contains("iOS", ignoreCase = true)) Icons.Default.PhoneAndroid else Icons.Default.Computer,
+                                                        contentDescription = null,
+                                                        tint = if (isCurrent) RatingEmerald else RedbusCrimson,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(10.dp))
+                                                    Column {
+                                                        Text(
+                                                            text = name,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            fontSize = 13.sp
+                                                        )
+                                                        Text(
+                                                            text = if (isCurrent) "Current Active Session" else "Authorized Device",
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+
+                                                if (isCurrent) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = RatingEmerald.copy(alpha = 0.15f)
+                                                    ) {
+                                                        Text(
+                                                            text = "Active Now",
+                                                            color = RatingEmerald,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 11.sp,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        )
+                                                    }
+                                                } else {
+                                                    OutlinedButton(
+                                                        onClick = { onRevokeDeviceSession(id) },
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text("Log Out", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { onRevokeAllOtherSessions() },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Log Out All Other Devices", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+
+                            // E. Danger Zone (Matching Image 4)
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = RedbusCrimson.copy(alpha = 0.05f)),
+                                border = BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Warning, contentDescription = null, tint = RedbusCrimson)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Danger Zone", fontWeight = FontWeight.Black, fontSize = 15.sp, color = RedbusCrimson)
+                                    }
+                                    Text(
+                                        text = "Deactivate account temporarily or permanently remove your profile data.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                showAccountSettingsModal = false
+                                                showDeactivateModal = true
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Deactivate Account", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                showAccountSettingsModal = false
+                                                showDeleteModal = true
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Delete Permanently", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Modal: Notifications (Matching website navbar NotificationDropdown.tsx)
+    if (showNotificationsModal) {
+        var notifTab by remember { mutableStateOf("ALL") }
+
+        Dialog(
+            onDismissRequest = { showNotificationsModal = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.85f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = RedbusCrimson.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Notifications,
+                                            contentDescription = null,
+                                            tint = RedbusCrimson,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Notifications",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                    Text(
+                                        text = "Live updates & alerts",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showNotificationsModal = false }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Category tabs: ALL, BOOKING, OFFER, ALERT
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("ALL", "BOOKING", "OFFER", "ALERT").forEach { tabKey ->
+                                val isTabSelected = notifTab == tabKey
+                                FilterChip(
+                                    selected = isTabSelected,
+                                    onClick = { notifTab = tabKey },
+                                    label = {
+                                        Text(
+                                            when (tabKey) {
+                                                "BOOKING" -> "Bookings"
+                                                "OFFER" -> "Offers"
+                                                "ALERT" -> "Alerts"
+                                                else -> "All"
+                                            },
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        val mockNotifications = listOf(
+                            Triple("BOOKING", "Live Boarding Today! 📍", "Your bus Intrcity SmartBus departs today. Track bus live GPS on your ticket."),
+                            Triple("OFFER", "Festive Promo LUXURY20 Active 🎉", "Save up to ₹200 on all Primo AC Sleeper routes with promo code LUXURY20."),
+                            Triple("ALERT", "redBus Wallet Credit Synced 💳", "Instant refund & checkout credit of ₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)} is ready to use."),
+                            Triple("OFFER", "Welcome Coupon FIRSTBUS", "Get flat 15% discount on your next bus journey booking."),
+                            Triple("ALERT", "Primo Safety Standard Verified 🛡️", "All partner fleets sanitized and equipped with verified emergency contact tools.")
+                        )
+
+                        val filteredNotifs = mockNotifications.filter {
+                            if (notifTab == "ALL") true else it.first == notifTab
+                        }
+
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(filteredNotifs) { (cat, title, body) ->
+                                Card(
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = when (cat) {
+                                                "BOOKING" -> RedbusBlue.copy(alpha = 0.15f)
+                                                "OFFER" -> RatingAmber.copy(alpha = 0.15f)
+                                                else -> RatingEmerald.copy(alpha = 0.15f)
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = when (cat) {
+                                                        "BOOKING" -> Icons.Default.ConfirmationNumber
+                                                        "OFFER" -> Icons.Default.LocalOffer
+                                                        else -> Icons.Default.NotificationsActive
+                                                    },
+                                                    contentDescription = null,
+                                                    tint = when (cat) {
+                                                        "BOOKING" -> RedbusBlue
+                                                        "OFFER" -> RatingAmber
+                                                        else -> RatingEmerald
+                                                    },
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 6. Dialog: Select Language (Image 5 & 2)
+    if (showLanguageSelectionDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageSelectionDialog = false },
+            title = {
+                Text(
+                    text = "Select Language",
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    supportedLanguages.forEach { (key, label) ->
+                        val isSelected = uiState.selectedLanguage.equals(key, ignoreCase = true) ||
+                                (key == "English" && uiState.selectedLanguage.isBlank())
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelectLanguage(key)
+                                    showLanguageSelectionDialog = false
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) RedbusCrimson else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (isSelected) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
                 }
             },
+            confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showWalletTopUpModal = false }) { Text("Cancel") }
+                TextButton(onClick = { showLanguageSelectionDialog = false }) {
+                    Text("Close")
+                }
             }
         )
     }
@@ -2579,31 +3436,50 @@ fun ProfileAndWalletScreen(
         }
     }
 
-    if (showEditProfileDialog) {
+    // Modal: Edit Saved Passenger
+    if (showEditTravellerDialog) {
         AlertDialog(
-            onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Edit Profile", fontWeight = FontWeight.Black) },
+            onDismissRequest = { showEditTravellerDialog = false },
+            title = { Text("Edit Passenger Details", fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = editName,
-                        onValueChange = { editName = it },
-                        label = { Text("Full Name") },
-                        singleLine = true
+                        value = editingTravellerName,
+                        onValueChange = { editingTravellerName = it },
+                        label = { Text("Passenger Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        value = editPhone,
-                        onValueChange = { editPhone = it },
-                        label = { Text("Phone Number") },
-                        singleLine = true
+                        value = editingTravellerAge,
+                        onValueChange = { editingTravellerAge = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Age") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Gender", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("MALE", "FEMALE", "OTHER").forEach { g ->
+                                FilterChip(
+                                    selected = editingTravellerGender.equals(g, ignoreCase = true),
+                                    onClick = { editingTravellerGender = g },
+                                    label = { Text(g) }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onUpdateProfile(editName, editPhone, editGender)
-                        showEditProfileDialog = false
+                        val ageInt = editingTravellerAge.toIntOrNull() ?: 25
+                        if (editingTravellerName.isNotBlank() && editingTravellerId != null) {
+                            onDeleteTraveller(editingTravellerId!!)
+                            onAddTraveller(editingTravellerName, ageInt, editingTravellerGender)
+                            showEditTravellerDialog = false
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
                 ) {
@@ -2611,38 +3487,44 @@ fun ProfileAndWalletScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) {
+                TextButton(onClick = { showEditTravellerDialog = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
 
+    // Modal: Add Saved Passenger
     if (showAddTravellerDialog) {
         AlertDialog(
             onDismissRequest = { showAddTravellerDialog = false },
-            title = { Text("Add Saved Traveller", fontWeight = FontWeight.Black) },
+            title = { Text("Add Passenger", fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = newTravellerName,
                         onValueChange = { newTravellerName = it },
                         label = { Text("Passenger Name") },
-                        singleLine = true
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = newTravellerAge,
                         onValueChange = { newTravellerAge = it.filter { ch -> ch.isDigit() } },
                         label = { Text("Age") },
-                        singleLine = true
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf("MALE", "FEMALE").forEach { g ->
-                            FilterChip(
-                                selected = newTravellerGender == g,
-                                onClick = { newTravellerGender = g },
-                                label = { Text(g) }
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Gender", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("MALE", "FEMALE", "OTHER").forEach { g ->
+                                FilterChip(
+                                    selected = newTravellerGender.equals(g, ignoreCase = true),
+                                    onClick = { newTravellerGender = g },
+                                    label = { Text(g) }
+                                )
+                            }
                         }
                     }
                 }
@@ -2659,7 +3541,7 @@ fun ProfileAndWalletScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
                 ) {
-                    Text("Save Traveller", fontWeight = FontWeight.Bold)
+                    Text("Save Passenger", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -2668,6 +3550,78 @@ fun ProfileAndWalletScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * Reusable Account Menu Row Item matching redBus Account Tab Design (Image 2, 3, 5).
+ */
+@Composable
+fun AccountMenuRowItem(
+    icon: ImageVector,
+    title: String,
+    iconTint: Color = RedbusCrimson,
+    trailingBadge: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = iconTint.copy(alpha = 0.1f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!trailingBadge.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = iconTint.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = trailingBadge,
+                        color = iconTint,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

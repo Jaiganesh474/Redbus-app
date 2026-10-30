@@ -121,7 +121,8 @@ data class RedbusUiState(
             timestamp = "Live"
         )
     ),
-    val isAiTyping: Boolean = false
+    val isAiTyping: Boolean = false,
+    val selectedLanguage: String = "English"
 )
 
 class RedbusViewModel(
@@ -433,6 +434,10 @@ class RedbusViewModel(
         val next = !_uiState.value.isDarkTheme
         SessionManager.setDarkMode(next)
         _uiState.update { it.copy(isDarkTheme = next) }
+    }
+
+    fun setLanguage(lang: String) {
+        _uiState.update { it.copy(selectedLanguage = lang) }
     }
 
     // --- Search & Route Filtering ---

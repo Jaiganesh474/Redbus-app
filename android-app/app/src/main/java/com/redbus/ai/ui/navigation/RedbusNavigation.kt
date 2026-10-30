@@ -350,6 +350,10 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onFetchDeviceSessions = viewModel::fetchDeviceSessions,
                         onRevokeDeviceSession = viewModel::revokeDeviceSession,
                         onRevokeAllOtherSessions = viewModel::revokeAllOtherDeviceSessions,
+                        onNavigateToBookings = {
+                            navigateToTab(navController, ScreenRoute.MyTrips.route)
+                        },
+                        onSelectLanguage = viewModel::setLanguage,
                         onDeactivateAccount = { viewModel.deactivateAccount { navController.navigate(ScreenRoute.Home.route) } },
                         onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } }
                     )
