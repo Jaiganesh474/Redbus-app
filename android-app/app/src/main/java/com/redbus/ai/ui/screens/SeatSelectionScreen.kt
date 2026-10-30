@@ -580,7 +580,11 @@ fun SeatSelectionScreen(
                                         )
                                     },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isChosen) Color(0xFFFFF1F2) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    color = if (isChosen) {
+                                        if (uiState.isDarkTheme) Color(0xFF4C1D24) else Color(0xFFFFF1F2)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 5.dp)
@@ -605,7 +609,8 @@ fun SeatSelectionScreen(
                                             Text(
                                                 text = bp,
                                                 fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 13.sp
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                     }
@@ -641,7 +646,11 @@ fun SeatSelectionScreen(
                                         )
                                     },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (isChosen) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    color = if (isChosen) {
+                                        if (uiState.isDarkTheme) Color(0xFF123B2B) else Color(0xFFECFDF5)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 5.dp)
@@ -664,7 +673,8 @@ fun SeatSelectionScreen(
                                         Text(
                                             text = dp,
                                             fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 13.sp
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                 }
