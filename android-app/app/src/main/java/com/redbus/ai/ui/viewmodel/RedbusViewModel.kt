@@ -1221,13 +1221,13 @@ class RedbusViewModel(
                     } else if (response.reply.contains("buses connecting", ignoreCase = true) ||
                         response.toolExecuted.equals("searchRoutes", ignoreCase = true)
                     ) {
-                        if (_uiState.value.searchResults.isNotEmpty()) {
-                            _uiState.value.searchResults.take(3)
+                        if (_uiState.value.routes.isNotEmpty()) {
+                            _uiState.value.routes.take(3)
                         } else null
                     } else null
                 } catch (_: Exception) {
-                    if (_uiState.value.searchResults.isNotEmpty() && response.reply.contains("buses connecting", ignoreCase = true)) {
-                        _uiState.value.searchResults.take(3)
+                    if (_uiState.value.routes.isNotEmpty() && response.reply.contains("buses connecting", ignoreCase = true)) {
+                        _uiState.value.routes.take(3)
                     } else null
                 }
 
