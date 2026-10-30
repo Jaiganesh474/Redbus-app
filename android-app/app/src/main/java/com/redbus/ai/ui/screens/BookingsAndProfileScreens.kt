@@ -11,12 +11,14 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,8 +50,77 @@ import com.redbus.ai.data.model.BookingDetails
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
+
+enum class RealtimeTripStatus(val label: String, val badgeColor: Color, val textColor: Color) {
+    CONFIRMED("CONFIRMED", Color(0xFFDCFCE7), Color(0xFF15803D)),
+    TRIP_STARTED("Trip Started · On the way", Color(0xFFEFF6FF), Color(0xFF1D4ED8)),
+    TRIP_COMPLETED("Trip Completed", Color(0xFFDCFCE7), Color(0xFF15803D)),
+    CANCELLED("CANCELLED", Color(0xFFFFE4E6), Color(0xFFBE123C)),
+    REFUNDED("REFUNDED", Color(0xFFF1F5F9), Color(0xFF475569))
+}
+
+enum class BookingTabFilter(val label: String) {
+    ALL("All"),
+    UPCOMING("Upcoming"),
+    PAST("Past Trips"),
+    CANCELLED("Cancelled")
+}
+
+private fun parseFlexibleTime(timeStr: String?): LocalTime? {
+    if (timeStr.isNullOrBlank()) return null
+    return try {
+        val clean = timeStr.trim().uppercase(Locale.ENGLISH)
+        if (clean.contains("AM") || clean.contains("PM")) {
+            val isPm = clean.contains("PM")
+            val digits = clean.replace(Regex("[^0-9:]"), "").split(":")
+            var h = digits.getOrNull(0)?.toIntOrNull() ?: 12
+            val m = digits.getOrNull(1)?.toIntOrNull() ?: 0
+            if (isPm && h < 12) h += 12
+            if (!isPm && h == 12) h = 0
+            LocalTime.of(h, m)
+        } else {
+            val parts = clean.split(":")
+            val h = parts.getOrNull(0)?.toIntOrNull() ?: 0
+            val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            LocalTime.of(h, m)
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun calculateTripStatus(booking: BookingDetails): RealtimeTripStatus {
+    if (booking.status.equals("CANCELLED", ignoreCase = true)) return RealtimeTripStatus.CANCELLED
+    if (booking.status.equals("REFUNDED", ignoreCase = true)) return RealtimeTripStatus.REFUNDED
+
+    return try {
+        val now = LocalDateTime.now()
+        val travelDate = LocalDate.parse(booking.travelDate.trim())
+
+        val depTime = parseFlexibleTime(booking.departureTime) ?: LocalTime.of(12, 0)
+        val depDateTime = travelDate.atTime(depTime)
+
+        val arrTime = parseFlexibleTime(booking.arrivalTime) ?: depTime.plusHours(7)
+        val arrDateTime = if (arrTime.isBefore(depTime) || arrTime == depTime) {
+            travelDate.plusDays(1).atTime(arrTime)
+        } else {
+            travelDate.atTime(arrTime)
+        }
+
+        when {
+            now.isBefore(depDateTime) -> RealtimeTripStatus.CONFIRMED
+            now.isAfter(arrDateTime) -> RealtimeTripStatus.TRIP_COMPLETED
+            else -> RealtimeTripStatus.TRIP_STARTED
+        }
+    } catch (_: Exception) {
+        if (booking.status.equals("CONFIRMED", ignoreCase = true)) RealtimeTripStatus.CONFIRMED else RealtimeTripStatus.CANCELLED
+    }
+}
 
 @Composable
 fun MyBookingsScreen(
@@ -58,11 +129,14 @@ fun MyBookingsScreen(
     onRefreshBookings: () -> Unit,
     onCancelBooking: (String, String, String) -> Unit,
     onEmailTicket: (String) -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> }
 ) {
     var pnrQuery by remember { mutableStateOf("") }
+    var activeTabFilter by remember { mutableStateOf(BookingTabFilter.ALL) }
     var bookingToCancel by remember { mutableStateOf<BookingDetails?>(null) }
     var selectedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
+    var bookingToRate by remember { mutableStateOf<BookingDetails?>(null) }
     var cancelReason by remember { mutableStateOf("Change of plans") }
     var refundDestination by remember { mutableStateOf("WALLET") }
 
@@ -71,6 +145,23 @@ fun MyBookingsScreen(
             listOf(uiState.pnrSearchResult)
         } else {
             uiState.myBookings
+        }
+    }
+
+    val filteredBookings = remember(displayedBookings, activeTabFilter) {
+        when (activeTabFilter) {
+            BookingTabFilter.ALL -> displayedBookings
+            BookingTabFilter.UPCOMING -> displayedBookings.filter {
+                val s = calculateTripStatus(it)
+                s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
+            }
+            BookingTabFilter.PAST -> displayedBookings.filter {
+                calculateTripStatus(it) == RealtimeTripStatus.TRIP_COMPLETED
+            }
+            BookingTabFilter.CANCELLED -> displayedBookings.filter {
+                val s = calculateTripStatus(it)
+                s == RealtimeTripStatus.CANCELLED || s == RealtimeTripStatus.REFUNDED
+            }
         }
     }
 
@@ -84,8 +175,8 @@ fun MyBookingsScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -154,6 +245,61 @@ fun MyBookingsScreen(
                         Text("Find PNR", fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                 }
+
+                // Divided booking filter tabs: All | Upcoming trips | Past trips | Cancelled
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(BookingTabFilter.values()) { tab ->
+                        val isSelected = activeTabFilter == tab
+                        val count = when (tab) {
+                            BookingTabFilter.ALL -> displayedBookings.size
+                            BookingTabFilter.UPCOMING -> displayedBookings.count {
+                                val s = calculateTripStatus(it)
+                                s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
+                            }
+                            BookingTabFilter.PAST -> displayedBookings.count {
+                                calculateTripStatus(it) == RealtimeTripStatus.TRIP_COMPLETED
+                            }
+                            BookingTabFilter.CANCELLED -> displayedBookings.count {
+                                val s = calculateTripStatus(it)
+                                s == RealtimeTripStatus.CANCELLED || s == RealtimeTripStatus.REFUNDED
+                            }
+                        }
+                        Surface(
+                            onClick = { activeTabFilter = tab },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.18f),
+                            border = BorderStroke(1.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.35f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = tab.label,
+                                    color = if (isSelected) RedbusCrimson else Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
+                                )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (isSelected) RedbusCrimson.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.25f)
+                                ) {
+                                    Text(
+                                        text = "$count",
+                                        color = if (isSelected) RedbusCrimson else Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -220,7 +366,7 @@ fun MyBookingsScreen(
                     }
                 }
             }
-        } else if (displayedBookings.isEmpty()) {
+        } else if (filteredBookings.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -238,7 +384,12 @@ fun MyBookingsScreen(
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
-                        text = "No bookings found for your account yet",
+                        text = when (activeTabFilter) {
+                            BookingTabFilter.UPCOMING -> "No upcoming trips found"
+                            BookingTabFilter.PAST -> "No past trips found"
+                            BookingTabFilter.CANCELLED -> "No cancelled trips"
+                            BookingTabFilter.ALL -> "No bookings found for your account yet"
+                        },
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -253,12 +404,13 @@ fun MyBookingsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(displayedBookings, key = { it.pnr.ifBlank { it.id.toString() } }) { booking ->
+                items(filteredBookings, key = { it.pnr.ifBlank { it.id.toString() } }) { booking ->
                     BookingTicketCard(
                         booking = booking,
                         onViewTicketClick = { selectedTicketToView = booking },
                         onCancelClick = { bookingToCancel = booking },
-                        onEmailClick = { onEmailTicket(booking.pnr) }
+                        onEmailClick = { onEmailTicket(booking.pnr) },
+                        onRateClick = { bookingToRate = booking }
                     )
                 }
             }
@@ -273,6 +425,17 @@ fun MyBookingsScreen(
             onCancelBooking = {
                 selectedTicketToView = null
                 bookingToCancel = ticketBooking
+            }
+        )
+    }
+
+    // Rate Journey Experience & Hygiene Review Modal
+    bookingToRate?.let { b ->
+        RateJourneyModal(
+            booking = b,
+            onDismiss = { bookingToRate = null },
+            onSubmitReview = { busId, rating, comment ->
+                onSubmitReview(busId, rating, comment)
             }
         )
     }
@@ -337,9 +500,10 @@ private fun BookingTicketCard(
     booking: BookingDetails,
     onViewTicketClick: () -> Unit,
     onCancelClick: () -> Unit,
-    onEmailClick: () -> Unit
+    onEmailClick: () -> Unit,
+    onRateClick: () -> Unit = {}
 ) {
-    val isConfirmed = booking.status == "CONFIRMED"
+    val tripStatus = calculateTripStatus(booking)
     val cardScale = remember { Animatable(0.95f) }
     val cardRotX = remember { Animatable(8f) }
     LaunchedEffect(booking.pnr) {
@@ -377,12 +541,12 @@ private fun BookingTicketCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = if (isConfirmed) RatingEmeraldBg else RedbusSoftTint,
+                    color = tripStatus.badgeColor,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "● ${booking.status}",
-                        color = if (isConfirmed) RatingEmerald else RedbusCrimson,
+                        text = "● ${tripStatus.label}",
+                        color = tripStatus.textColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -494,15 +658,53 @@ private fun BookingTicketCard(
                         )
                     }
 
-                    if (isConfirmed) {
-                        OutlinedButton(
-                            onClick = onCancelClick,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-                        ) {
-                            Text("Cancel", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    when (tripStatus) {
+                        RealtimeTripStatus.CONFIRMED -> {
+                            OutlinedButton(
+                                onClick = onCancelClick,
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Text("Cancel", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
                         }
+                        RealtimeTripStatus.TRIP_COMPLETED -> {
+                            Button(
+                                onClick = onRateClick,
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFDCFCE7),
+                                    contentColor = Color(0xFF15803D)
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFF15803D),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Rate Journey", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                        RealtimeTripStatus.TRIP_STARTED -> {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFEFF6FF),
+                                border = BorderStroke(1.dp, Color(0xFF93C5FD))
+                            ) {
+                                Text(
+                                    text = "On the way",
+                                    color = Color(0xFF1D4ED8),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                        else -> { /* Cancelled or Refunded */ }
                     }
                 }
             }
@@ -558,22 +760,20 @@ private fun ViewTicketDetailsModal(
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            usePlatformDefaultWidth = false
         )
     ) {
         val backdropColor = Color(0xFF141416)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backdropColor.copy(alpha = 0.92f))
-                .windowInsetsPadding(WindowInsets.systemBars)
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .background(backdropColor.copy(alpha = 0.94f))
+                .systemBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 14.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Top Circular Close Button (✕) matching Image 5
                 Surface(
@@ -594,12 +794,12 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Scrollable Middle Ticket Card Container (Properly bounded so bottom Share button is ALWAYS completely visible)
                 Box(
                     modifier = Modifier
-                        .weight(1f, fill = true)
+                        .weight(1f, fill = false)
                         .fillMaxWidth()
                         .widthIn(max = 420.dp)
                         .verticalScroll(rememberScrollState()),
@@ -1029,7 +1229,7 @@ private fun ViewTicketDetailsModal(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(52.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
@@ -1043,6 +1243,245 @@ private fun ViewTicketDetailsModal(
                         fontWeight = FontWeight.Bold
                     )
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RateJourneyModal(
+    booking: BookingDetails,
+    onDismiss: () -> Unit,
+    onSubmitReview: (Long, Int, String) -> Unit
+) {
+    var rating by remember { mutableIntStateOf(5) }
+    var cleanlinessRating by remember { mutableIntStateOf(5) }
+    var punctualityRating by remember { mutableIntStateOf(5) }
+    var staffRating by remember { mutableIntStateOf(5) }
+    var comment by remember { mutableStateOf("") }
+    val selectedTags = remember { mutableStateListOf<String>() }
+
+    val hygieneTags = listOf(
+        "Sanitized Bus",
+        "Clean Blankets",
+        "Deep Cleaned Seats",
+        "AC Filter Clean",
+        "Punctual Departure",
+        "Polite Crew",
+        "Safe Driving",
+        "Clean Rest Stop"
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .systemBarsPadding()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header with Close Icon
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Rate Your Journey Experience",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${booking.sourceCity} ➔ ${booking.destinationCity} • ${booking.operatorName}",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    // 1. Overall Star Rating
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = when (rating) {
+                                5 -> "⭐ Excellent Journey"
+                                4 -> "⭐ Very Good"
+                                3 -> "⭐ Good"
+                                2 -> "⭐ Fair"
+                                else -> "⭐ Needs Improvement"
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = RatingAmber
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (star in 1..5) {
+                                Icon(
+                                    imageVector = if (star <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = "$star stars",
+                                    tint = if (star <= rating) RatingAmber else Color.Gray.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clickable { rating = star }
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Hygiene & Service Breakdown
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("Hygiene & Service Quality", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+
+                            // Bus Cleanliness & Hygiene
+                            RatingAspectRow(
+                                title = "Bus Hygiene & Cleanliness",
+                                rating = cleanlinessRating,
+                                onRatingChange = { cleanlinessRating = it }
+                            )
+
+                            // Punctuality
+                            RatingAspectRow(
+                                title = "Punctuality & Timeliness",
+                                rating = punctualityRating,
+                                onRatingChange = { punctualityRating = it }
+                            )
+
+                            // Staff & Driver Behavior
+                            RatingAspectRow(
+                                title = "Staff & Driver Behavior",
+                                rating = staffRating,
+                                onRatingChange = { staffRating = it }
+                            )
+                        }
+                    }
+
+                    // 3. Experience & Hygiene Tags
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("What went well?", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            hygieneTags.forEach { tag ->
+                                val isSelected = selectedTags.contains(tag)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (isSelected) selectedTags.remove(tag) else selectedTags.add(tag)
+                                    },
+                                    label = { Text(tag, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = RedbusCrimson.copy(alpha = 0.15f),
+                                        selectedLabelColor = RedbusCrimson
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Feedback comment
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = { comment = it },
+                        label = { Text("Write your review (hygiene, comfort, route)") },
+                        placeholder = { Text("Share feedback about hygiene, blankets, driving quality...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 5,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    // 5. Submit Button
+                    Button(
+                        onClick = {
+                            val targetBusId = if (booking.routeId > 0) booking.routeId.toLong() else booking.id.toLong()
+                            val fullComment = buildString {
+                                if (comment.isNotBlank()) append(comment.trim())
+                                if (selectedTags.isNotEmpty()) {
+                                    if (isNotEmpty()) append(" | ")
+                                    append("Tags: ")
+                                    append(selectedTags.joinToString(", "))
+                                }
+                                append(" (Hygiene: $cleanlinessRating/5, Punctuality: $punctualityRating/5, Staff: $staffRating/5)")
+                            }
+                            onSubmitReview(targetBusId, rating, fullComment)
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Submit Review", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RatingAspectRow(
+    title: String,
+    rating: Int,
+    onRatingChange: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (i in 1..5) {
+                Icon(
+                    imageVector = if (i <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = null,
+                    tint = if (i <= rating) RatingAmber else Color.Gray.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onRatingChange(i) }
+                )
             }
         }
     }
@@ -1399,38 +1838,18 @@ fun ProfileAndWalletScreen(
                         }
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    OutlinedButton(
+                        onClick = onOpenWallet,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        OutlinedButton(
-                            onClick = onOpenWallet,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ReceiptLong,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Passbook", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-
-                        Button(
-                            onClick = { showWalletTopUpModal = true },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = RatingEmerald),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("+ Add Money", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Passbook", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }

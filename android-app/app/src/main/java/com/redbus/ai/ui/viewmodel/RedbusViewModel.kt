@@ -295,7 +295,10 @@ class RedbusViewModel(
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
-                            authError = extractErrorMessage(err, "Registration failed. Email or phone may already be registered.")
+                            authError = extractErrorMessage(
+                                err,
+                                "Registration failed. Email or phone may already be registered."
+                            )
                         )
                     }
                 }
@@ -539,6 +542,7 @@ class RedbusViewModel(
             RouteFilter.AC -> state.routes.filter {
                 it.busType.contains("AC", ignoreCase = true) && !it.busType.contains("Non-AC", ignoreCase = true)
             }
+
             RouteFilter.CHEAPEST -> state.routes.sortedBy { it.basePrice }
         }
     }
@@ -599,13 +603,19 @@ class RedbusViewModel(
                         }
                         .onFailure { err ->
                             _uiState.update {
-                                it.copy(isLoading = false, errorBanner = extractErrorMessage(err, "Failed to search routes."))
+                                it.copy(
+                                    isLoading = false,
+                                    errorBanner = extractErrorMessage(err, "Failed to search routes.")
+                                )
                             }
                         }
                 }
                 .onFailure { err ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorBanner = extractErrorMessage(err, "AI NLP service unavailable."))
+                        it.copy(
+                            isLoading = false,
+                            errorBanner = extractErrorMessage(err, "AI NLP service unavailable.")
+                        )
                     }
                 }
         }
@@ -686,12 +696,21 @@ class RedbusViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isReviewSubmitting = true, reviewActionMessage = null) }
             val authorName = _uiState.value.user?.name?.ifBlank { "Verified Passenger" } ?: "Verified Passenger"
-            repository.createReview(CreateReviewRequest(busId = busId, rating = rating, comment = comment, userName = authorName))
+            repository.createReview(
+                CreateReviewRequest(
+                    busId = busId,
+                    rating = rating,
+                    comment = comment,
+                    userName = authorName
+                )
+            )
                 .onSuccess { newReview ->
                     _uiState.update { state ->
-                        val updatedList = listOf(newReview) + state.currentBusReviews.filterNot { it.id == newReview.id }
+                        val updatedList =
+                            listOf(newReview) + state.currentBusReviews.filterNot { it.id == newReview.id }
                         val newAvg = updatedList.map { it.rating }.average()
-                        val updatedRoute = state.selectedRoute?.copy(rating = if (newAvg > 0) newAvg else state.selectedRoute.rating)
+                        val updatedRoute =
+                            state.selectedRoute?.copy(rating = if (newAvg > 0) newAvg else state.selectedRoute.rating)
                         state.copy(
                             isReviewSubmitting = false,
                             currentBusReviews = updatedList,
@@ -751,7 +770,12 @@ class RedbusViewModel(
         val user = _uiState.value.user ?: return
         viewModelScope.launch {
             repository.updateProfile(user.name, user.phone.orEmpty(), user.gender)
-            _uiState.update { it.copy(user = it.user?.copy(avatarUrl = avatarUrl), profileActionMessage = "Profile photo updated!") }
+            _uiState.update {
+                it.copy(
+                    user = it.user?.copy(avatarUrl = avatarUrl),
+                    profileActionMessage = "Profile photo updated!"
+                )
+            }
         }
     }
 
@@ -916,7 +940,8 @@ class RedbusViewModel(
                             it.copy(
                                 isValidatingCoupon = false,
                                 appliedCoupon = res,
-                                couponMessage = res.message ?: "Coupon ${res.code} applied! Saved ₹${res.discountAmount?.toInt() ?: 0}"
+                                couponMessage = res.message
+                                    ?: "Coupon ${res.code} applied! Saved ₹${res.discountAmount?.toInt() ?: 0}"
                             )
                         }
                     } else {
@@ -1060,7 +1085,10 @@ class RedbusViewModel(
                     _uiState.update {
                         it.copy(
                             isCreatingBooking = false,
-                            errorBanner = extractErrorMessage(err, "Could not create booking. Please check passenger details.")
+                            errorBanner = extractErrorMessage(
+                                err,
+                                "Could not create booking. Please check passenger details."
+                            )
                         )
                     }
                 }
@@ -1140,7 +1168,10 @@ class RedbusViewModel(
                         it.copy(
                             isBookingsLoading = false,
                             pnrSearchResult = null,
-                            bookingActionMessage = extractErrorMessage(err, "No booking found with PNR: ${pnr.uppercase()}")
+                            bookingActionMessage = extractErrorMessage(
+                                err,
+                                "No booking found with PNR: ${pnr.uppercase()}"
+                            )
                         )
                     }
                 }
@@ -1226,7 +1257,11 @@ class RedbusViewModel(
                         } else null
                     } else null
                 } catch (_: Exception) {
-                    if (_uiState.value.routes.isNotEmpty() && response.reply.contains("buses connecting", ignoreCase = true)) {
+                    if (_uiState.value.routes.isNotEmpty() && response.reply.contains(
+                            "buses connecting",
+                            ignoreCase = true
+                        )
+                    ) {
                         _uiState.value.routes.take(3)
                     } else null
                 }

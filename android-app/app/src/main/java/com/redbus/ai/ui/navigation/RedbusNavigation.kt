@@ -320,6 +320,9 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onEmailTicket = viewModel::emailTicket,
                         onNavigateToLogin = {
                             navigateToTab(navController, ScreenRoute.Profile.route)
+                        },
+                        onSubmitReview = { busId, rating, comment ->
+                            viewModel.submitReview(busId, rating, comment)
                         }
                     )
                 }
