@@ -118,6 +118,13 @@ fun HomeScreen(
 
     val activePromoCode = uiState.availableCoupons.firstOrNull()?.code ?: "FIRSTBUS"
 
+    val upcomingTrips = remember(uiState.myBookings) {
+        uiState.myBookings.filter {
+            val s = calculateTripStatus(it)
+            s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -704,12 +711,6 @@ fun HomeScreen(
         }
 
         // 2. "Upcoming trips" Section (Matching Image 2 bottom section)
-        val upcomingTrips = remember(uiState.myBookings) {
-            uiState.myBookings.filter {
-                val s = calculateTripStatus(it)
-                s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
-            }
-        }
         if (upcomingTrips.isNotEmpty()) {
             item {
                 Column(modifier = Modifier.padding(top = 20.dp)) {
