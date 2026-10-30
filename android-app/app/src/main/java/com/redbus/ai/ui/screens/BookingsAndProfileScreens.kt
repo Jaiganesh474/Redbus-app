@@ -72,7 +72,7 @@ enum class BookingTabFilter(val label: String) {
     CANCELLED("Cancelled")
 }
 
-private fun parseFlexibleTime(timeStr: String?): LocalTime? {
+fun parseFlexibleTime(timeStr: String?): LocalTime? {
     if (timeStr.isNullOrBlank()) return null
     return try {
         val clean = timeStr.trim().uppercase(Locale.ENGLISH)
@@ -95,7 +95,7 @@ private fun parseFlexibleTime(timeStr: String?): LocalTime? {
     }
 }
 
-private fun calculateTripStatus(booking: BookingDetails): RealtimeTripStatus {
+fun calculateTripStatus(booking: BookingDetails): RealtimeTripStatus {
     if (booking.status.equals("CANCELLED", ignoreCase = true)) return RealtimeTripStatus.CANCELLED
     if (booking.status.equals("REFUNDED", ignoreCase = true)) return RealtimeTripStatus.REFUNDED
 
@@ -1565,7 +1565,8 @@ fun ProfileAndWalletScreen(
     onDeactivateAccount: () -> Unit = {},
     onDeleteAccount: (String) -> Unit = {},
     onNavigateToBookings: () -> Unit = {},
-    onSelectLanguage: (String) -> Unit = {}
+    onSelectLanguage: (String) -> Unit = {},
+    onToggleBookingForWomen: (Boolean) -> Unit = {}
 ) {
     if (!uiState.isAuthenticated || uiState.user == null) {
         LiveAuthScreen(
@@ -1596,6 +1597,7 @@ fun ProfileAndWalletScreen(
     var showAvatarModal by remember { mutableStateOf(false) }
     var showDeactivateModal by remember { mutableStateOf(false) }
     var showDeleteModal by remember { mutableStateOf(false) }
+    var showBookingForWomenDialog by remember { mutableStateOf(false) }
     var showAddTravellerDialog by remember { mutableStateOf(false) }
     var editingTravellerId by remember { mutableStateOf<Int?>(null) }
     var deleteConfirmText by remember { mutableStateOf("") }
@@ -2037,6 +2039,16 @@ fun ProfileAndWalletScreen(
                             title = "Notifications",
                             onClick = { showNotificationsModal = true }
                         )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+                        // Booking for women (Image 4)
+                        AccountMenuRowItem(
+                            icon = Icons.Default.Face,
+                            iconTint = FemaleSeatPink,
+                            title = "Booking for women",
+                            trailingBadge = if (uiState.isBookingForWomen) "Yes" else "No",
+                            onClick = { showBookingForWomenDialog = true }
+                        )
                     }
                 }
             }
@@ -2220,7 +2232,7 @@ fun ProfileAndWalletScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Passengers (${uiState.travellers.size})",
+                                    text = "Passengers (${uiState.savedTravellers.size})",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black
                                 )
@@ -2237,7 +2249,7 @@ fun ProfileAndWalletScreen(
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                        if (uiState.travellers.isEmpty()) {
+                        if (uiState.savedTravellers.isEmpty()) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -2271,7 +2283,7 @@ fun ProfileAndWalletScreen(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(uiState.travellers, key = { it.id }) { traveller ->
+                                items(uiState.savedTravellers, key = { it.id }) { traveller ->
                                     Card(
                                         shape = RoundedCornerShape(14.dp),
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
@@ -3547,6 +3559,106 @@ fun ProfileAndWalletScreen(
             dismissButton = {
                 TextButton(onClick = { showAddTravellerDialog = false }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Modal: Booking for Women Preference Dialog (Image 4)
+    if (showBookingForWomenDialog) {
+        AlertDialog(
+            onDismissRequest = { showBookingForWomenDialog = false },
+            title = {
+                Text(
+                    text = "Booking for women",
+                    fontWeight = FontWeight.Black,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = "Book for women? When enabled, redBus AI ensures booking is reserved exclusively for female passengers.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (uiState.isBookingForWomen) FemaleSeatPink.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            1.dp,
+                            if (uiState.isBookingForWomen) FemaleSeatPink else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onToggleBookingForWomen(true)
+                                showBookingForWomenDialog = false
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Face,
+                                    contentDescription = null,
+                                    tint = FemaleSeatPink,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text("Yes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text("Only women can book tickets", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            if (uiState.isBookingForWomen) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = FemaleSeatPink)
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (!uiState.isBookingForWomen) RedbusCrimson.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            1.dp,
+                            if (!uiState.isBookingForWomen) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onToggleBookingForWomen(false)
+                                showBookingForWomenDialog = false
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("No", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("Standard all-passenger booking", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (!uiState.isBookingForWomen) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = RedbusCrimson)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showBookingForWomenDialog = false }) {
+                    Text("Close")
                 }
             }
         )

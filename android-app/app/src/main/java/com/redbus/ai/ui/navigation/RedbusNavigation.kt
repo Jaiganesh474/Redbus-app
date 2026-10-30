@@ -222,7 +222,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             navigateToTab(navController, ScreenRoute.MyTrips.route)
                         },
                         onOpenWallet = handleOpenWallet,
-                        onToggleDarkTheme = viewModel::toggleDarkTheme
+                        onToggleDarkTheme = viewModel::toggleDarkTheme,
+                        onToggleBookingForWomen = viewModel::toggleBookingForWomen
                     )
                 }
 
@@ -354,6 +355,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             navigateToTab(navController, ScreenRoute.MyTrips.route)
                         },
                         onSelectLanguage = viewModel::setLanguage,
+                        onToggleBookingForWomen = viewModel::toggleBookingForWomen,
                         onDeactivateAccount = { viewModel.deactivateAccount { navController.navigate(ScreenRoute.Home.route) } },
                         onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } }
                     )

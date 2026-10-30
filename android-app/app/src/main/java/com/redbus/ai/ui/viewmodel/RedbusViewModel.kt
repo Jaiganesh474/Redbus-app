@@ -122,7 +122,8 @@ data class RedbusUiState(
         )
     ),
     val isAiTyping: Boolean = false,
-    val selectedLanguage: String = "English"
+    val selectedLanguage: String = "English",
+    val isBookingForWomen: Boolean = false
 )
 
 class RedbusViewModel(
@@ -438,6 +439,18 @@ class RedbusViewModel(
 
     fun setLanguage(lang: String) {
         _uiState.update { it.copy(selectedLanguage = lang) }
+    }
+
+    fun toggleBookingForWomen(enabled: Boolean? = null) {
+        _uiState.update { state ->
+            val next = enabled ?: !state.isBookingForWomen
+            val updatedPassengers = if (next) {
+                state.passengers.map { it.copy(gender = "FEMALE") }
+            } else {
+                state.passengers
+            }
+            state.copy(isBookingForWomen = next, passengers = updatedPassengers)
+        }
     }
 
     // --- Search & Route Filtering ---
@@ -860,7 +873,7 @@ class RedbusViewModel(
                     seatNumber = s.seatNumber,
                     name = if (pIdx == 0) state.user?.name.orEmpty() else state.savedTravellers.getOrNull(pIdx - 1)?.name.orEmpty(),
                     age = state.savedTravellers.getOrNull(pIdx)?.age ?: 25,
-                    gender = if (s.genderRestriction.equals("FEMALE", ignoreCase = true)) "FEMALE"
+                    gender = if (state.isBookingForWomen || s.genderRestriction.equals("FEMALE", ignoreCase = true)) "FEMALE"
                     else state.user?.gender ?: "MALE"
                 )
             }
@@ -906,7 +919,8 @@ class RedbusViewModel(
         _uiState.update { state ->
             val list = state.passengers.toMutableList()
             if (index in list.indices) {
-                list[index] = list[index].copy(name = name, age = age, gender = gender)
+                val effectiveGender = if (state.isBookingForWomen) "FEMALE" else gender
+                list[index] = list[index].copy(name = name, age = age, gender = effectiveGender)
             }
             state.copy(passengers = list)
         }
@@ -1013,6 +1027,14 @@ class RedbusViewModel(
         if (!state.isAuthenticated) {
             _uiState.update { it.copy(errorBanner = "Please sign in to your redBus AI account to complete booking.") }
             return
+        }
+
+        if (state.isBookingForWomen) {
+            val nonFemale = state.passengers.any { !it.gender.equals("FEMALE", ignoreCase = true) }
+            if (nonFemale) {
+                _uiState.update { it.copy(errorBanner = "Booking for Women is enabled. Only female passengers can be booked.") }
+                return
+            }
         }
 
         val fare = calculateFareBreakdown()

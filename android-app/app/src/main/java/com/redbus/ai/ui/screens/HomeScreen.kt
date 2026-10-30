@@ -80,11 +80,11 @@ fun HomeScreen(
     onNavigateToAccount: () -> Unit,
     onNavigateToBookings: () -> Unit = {},
     onOpenWallet: () -> Unit = {},
-    onToggleDarkTheme: () -> Unit
+    onToggleDarkTheme: () -> Unit,
+    onToggleBookingForWomen: (Boolean) -> Unit = {}
 ) {
     var showDateModal by remember { mutableStateOf(false) }
     var activeCityPickerIsSource by remember { mutableStateOf<Boolean?>(null) }
-    var bookingForWomen by remember { mutableStateOf(false) }
     var showWomenInfoDialog by remember { mutableStateOf(false) }
 
     var swapRotationCount by remember { mutableIntStateOf(0) }
@@ -529,8 +529,8 @@ fun HomeScreen(
                                         }
 
                                         RedbusStyledSwitch(
-                                            checked = bookingForWomen,
-                                            onCheckedChange = { bookingForWomen = it }
+                                            checked = uiState.isBookingForWomen,
+                                            onCheckedChange = { onToggleBookingForWomen(it) }
                                         )
                                     }
                                 }
@@ -704,7 +704,12 @@ fun HomeScreen(
         }
 
         // 2. "Upcoming trips" Section (Matching Image 2 bottom section)
-        val upcomingTrips = uiState.myBookings.filter { it.status == "CONFIRMED" }
+        val upcomingTrips = remember(uiState.myBookings) {
+            uiState.myBookings.filter {
+                val s = calculateTripStatus(it)
+                s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
+            }
+        }
         if (upcomingTrips.isNotEmpty()) {
             item {
                 Column(modifier = Modifier.padding(top = 20.dp)) {
