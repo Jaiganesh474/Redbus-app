@@ -672,7 +672,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Bottom Navy Partner Strip ("IRCTC AUTHORISED PARTNER" - Matching Image 2)
+                // Bottom Navy Partner Strip ("AUTHORIZED & VERIFIED BUS PARTNERS")
                 Surface(
                     color = Color(0xFF172554),
                     modifier = Modifier.fillMaxWidth()
@@ -692,7 +692,7 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "IRCTC AUTHORISED & AI VERIFIED PARTNER",
+                            text = "AUTHORIZED & VERIFIED BUS PARTNERS",
                             color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
