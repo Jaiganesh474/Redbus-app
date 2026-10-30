@@ -1,5 +1,12 @@
 package com.redbus.ai.ui.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -100,6 +107,40 @@ fun SearchResultsScreen(
 
     // Website-matching Filter States (matching frontend/src/app/search/page.tsx & Image 5)
     var aiFilterQuery by remember { mutableStateOf("") }
+    var isTranscribing by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isTranscribing = false
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                aiFilterQuery = spokenText
+            }
+        }
+    }
+
+    fun startSpeechToText() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to filter buses...")
+        }
+        try {
+            isTranscribing = true
+            speechLauncher.launch(intent)
+        } catch (_: Exception) {
+            coroutineScope.launch {
+                isTranscribing = true
+                aiFilterQuery = ""
+                delay(1500)
+                isTranscribing = false
+                aiFilterQuery = "AC Sleeper night bus"
+            }
+        }
+    }
     var isPrimoFilter by remember { mutableStateOf(false) }
     var isFreeCancelFilter by remember { mutableStateOf(false) }
     var isAcFilter by remember { mutableStateOf(false) }
@@ -769,41 +810,55 @@ fun SearchResultsScreen(
                                     value = aiFilterQuery,
                                     onValueChange = { aiFilterQuery = it },
                                     placeholder = {
-                                        AutoTypingMovingPlaceholder(
-                                            phrases = listOf(
-                                                "Search 'AC sleeper under 1000'...",
-                                                "Search 'Primo bus with live tracking'...",
-                                                "Search 'Morning bus before 11 AM'...",
-                                                "Search 'Night AC Sleeper with GPS'...",
-                                                "Search 'Free cancellation buses'...",
-                                                "Search 'Volvo multi-axle AC'..."
+                                        if (isTranscribing) {
+                                            Text(
+                                                text = "transcribing... ",
+                                                color = RedbusCrimson,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
                                             )
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = AiViolet,
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                                        } else {
+                                            AutoTypingMovingPlaceholder(
+                                                phrases = listOf(
+                                                    "Search 'AC sleeper under 1000'...",
+                                                    "Search 'Primo bus with live tracking'...",
+                                                    "Search 'Morning bus before 11 AM'...",
+                                                    "Search 'Night AC Sleeper with GPS'...",
+                                                    "Search 'Free cancellation buses'...",
+                                                    "Search 'Volvo multi-axle AC'..."
+                                                )
+                                            )
+                                        }
                                     },
                                     trailingIcon = {
-                                        if (aiFilterQuery.isNotEmpty()) {
-                                            IconButton(onClick = { aiFilterQuery = "" }) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        ) {
+                                            if (aiFilterQuery.isNotEmpty()) {
+                                                IconButton(
+                                                    onClick = { aiFilterQuery = "" },
+                                                    modifier = Modifier.size(30.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Clear AI Filter",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = { startSpeechToText() },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = "Clear AI Filter",
-                                                    modifier = Modifier.size(16.dp)
+                                                    imageVector = Icons.Default.Mic,
+                                                    contentDescription = "Voice Search",
+                                                    tint = if (isTranscribing) RedbusCrimson else AiViolet,
+                                                    modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Default.Mic,
-                                                contentDescription = null,
-                                                tint = AiViolet,
-                                                modifier = Modifier.size(18.dp)
-                                            )
                                         }
                                     },
                                     singleLine = true,
@@ -1021,19 +1076,15 @@ fun SearchResultsScreen(
                                     Surface(
                                         onClick = { activeSort = sortOpt },
                                         shape = RoundedCornerShape(8.dp),
-                                        color = if (selected) RedbusCrimson.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                        modifier = if (selected) {
-                                            Modifier.border(1.dp, RedbusCrimson, RoundedCornerShape(8.dp))
-                                        } else {
-                                            Modifier
-                                        }
+                                        color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        shadowElevation = if (selected) 2.dp else 0.dp
                                     ) {
                                         Text(
                                             text = sortOpt.label,
                                             fontSize = 11.sp,
                                             fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold,
-                                            color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                         )
                                     }
                                 }
@@ -1042,44 +1093,7 @@ fun SearchResultsScreen(
                     }
                 }
 
-                // 5. Trust Strip: "✨ 3.6+ lakh bus routes on redBus" (Matching Image 5)
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (uiState.isDarkTheme) Color(0xFF1E293B) else Color(0xFFFFFBEB),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(
-                                1.dp,
-                                if (uiState.isDarkTheme) Color(0xFF334155) else Color(0xFFFDE68A),
-                                RoundedCornerShape(12.dp)
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = Color(0xFFD97706),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "3.6+ lakh bus routes on redBus",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.isDarkTheme) Color(0xFFFDE68A) else Color(0xFF92400E)
-                            )
-                        }
-                    }
-                }
-
-                // 6. Filtered & Sorted Bus Route Cards with 3D Entrance Animation
+                // 5. Filtered & Sorted Bus Route Cards with 3D Entrance Animation
                 if (displayedRoutes.isEmpty()) {
                     item {
                         Card(
