@@ -1322,7 +1322,15 @@ private fun WebsiteFilterRowItem(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+        color = if (selected) {
+            if (MaterialTheme.colorScheme.background == DarkBackground) {
+                RedbusCrimson.copy(alpha = 0.34f)
+            } else {
+                RedbusCrimson.copy(alpha = 0.1f)
+            }
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
@@ -1349,14 +1357,15 @@ private fun WebsiteFilterRowItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (selected) RedbusCrimson else iconTint,
+                    tint = if (selected) MaterialTheme.colorScheme.onSurface else iconTint,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = label,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.onSurface
+                    color = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -1364,7 +1373,8 @@ private fun WebsiteFilterRowItem(
                 text = "($count)",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (selected) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -1380,7 +1390,15 @@ private fun DepartureWindowTile(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
+        color = if (selected) {
+            if (MaterialTheme.colorScheme.background == DarkBackground) {
+                RedbusCrimson.copy(alpha = 0.34f)
+            } else {
+                RedbusCrimson.copy(alpha = 0.1f)
+            }
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
         modifier = modifier.border(
             width = if (selected) 1.5.dp else 1.dp,
             color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
@@ -1397,14 +1415,15 @@ private fun DepartureWindowTile(
                 Icon(
                     imageVector = option.icon,
                     contentDescription = null,
-                    tint = if (selected) RedbusCrimson else option.tint,
+                    tint = if (selected) MaterialTheme.colorScheme.onSurface else option.tint,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
                     text = option.label,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (selected) RedbusCrimson else MaterialTheme.colorScheme.onSurface
+                    color = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface
                 )
             }
             Text(
@@ -1797,6 +1816,11 @@ private fun AllFiltersSheetModal(
                             FilterChip(
                                 selected = selected,
                                 onClick = { onSelectMaxPrice(cap) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = RedbusCrimson,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                ),
                                 label = { Text("Under ₹$cap", fontWeight = FontWeight.Bold, fontSize = 11.sp) }
                             )
                         }
@@ -1835,6 +1859,11 @@ private fun AllFiltersSheetModal(
                             FilterChip(
                                 selected = selectedAmenities.contains(am),
                                 onClick = { onToggleAmenity(am) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = RedbusCrimson,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                ),
                                 label = { Text(am, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                             )
                         }
@@ -1847,6 +1876,11 @@ private fun AllFiltersSheetModal(
                             FilterChip(
                                 selected = selectedAmenities.contains(am),
                                 onClick = { onToggleAmenity(am) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = RedbusCrimson,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                ),
                                 label = { Text(am, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                             )
                         }
@@ -1862,7 +1896,7 @@ private fun AllFiltersSheetModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 36.dp)
                     ) {
                         Button(
                             onClick = onDismiss,
