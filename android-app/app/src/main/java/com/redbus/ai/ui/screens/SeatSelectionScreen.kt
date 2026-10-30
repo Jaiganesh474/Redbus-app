@@ -339,7 +339,7 @@ fun SeatSelectionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color(0xFFF8FAFC)),
+                    .background(MaterialTheme.colorScheme.background),
                 contentPadding = PaddingValues(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
@@ -434,7 +434,7 @@ fun SeatSelectionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp)
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // Horizontal Scrollable Tabs Bar with Left/Right Chevron Buttons
@@ -447,16 +447,16 @@ fun SeatSelectionScreen(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier
                                         .size(28.dp)
-                                        .border(1.dp, Color(0xFFCBD5E1), CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                             contentDescription = null,
-                                            tint = Color(0xFF475569),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -483,7 +483,10 @@ fun SeatSelectionScreen(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(if (selected) Color(0xFFFFF1F2) else Color.Transparent)
+                                                .background(
+                                                    if (selected) RedbusCrimson.copy(alpha = 0.12f)
+                                                    else Color.Transparent
+                                                )
                                                 .clickable { activeDetailTab = id }
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                         ) {
@@ -491,7 +494,8 @@ fun SeatSelectionScreen(
                                                 text = label,
                                                 fontSize = 12.sp,
                                                 fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                                color = if (selected) RedbusCrimson else Color(0xFF64748B)
+                                                color = if (selected) RedbusCrimson
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -499,23 +503,23 @@ fun SeatSelectionScreen(
 
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier
                                         .size(28.dp)
-                                        .border(1.dp, Color(0xFFCBD5E1), CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                             contentDescription = null,
-                                            tint = Color(0xFF475569),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
                             }
 
-                            HorizontalDivider(color = Color(0xFFE2E8F0))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                             // Tab Content Area
                             Box(modifier = Modifier.padding(16.dp)) {
@@ -556,7 +560,7 @@ fun SeatSelectionScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(18.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -617,7 +621,7 @@ fun SeatSelectionScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(18.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -756,20 +760,20 @@ private fun SingleDeckChassisColumn(
                 text = "BUS SEAT LAYOUT (${deckSeats.size} SEATS)",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF1E293B)
+                color = MaterialTheme.colorScheme.onBackground
             )
             Surface(
                 shape = CircleShape,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .size(26.dp)
-                    .border(1.dp, Color(0xFFE2E8F0), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Support,
                         contentDescription = "Steering Wheel",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(15.dp)
                     )
                 }
@@ -778,7 +782,7 @@ private fun SingleDeckChassisColumn(
 
         // Rounded White Bus Chassis
         Surface(
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(
                 topStart = 32.dp,
                 topEnd = 32.dp,
@@ -790,7 +794,7 @@ private fun SingleDeckChassisColumn(
                 .fillMaxWidth()
                 .border(
                     width = 1.8.dp,
-                    color = Color(0xFFE2E8F0),
+                    color = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(
                         topStart = 32.dp,
                         topEnd = 32.dp,
@@ -853,7 +857,7 @@ private fun SingleDeckChassisColumn(
                                 Text(
                                     text = "· ·",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFCBD5E1),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -935,12 +939,12 @@ private fun SingleDeckChassisColumn(
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
-                HorizontalDivider(color = Color(0xFFE2E8F0))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Text(
                     text = "▼ EMERGENCY EXIT",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF94A3B8),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -984,21 +988,21 @@ private fun DeckChassisColumn(
                 text = title.uppercase(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF1E293B)
+                color = MaterialTheme.colorScheme.onBackground
             )
             Surface(
                 shape = CircleShape,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .size(24.dp)
-                    .border(1.dp, Color(0xFFE2E8F0), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (isLowerDeck) {
                         Icon(
                             imageVector = Icons.Default.Support,
                             contentDescription = "Steering Wheel",
-                            tint = Color(0xFF64748B),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)
                         )
                     } else {
@@ -1006,7 +1010,7 @@ private fun DeckChassisColumn(
                             text = "⬆",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -1015,7 +1019,7 @@ private fun DeckChassisColumn(
 
         // Rounded White Bus Deck Chassis
         Surface(
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(
                 topStart = 28.dp,
                 topEnd = 28.dp,
@@ -1027,7 +1031,7 @@ private fun DeckChassisColumn(
                 .fillMaxWidth()
                 .border(
                     width = 1.8.dp,
-                    color = Color(0xFFE2E8F0),
+                    color = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(
                         topStart = 28.dp,
                         topEnd = 28.dp,
@@ -1095,12 +1099,12 @@ private fun DeckChassisColumn(
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
-                HorizontalDivider(color = Color(0xFFE2E8F0))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Text(
                     text = "▼ EMERGENCY EXIT",
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF94A3B8),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1123,34 +1127,34 @@ private fun SleeperBerthItem(
 
     val borderColor = when {
         isSold && isFemale -> Color(0xFFF472B6)
-        isSold -> Color(0xFFCBD5E1)
+        isSold -> MaterialTheme.colorScheme.outline
         isSelected -> Color(0xFF15803D)
         else -> Color(0xFF10B981)
     }
 
     val containerColor = when {
         isSold && isFemale -> Color(0xFFFDF2F8)
-        isSold -> Color(0xFFF8FAFC)
+        isSold -> MaterialTheme.colorScheme.surface
         isSelected -> Color(0xFF15803D)
-        else -> Color.White
+        else -> MaterialTheme.colorScheme.surface
     }
 
     val pillowColor = when {
         isSold && isFemale -> Color(0xFFFBCFE8)
-        isSold -> Color(0xFFE2E8F0)
+        isSold -> MaterialTheme.colorScheme.surfaceVariant
         isSelected -> Color(0xFF6EE7B7)
         else -> Color(0xFFD1FAE5)
     }
 
     val priceText = if (isSold) "Sold" else "₹${(if (seat.price > 0) seat.price else fallbackPrice).roundToInt()}"
     val priceColor = when {
-        isSold -> Color(0xFF94A3B8)
+        isSold -> MaterialTheme.colorScheme.onSurfaceVariant
         isSelected -> Color.White
-        else -> Color(0xFF1E293B)
+        else -> MaterialTheme.colorScheme.onSurface
     }
     val seatNumColor = when {
         isSelected -> Color(0xFFD1FAE5)
-        else -> Color(0xFF94A3B8)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Box(
@@ -1187,7 +1191,7 @@ private fun SleeperBerthItem(
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
-                tint = if (isFemale) Color(0xFFF472B6) else Color(0xFFCBD5E1),
+                tint = if (isFemale) Color(0xFFF472B6) else MaterialTheme.colorScheme.outline,
                 modifier = Modifier
                     .size(13.dp)
                     .align(Alignment.Center)
@@ -1236,7 +1240,7 @@ private fun SeatLegendItem(
             text = label,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF475569)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -1258,12 +1262,12 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                 text = "Cancellation policy",
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp,
-                color = Color(0xFF0F172A)
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Dynamic refund schedule for journey on ${route.travelDate} (${route.departureTime}).",
                 fontSize = 12.sp,
-                color = Color(0xFF64748B)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -1272,13 +1276,13 @@ private fun CancellationPolicyPanel(route: RouteItem) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
         ) {
             // Table Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF8FAFC))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(vertical = 10.dp, horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1286,14 +1290,14 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                     text = "Time before travel",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF475569),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1.2f)
                 )
                 Text(
                     text = "Without free\ncancellation",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF475569),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
@@ -1308,7 +1312,7 @@ private fun CancellationPolicyPanel(route: RouteItem) {
             }
 
             tiers.forEach { (timeRange, withoutText, withText) ->
-                HorizontalDivider(color = Color(0xFFE2E8F0))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1318,14 +1322,14 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                     Text(
                         text = timeRange,
                         fontSize = 11.sp,
-                        color = Color(0xFF334155),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1.2f)
                     )
                     Text(
                         text = withoutText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1E293B),
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )
@@ -1333,7 +1337,13 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFFECFDF5))
+                            .background(
+                                if (MaterialTheme.colorScheme.background == DarkBackground) {
+                                    Color(0xFF123B2B)
+                                } else {
+                                    Color(0xFFECFDF5)
+                                }
+                            )
                             .padding(vertical = 4.dp, horizontal = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1341,7 +1351,7 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                             text = withText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
-                            color = Color(0xFF15803D),
+                            color = Color(0xFF34D399),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -1351,11 +1361,23 @@ private fun CancellationPolicyPanel(route: RouteItem) {
 
         // Bottom Red Free Cancellation Callout Banner (Matching Screenshot)
         Surface(
-            color = Color(0xFFFFF1F2),
+            color = if (MaterialTheme.colorScheme.background == DarkBackground) {
+                Color(0xFF4C1D24)
+            } else {
+                Color(0xFFFFF1F2)
+            },
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFFFECDD3), RoundedCornerShape(14.dp))
+                .border(
+                    1.dp,
+                    if (MaterialTheme.colorScheme.background == DarkBackground) {
+                        Color(0xFF7F1D1D)
+                    } else {
+                        Color(0xFFFECDD3)
+                    },
+                    RoundedCornerShape(14.dp)
+                )
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),
@@ -1380,7 +1402,11 @@ private fun CancellationPolicyPanel(route: RouteItem) {
                     text = "Add Free Cancellation while booking to get a 100% refund on cancellation.",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF881337)
+                    color = if (MaterialTheme.colorScheme.background == DarkBackground) {
+                        Color(0xFFFFCDD2)
+                    } else {
+                        Color(0xFF881337)
+                    }
                 )
             }
         }
@@ -1398,7 +1424,7 @@ private fun HighlightsPanel(route: RouteItem) {
         Text(
             text = "${route.operatorName} operates ${route.busType} with live GPS tracking, sanitized sleeper berths, and 24/7 passenger assistance.",
             fontSize = 12.sp,
-            color = Color(0xFF475569)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1413,7 +1439,7 @@ private fun HighlightsPanel(route: RouteItem) {
                         text = amenity,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF334155),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
@@ -1434,7 +1460,7 @@ private fun AiPunctualityPanel(route: RouteItem) {
         Text(
             text = "• 96% historical on-time arrival for ${route.sourceCity} ➔ ${route.destinationCity}\n• Mid-coach berths (L4, L5, U4, U5) offer 40% lower road vibration.",
             fontSize = 12.sp,
-            color = Color(0xFF334155)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -1450,7 +1476,7 @@ private fun BusPhotosPanel(route: RouteItem) {
         Text(
             text = "${route.busType} • Memory foam sleeper berths, individual charging ports & privacy curtains.",
             fontSize = 12.sp,
-            color = Color(0xFF475569)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -1463,12 +1489,12 @@ private fun BoardingPreviewPanel(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Boarding Points", fontWeight = FontWeight.Black, fontSize = 14.sp, color = RedbusCrimson)
         boardingStops.forEach { stop ->
-            Text("• $stop", fontSize = 12.sp, color = Color(0xFF334155))
+            Text("• $stop", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text("Dropping Points", fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF15803D))
         droppingStops.forEach { stop ->
-            Text("• $stop", fontSize = 12.sp, color = Color(0xFF334155))
+            Text("• $stop", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1535,7 +1561,7 @@ private fun CustomerReviewsPanel(
                 text = "Customer Reviews",
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp,
-                color = Color(0xFF1E293B)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             TextButton(
@@ -1559,7 +1585,7 @@ private fun CustomerReviewsPanel(
                 Surface(
                     color = Color.White,
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -1575,7 +1601,7 @@ private fun CustomerReviewsPanel(
                                 text = r.userName,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
-                                color = Color(0xFF1E293B)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             // Rating badge pill matching screenshot (e.g. 5 ★ in green surface)
@@ -1607,7 +1633,7 @@ private fun CustomerReviewsPanel(
                         Text(
                             text = r.comment,
                             fontSize = 13.sp,
-                            color = Color(0xFF475569),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 18.sp
                         )
                     }
@@ -1634,7 +1660,7 @@ private fun CustomerReviewsPanel(
                     Text(
                         text = "Rate your journey experience:",
                         fontSize = 13.sp,
-                        color = Color(0xFF475569)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Row(
