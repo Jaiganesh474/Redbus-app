@@ -223,7 +223,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         },
                         onOpenWallet = handleOpenWallet,
                         onToggleDarkTheme = viewModel::toggleDarkTheme,
-                        onToggleBookingForWomen = viewModel::toggleBookingForWomen
+                        onToggleBookingForWomen = viewModel::toggleBookingForWomen,
+                        onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) }
                     )
                 }
 
@@ -243,7 +244,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         },
                         onBack = {
                             navigateToTab(navController, ScreenRoute.Home.route)
-                        }
+                        },
+                        onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) }
                     )
                 }
 
@@ -324,7 +326,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         },
                         onSubmitReview = { busId, rating, comment ->
                             viewModel.submitReview(busId, rating, comment)
-                        }
+                        },
+                        onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) }
                     )
                 }
 

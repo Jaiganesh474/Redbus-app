@@ -1,5 +1,11 @@
 package com.redbus.ai.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -12,6 +18,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -81,7 +88,8 @@ fun HomeScreen(
     onNavigateToBookings: () -> Unit = {},
     onOpenWallet: () -> Unit = {},
     onToggleDarkTheme: () -> Unit,
-    onToggleBookingForWomen: (Boolean) -> Unit = {}
+    onToggleBookingForWomen: (Boolean) -> Unit = {},
+    onNavigateToAiHelp: () -> Unit = {}
 ) {
     var showDateModal by remember { mutableStateOf(false) }
     var activeCityPickerIsSource by remember { mutableStateOf<Boolean?>(null) }
@@ -125,11 +133,12 @@ fun HomeScreen(
         }
     }
 
-    LazyColumn(
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 32.dp)
+        contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         // 1. Hero Section Matching Image 2 (Warm Cream-to-Sunset Gradient + Search Card + Promo Banner)
         item {
@@ -656,27 +665,8 @@ fun HomeScreen(
                         }
                     }
 
-                    // Promo Code Badge in Sunset Footer (Matching Image 2 "Use code: EARLY2027")
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp, bottom = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF0284C7),
-                            modifier = Modifier.border(1.dp, Color(0xFFBAE6FD), RoundedCornerShape(8.dp))
-                        ) {
-                            Text(
-                                text = "Use code: $activePromoCode",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
+                    // Animated Scenic Promo Banner behind "Use code: FIRSTBUS" (Matching Video & Image 1)
+                    AnimatedPromoLandscapeBanner(promoCode = activePromoCode)
                 }
 
                 // Bottom Navy Partner Strip ("AUTHORIZED & VERIFIED BUS PARTNERS")
@@ -907,6 +897,15 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+        // Floating Circular AI Button (Matching Image 3)
+        FloatingAiHelpButton(
+            onClick = onNavigateToAiHelp,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 18.dp)
+        )
     }
 
     // Dynamic Searchable City Picker Modal (Strictly excluding the opposite selected city)
@@ -1765,6 +1764,299 @@ private fun LiveRecommendedRouteCard(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * Animated Circular Floating AI Chat Button matching Image 2 (magenta-to-purple gradient with sparkle).
+ */
+@Composable
+fun FloatingAiHelpButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "aiFabAnim")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.07f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1300, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "fabPulse"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        shadowElevation = 10.dp,
+        border = BorderStroke(2.dp, Color(0xFFF472B6).copy(alpha = 0.65f)),
+        color = Color.Transparent,
+        modifier = modifier
+            .size(56.dp)
+            .graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFFE11D48),
+                            Color(0xFF9333EA)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "Ask AI Help",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Scenic Animated Festive Promotional Banner behind "Use code: FIRSTBUS" matching user video & Image 1.
+ * Features animated high-speed train/bus gliding across the track with city skyline and twinkling stars.
+ */
+@Composable
+fun AnimatedPromoLandscapeBanner(promoCode: String) {
+    val infiniteTransition = rememberInfiniteTransition(label = "promoBanner")
+
+    val travelProgress by infiniteTransition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 7500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "travelProgress"
+    )
+
+    val starTwinkle by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "starTwinkle"
+    )
+
+    val badgeScale by infiniteTransition.animateFloat(
+        initialValue = 0.98f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "badgeScale"
+    )
+
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(115.dp)
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFEA580C).copy(alpha = 0.95f),
+                        Color(0xFFC2410C),
+                        Color(0xFF9A3412)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            val stars = listOf(
+                Offset(w * 0.10f, h * 0.22f),
+                Offset(w * 0.28f, h * 0.15f),
+                Offset(w * 0.48f, h * 0.28f),
+                Offset(w * 0.72f, h * 0.18f),
+                Offset(w * 0.88f, h * 0.30f),
+                Offset(w * 0.94f, h * 0.16f)
+            )
+            stars.forEachIndexed { i, offset ->
+                val alpha = ((starTwinkle + (i * 0.15f)) % 1f).coerceIn(0.2f, 1f)
+                drawCircle(
+                    color = Color(0xFFFEF08A).copy(alpha = alpha),
+                    radius = 3.dp.toPx() * alpha,
+                    center = offset
+                )
+            }
+
+            val skylineY = h * 0.72f
+            drawRect(
+                color = Color(0xFF7C2D12).copy(alpha = 0.45f),
+                topLeft = Offset(w * 0.05f, skylineY - 14.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(32.dp.toPx(), 18.dp.toPx())
+            )
+            drawRect(
+                color = Color(0xFF7C2D12).copy(alpha = 0.5f),
+                topLeft = Offset(w * 0.22f, skylineY - 22.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(26.dp.toPx(), 26.dp.toPx())
+            )
+            drawRect(
+                color = Color(0xFF7C2D12).copy(alpha = 0.45f),
+                topLeft = Offset(w * 0.65f, skylineY - 18.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(36.dp.toPx(), 22.dp.toPx())
+            )
+            drawRect(
+                color = Color(0xFF7C2D12).copy(alpha = 0.45f),
+                topLeft = Offset(w * 0.82f, skylineY - 26.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(28.dp.toPx(), 30.dp.toPx())
+            )
+
+            drawLine(
+                color = Color(0xFF431407),
+                start = Offset(0f, skylineY + 12.dp.toPx()),
+                end = Offset(w, skylineY + 12.dp.toPx()),
+                strokeWidth = 3.dp.toPx()
+            )
+            drawLine(
+                color = Color(0xFF78350F).copy(alpha = 0.6f),
+                start = Offset(0f, skylineY + 15.dp.toPx()),
+                end = Offset(w, skylineY + 15.dp.toPx()),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val totalWidthPx = constraints.maxWidth.toFloat()
+            val xPos = (travelProgress * totalWidthPx) - 140f
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset { androidx.compose.ui.unit.IntOffset(xPos.toInt(), -16) }
+                    .graphicsLayer {
+                        shadowElevation = 8f
+                    },
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 2.dp, topEnd = 14.dp, bottomEnd = 2.dp),
+                    color = RedbusCrimsonDark,
+                    border = BorderStroke(1.dp, Color(0xFFFCA5A5).copy(alpha = 0.6f)),
+                    modifier = Modifier.size(width = 68.dp, height = 24.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Surface(shape = RoundedCornerShape(2.dp), color = Color(0xFFFEF08A), modifier = Modifier.size(10.dp, 8.dp)) {}
+                        Surface(shape = RoundedCornerShape(2.dp), color = Color(0xFFBAE6FD), modifier = Modifier.size(14.dp, 8.dp)) {}
+                        Surface(shape = CircleShape, color = Color(0xFFFFFBEB), modifier = Modifier.size(6.dp)) {}
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(3.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
+                    color = Color(0xFF1E3A8A),
+                    border = BorderStroke(1.dp, Color(0xFF93C5FD).copy(alpha = 0.4f)),
+                    modifier = Modifier.size(width = 64.dp, height = 22.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        repeat(3) {
+                            Surface(shape = RoundedCornerShape(2.dp), color = Color(0xFFE0F2FE), modifier = Modifier.size(10.dp, 7.dp)) {}
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(3.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
+                    color = Color(0xFF1E3A8A),
+                    border = BorderStroke(1.dp, Color(0xFF93C5FD).copy(alpha = 0.4f)),
+                    modifier = Modifier.size(width = 54.dp, height = 22.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        repeat(2) {
+                            Surface(shape = RoundedCornerShape(2.dp), color = Color(0xFFE0F2FE), modifier = Modifier.size(10.dp, 7.dp)) {}
+                        }
+                    }
+                }
+            }
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(bottom = 6.dp)
+        ) {
+            Text(
+                text = "✦ Get up to ₹500 OFF ✦",
+                color = Color(0xFFFEF08A),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.4.sp
+            )
+
+            Surface(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("promo", promoCode))
+                    Toast.makeText(context, "Code $promoCode copied to clipboard!", Toast.LENGTH_SHORT).show()
+                },
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFF0284C7),
+                border = BorderStroke(1.5.dp, Color(0xFFE0F2FE)),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = badgeScale
+                        scaleY = badgeScale
+                        cameraDistance = 12f * density
+                    }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ConfirmationNumber,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Use code: $promoCode",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }

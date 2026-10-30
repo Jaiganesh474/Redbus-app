@@ -131,7 +131,8 @@ fun MyBookingsScreen(
     onCancelBooking: (String, String, String) -> Unit,
     onEmailTicket: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
-    onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> }
+    onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> },
+    onNavigateToAiHelp: () -> Unit = {}
 ) {
     var pnrQuery by remember { mutableStateOf("") }
     var activeTabFilter by remember { mutableStateOf(BookingTabFilter.ALL) }
@@ -166,11 +167,12 @@ fun MyBookingsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
         Surface(
             color = RedbusCrimson,
             modifier = Modifier.fillMaxWidth()
@@ -416,6 +418,15 @@ fun MyBookingsScreen(
                 }
             }
         }
+    }
+
+        // Floating Circular AI Button (Matching Image 3)
+        FloatingAiHelpButton(
+            onClick = onNavigateToAiHelp,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 18.dp)
+        )
     }
 
     // View Ticket Modal matching Image 5 (media_1793296527384_86dfb532.jpg)

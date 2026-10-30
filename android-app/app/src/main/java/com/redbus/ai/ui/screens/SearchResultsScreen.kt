@@ -17,6 +17,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,7 +93,8 @@ fun SearchResultsScreen(
     onFilterSelected: (RouteFilter) -> Unit,
     onSelectRoute: (RouteItem) -> Unit,
     onUpdateTravelDate: (String) -> Unit = {},
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToAiHelp: () -> Unit = {}
 ) {
     val rawRoutes = uiState.routes
 
@@ -369,11 +371,12 @@ fun SearchResultsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
         // 1. Website-Matching Top Route & Date Header Bar
         Surface(
             color = MaterialTheme.colorScheme.surface,
@@ -1131,6 +1134,15 @@ fun SearchResultsScreen(
         }
     }
 
+        // Floating Ask Ray Pill Button (Matching Image 5)
+        AskRayFloatingPillButton(
+            onClick = onNavigateToAiHelp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 18.dp)
+        )
+    }
+
     // Full "All Filters" Modal (Operators, Amenities, Departure Time, Bus Types, Price)
     if (showAllFiltersModal) {
         AllFiltersSheetModal(
@@ -1828,19 +1840,26 @@ private fun AllFiltersSheetModal(
                 }
 
                 Surface(
-                    shadowElevation = 12.dp,
-                    color = MaterialTheme.colorScheme.surface
+                    shadowElevation = 14.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
-                            .height(50.dp)
+                            .navigationBarsPadding()
+                            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp)
                     ) {
-                        Text("Apply Filters", fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Button(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                        ) {
+                            Text("Apply Filters", fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
                     }
                 }
             }
@@ -1994,5 +2013,73 @@ fun AutoTypingMovingPlaceholder(
                 .height(13.dp)
                 .background(cursorColor.copy(alpha = cursorAlpha))
         )
+    }
+}
+
+
+/**
+ * Floating "Ask Ray" AI Pill Button matching Image 5 (magenta-to-violet gradient with 3D shadow).
+ */
+@Composable
+fun AskRayFloatingPillButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "askRayPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.98f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rayScale"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        shadowElevation = 12.dp,
+        border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.45f)),
+        color = Color.Transparent,
+        modifier = modifier
+            .navigationBarsPadding()
+            .graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFC026D3), // Vibrant Fuchsia
+                            Color(0xFF7C3AED)  // Violet
+                        )
+                    )
+                )
+                .padding(horizontal = 22.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Ask Ray",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp,
+                    letterSpacing = 0.4.sp
+                )
+            }
+        }
     }
 }
