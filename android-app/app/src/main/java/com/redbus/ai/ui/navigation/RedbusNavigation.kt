@@ -7,12 +7,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,10 +19,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -369,7 +368,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 onDismissRequest = { showWalletLoginPrompt = false },
                 icon = {
                     Surface(
-                        shape = androidx.compose.foundation.shape.CircleShape,
+                        shape = CircleShape,
                         color = RedbusCrimson.copy(alpha = 0.12f),
                         modifier = Modifier.size(54.dp)
                     ) {
@@ -388,7 +387,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         text = "Sign In Required",
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
                 },
@@ -397,7 +396,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         text = "Please log in to your redBus account to access your redBus Wallet, view balance and cashback history.",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         lineHeight = 18.sp,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -409,7 +408,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             navigateToTab(navController, ScreenRoute.Profile.route)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Log In / Sign Up", fontWeight = FontWeight.Bold)
                     }

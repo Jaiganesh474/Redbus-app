@@ -361,7 +361,7 @@ private fun AiChatBusRouteCard(
                     // Price
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "₹${route.fare.toInt()}",
+                            text = "₹${route.basePrice.toInt()}",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
