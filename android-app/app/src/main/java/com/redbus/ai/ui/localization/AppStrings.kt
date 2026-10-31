@@ -67,6 +67,14 @@ object AppStrings {
             Lang.TELUGU to "రేని అడగండి",
             Lang.MALAYALAM to "റേയോട് ചോദിക്കൂ"
         ),
+        "nav_operator_hub" to mapOf(
+            Lang.ENGLISH to "Operator Hub",
+            Lang.TAMIL to "ஆபரேட்டர் மையம்",
+            Lang.HINDI to "ऑपरेटर हब",
+            Lang.KANNADA to "ಆಪರೇಟರ್ ಹಬ್",
+            Lang.TELUGU to "ఆపరేటర్ హబ్",
+            Lang.MALAYALAM to "ഓപ്പറേറ്റർ ഹബ്"
+        ),
         "nav_account" to mapOf(
             Lang.ENGLISH to "Account",
             Lang.TAMIL to "கணக்கு",

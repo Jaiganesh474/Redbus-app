@@ -153,15 +153,19 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                         ScreenRoute.Home -> AppStrings.get("nav_home", uiState.selectedLanguage)
                                         ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
                                         ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
-                                        ScreenRoute.OperatorHub -> "Operator Hub"
+                                        ScreenRoute.OperatorHub -> AppStrings.get("nav_operator_hub", uiState.selectedLanguage)
                                         ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
                                         ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
                                         else -> tab.label
                                     }
                                     Text(
                                         text = translatedLabel,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
+                                        fontSize = if (tab == ScreenRoute.OperatorHub) 9.sp else 10.sp,
+                                        fontWeight = if (selected) FontWeight.Black else FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        letterSpacing = if (tab == ScreenRoute.OperatorHub) (-0.2).sp else 0.sp,
+                                        textAlign = TextAlign.Center
                                     )
                                 },
                                 colors = NavigationBarItemDefaults.colors(
@@ -426,7 +430,9 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             onCreateSchedule = viewModel::createSchedule,
                             onApproveRefund = viewModel::approveRefund,
                             onCreateCoupon = viewModel::createOperatorCoupon,
-                            onUpdateProfile = viewModel::updateOperatorProfile,
+                            onUpdateProfile = { comp, cont, ph, kyc, bank, sc, er ->
+                                viewModel.updateOperatorProfile(comp, cont, ph, kyc, bank, sc, er)
+                            },
                             onNavigateToSearch = {
                                 navigateToTab(navController, ScreenRoute.SearchResults.route)
                             },

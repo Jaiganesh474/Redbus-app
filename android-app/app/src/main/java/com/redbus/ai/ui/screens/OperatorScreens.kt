@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -25,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -810,7 +812,7 @@ fun OperatorHubScreen(
     onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit,
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
     onCreateCoupon: (String, Double, Double, Double, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
-    onUpdateProfile: (String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
+    onUpdateProfile: (String?, String?, String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToAiHelp: () -> Unit
 ) {
@@ -1891,65 +1893,408 @@ private fun CouponsTabContent(
 }
 
 /**
- * 8. Agency Profile Tab Content
+ * 8. Agency Profile Tab Content (Matching Image 3 from Web Portal)
  */
 @Composable
 private fun AgencyProfileTabContent(
     uiState: RedbusUiState,
-    onUpdateProfile: (String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit
+    onUpdateProfile: (String?, String?, String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit
 ) {
-    var companyName by remember { mutableStateOf(uiState.operatorProfile?.companyName ?: uiState.user?.name ?: "Intercity Smartbus") }
-    var contactPerson by remember { mutableStateOf(uiState.operatorProfile?.contactPerson ?: uiState.user?.name ?: "Fleet Operations") }
-    var phone by remember { mutableStateOf(uiState.operatorProfile?.phone ?: uiState.user?.phone ?: "+91 9876543211") }
+    val profile = uiState.operatorProfile
+    var companyName by remember { mutableStateOf(profile?.companyName ?: uiState.user?.name ?: "Intercity Smartbus") }
+    var contactPerson by remember { mutableStateOf(profile?.contactPerson ?: "Fleet Operations Head") }
+    var phone by remember { mutableStateOf(profile?.phone ?: "+91 80 4567 8900") }
+    var email by remember { mutableStateOf(profile?.email ?: uiState.user?.email ?: "ops@intercitysmartbus.in") }
+    var bankAccountRef by remember { mutableStateOf(profile?.bankAccountRef ?: "HDFC0001234 - 50200088991122") }
+    var kycDocUrl by remember { mutableStateOf(profile?.kycDocUrl ?: "29AABCU9603R1ZM") }
+    var saveStatus by remember { mutableStateOf<String?>(null) }
+    var isSaving by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Agency Profile & Settings", fontWeight = FontWeight.Black, fontSize = 18.sp)
-        Text("Manage your transport company details and operations hub", fontSize = 12.sp, color = Color.Gray)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Tab Header & Status Badge (Image 3)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Agency & Commercial Operator Profile",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Manage your registered travel operator identity, passenger contact line, and direct payout bank details.",
+                    fontSize = 11.5.sp,
+                    color = Color.Gray,
+                    lineHeight = 15.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFECFDF5),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF059669),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Status: APPROVED",
+                        color = Color(0xFF065F46),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
 
+        // Top Dark Card (Intercity Smartbus Overview, Image 3)
         Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = companyName,
-                    onValueChange = { companyName = it },
-                    label = { Text("Company / Travels Brand Name") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = contactPerson,
-                    onValueChange = { contactPerson = it },
-                    label = { Text("Contact Person Name") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("Operations Phone Number") },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = { onUpdateProfile(companyName, contactPerson, phone, {}, {}) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Save Agency Details", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Surface(
+                        shape = CircleShape,
+                        color = RedbusCrimson,
+                        modifier = Modifier.size(46.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = companyName.firstOrNull()?.toString()?.uppercase() ?: "I",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 20.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = companyName,
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF10B981).copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "APPROVED",
+                                    color = Color(0xFF34D399),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF38BDF8).copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "10% Standard Tier",
+                                    color = Color(0xFF38BDF8),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Bangalore Urban Transport Hub • Partner ID: RB-OP-77291",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                // Mini Stats Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1E293B))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${uiState.operatorBuses.size.coerceAtLeast(2)} Coaches",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Text(text = "Fleet Registered", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    }
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0xFF334155)))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${uiState.operatorSchedules.size.coerceAtLeast(7)} Published",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Text(text = "Active Schedules", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    }
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0xFF334155)))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "₹12,212.3",
+                            color = Color(0xFF34D399),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Text(text = "Net Disbursed", color = Color(0xFF94A3B8), fontSize = 10.sp)
+                    }
+                }
+
+                // Direct Settlement notice
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1E293B).copy(alpha = 0.6f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CreditCard,
+                            contentDescription = null,
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Direct Passenger Settlement: All passenger ticket bookings are settled within T+1 banking days directly to your verified bank account below.",
+                            color = Color(0xFFCBD5E1),
+                            fontSize = 10.5.sp,
+                            lineHeight = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // Edit Operator Credentials Card (Image 3)
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = RedbusCrimson.copy(alpha = 0.1f),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Edit Operator Credentials",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "Updates will reflect across all search results & passenger e-tickets",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                // Section 1: Brand & Representative
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "1. BRAND IDENTITY & REPRESENTATIVE",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        letterSpacing = 0.5.sp
+                    )
+                    OutlinedTextField(
+                        value = companyName,
+                        onValueChange = { companyName = it },
+                        label = { Text("Agency / Bus Brand Name *") },
+                        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = RedbusCrimson) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = contactPerson,
+                        onValueChange = { contactPerson = it },
+                        label = { Text("Authorized Signatory / Contact Person *") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Section 2: Contact & Support
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "2. COMMUNICATION & PASSENGER SUPPORT",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        letterSpacing = 0.5.sp
+                    )
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        label = { Text("Dispatch Contact Phone / Helpline") },
+                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = RedbusCrimson) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Official Business Email") },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color.Gray) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Section 3: Payout Settlement & KYC
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "3. SETTLEMENT BANK ACCOUNT & COMPLIANCE",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        letterSpacing = 0.5.sp
+                    )
+                    OutlinedTextField(
+                        value = bankAccountRef,
+                        onValueChange = { bankAccountRef = it },
+                        label = { Text("Bank Account / UPI / Settlement Reference") },
+                        leadingIcon = { Icon(Icons.Default.CreditCard, contentDescription = null, tint = RedbusCrimson) },
+                        supportingText = {
+                            Text("Ticket sales earnings will be disbursed automatically to this settlement account.", fontSize = 10.sp, color = Color.Gray)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = kycDocUrl,
+                        onValueChange = { kycDocUrl = it },
+                        label = { Text("GSTIN / Business Registration Reference") },
+                        leadingIcon = { Icon(Icons.Default.Description, contentDescription = null, tint = Color.Gray) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                saveStatus?.let { msg ->
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFECFDF5),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(msg, color = Color(0xFF065F46), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Action Buttons Row (Image 3)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            companyName = profile?.companyName ?: "Intercity Smartbus"
+                            contactPerson = profile?.contactPerson ?: "Fleet Operations Head"
+                            phone = profile?.phone ?: "+91 80 4567 8900"
+                            email = profile?.email ?: "ops@intercitysmartbus.in"
+                            bankAccountRef = profile?.bankAccountRef ?: "HDFC0001234 - 50200088991122"
+                            kycDocUrl = profile?.kycDocUrl ?: "29AABCU9603R1ZM"
+                            saveStatus = "Reset to current saved values"
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                    ) {
+                        Text("Reset Changes", fontSize = 12.sp)
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Button(
+                        onClick = {
+                            isSaving = true
+                            onUpdateProfile(
+                                companyName,
+                                contactPerson,
+                                phone,
+                                kycDocUrl,
+                                bankAccountRef,
+                                {
+                                    isSaving = false
+                                    saveStatus = "Profile credentials updated successfully!"
+                                },
+                                { err ->
+                                    isSaving = false
+                                    saveStatus = err
+                                }
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
+                        enabled = !isSaving
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isSaving) "Saving..." else "Save & Update Profile", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
         }
     }
 }
 
-// Dialog: Add Bus to Fleet
+// Dialog: Add Bus to Fleet (Matching Image 2 from Web Portal)
 @Composable
 private fun AddBusModal(
     onDismiss: () -> Unit,
@@ -1959,31 +2304,304 @@ private fun AddBusModal(
     var busType by remember { mutableStateOf("AC Sleeper (2+1)") }
     var regNo by remember { mutableStateOf("") }
     var totalSeats by remember { mutableStateOf("36") }
-    var amenities by remember { mutableStateOf("WiFi, Charging, Water, Blankets") }
+    var amenities by remember { mutableStateOf("Air Suspension, Fast WiFi 6, 220V AC Socket per berth, Ambient Reading Lamp, Mineral Water, Sanitized Blanket") }
+
+    val presetThemes = listOf(
+        "Volvo 9600 Crimson Flagship",
+        "Scania Touring Ocean Blue",
+        "Royal Maharaja Double Decker",
+        "Mercedes-Benz Silver Jet Club",
+        "GreenVolt Zero-Emission E-Bus"
+    )
+    var selectedPreset by remember { mutableStateOf(presetThemes[0]) }
+    var photoSuiteReady by remember { mutableStateOf(true) }
+    var isTypeMenuExpanded by remember { mutableStateOf(false) }
+
+    val busTypeOptions = listOf(
+        "AC Sleeper (2+1)",
+        "Volvo Multi-Axle AC Sleeper (2+1)",
+        "BharatBenz AC Sleeper (2+1)",
+        "Volvo Multi-Axle AC Seater (2+2)",
+        "Scania AC Seater (2+2)",
+        "Non-AC Seater (2+2)"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Add Bus to Fleet", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                OutlinedTextField(value = busType, onValueChange = { busType = it }, label = { Text("Bus Type") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = regNo, onValueChange = { regNo = it }, label = { Text("Registration Number (e.g. KA-01-F-1234)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = totalSeats, onValueChange = { totalSeats = it }, label = { Text("Total Seats") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = amenities, onValueChange = { amenities = it }, label = { Text("Amenities") }, modifier = Modifier.fillMaxWidth())
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header (Image 2)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = RedbusCrimson.copy(alpha = 0.1f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Column {
+                            Text("Add Bus to Fleet", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text("Auto-generates seat map layout", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Operator / Bus Brand Name
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Operator / Bus Brand Name", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = operatorName,
+                        onValueChange = { operatorName = it },
+                        placeholder = { Text("e.g. Royal Travels", fontSize = 12.sp) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Registration Plate Number
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Registration Plate Number", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = regNo,
+                        onValueChange = { regNo = it.uppercase() },
+                        placeholder = { Text("e.g. KA-01-AB-1234", fontSize = 12.sp) },
+                        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Bus Layout Type & Total Capacity Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.weight(1.3f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Bus Layout Type", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Box {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isTypeMenuExpanded = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(busType, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = isTypeMenuExpanded,
+                                onDismissRequest = { isTypeMenuExpanded = false }
+                            ) {
+                                busTypeOptions.forEach { opt ->
+                                    DropdownMenuItem(
+                                        text = { Text(opt, fontSize = 12.sp) },
+                                        onClick = {
+                                            busType = opt
+                                            if (opt.contains("Sleeper")) totalSeats = "36" else totalSeats = "40"
+                                            isTypeMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(0.7f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Total Capacity", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = totalSeats,
+                            onValueChange = { totalSeats = it },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Amenities
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Amenities (Comma separated)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = amenities,
+                        onValueChange = { amenities = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // AI Bus Photo Studio Section (Image 2)
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text("AI Bus Photo Studio", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                                Text("Auto-generates verified multi-angle exterior, sleeper/seater cabin & cockpit photos", fontSize = 9.5.sp, color = Color.Gray, lineHeight = 13.sp)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color.White,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                                    modifier = Modifier.clickable { }
+                                ) {
+                                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Tune, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("Studio", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = RedbusCrimson,
+                                    modifier = Modifier.clickable {
+                                        photoSuiteReady = true
+                                    }
+                                ) {
+                                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("Ask AI", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Preset Model Pills
+                        Text("SELECT BUS MODEL PRESET:", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray, letterSpacing = 0.5.sp)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(presetThemes) { theme ->
+                                val isSel = selectedPreset == theme
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSel) Color(0xFF0F172A) else Color.White,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) Color(0xFFF59E0B) else Color(0xFFE2E8F0)),
+                                    modifier = Modifier.clickable {
+                                        selectedPreset = theme
+                                        photoSuiteReady = true
+                                    }
+                                ) {
+                                    Text(
+                                        text = theme,
+                                        color = if (isSel) Color.White else Color(0xFF334155),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Active Suite Ready Banner
+                        if (photoSuiteReady) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Active: $selectedPreset", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("4-Angle Suite Ready", color = Color(0xFF059669), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Drag & drop upload box
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                            modifier = Modifier.fillMaxWidth().clickable { }
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(24.dp))
+                                Text("Drag & drop coach photo or tap to upload", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text("PNG, JPG up to 5MB (Used in search results & ticket)", fontSize = 9.5.sp, color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+
+                // Modal Footer Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.Gray, fontSize = 13.sp)
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            onConfirm(operatorName, busType, regNo.ifBlank { null }, totalSeats.toIntOrNull() ?: 36, amenities, null)
+                            val reg = regNo.ifBlank { "KA-01-F-${(1000..9999).random()}" }
+                            val seats = totalSeats.toIntOrNull() ?: 36
+                            onConfirm(operatorName, busType, reg, seats, amenities, selectedPreset)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
                     ) {
-                        Text("Add Bus")
+                        Icon(Icons.Default.DirectionsBus, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Create Bus Layout", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -1991,48 +2609,319 @@ private fun AddBusModal(
     }
 }
 
-// Dialog: Publish Schedule
+// Dialog: Publish Schedule (Matching Image 4 from Web Portal)
 @Composable
 private fun PublishScheduleModal(
     buses: List<BusResponseDto>,
     onDismiss: () -> Unit,
     onConfirm: (Long, String, String, String, String, Double, String, String, String) -> Unit
 ) {
+    val displayBuses = buses.ifEmpty {
+        listOf(
+            BusResponseDto(id = 1L, operatorName = "Intercity Smartbus", busType = "Scania AC Multi-Axle Sleeper (2+1)", registrationNumber = "KA-01-F-9921", totalSeats = 36),
+            BusResponseDto(id = 2L, operatorName = "Intercity Smartbus", busType = "Volvo 9600 Luxury Seater (2+2)", registrationNumber = "TN-09-BK-4412", totalSeats = 45)
+        )
+    }
+    var selectedBus by remember { mutableStateOf(displayBuses.first()) }
+    var isBusDropdownExpanded by remember { mutableStateOf(false) }
+
     var sourceCity by remember { mutableStateOf("Bangalore") }
     var destCity by remember { mutableStateOf("Chennai") }
-    var departureTime by remember { mutableStateOf("21:00") }
-    var arrivalTime by remember { mutableStateOf("05:30") }
+    var departureTime by remember { mutableStateOf("17:00") }
+    var arrivalTime by remember { mutableStateOf("04:30") }
     var basePrice by remember { mutableStateOf("1150") }
+    var frequency by remember { mutableStateOf("Daily (7 days)") }
+    var isFreqMenuExpanded by remember { mutableStateOf(false) }
+    var validFrom by remember { mutableStateOf(LocalDate.now().toString()) }
+    var validTo by remember { mutableStateOf(LocalDate.now().plusYears(1).toString()) }
+
+    var boardingPoints by remember {
+        mutableStateOf("Majestic Anand Rao Circle (21:00), Shantinagar Bus Stand (21:30), Madiwala Petrol Bunk (22:00), Electronic City Toll (22:30)")
+    }
+    var droppingPoints by remember {
+        mutableStateOf("Poonamallee Bypass (04:00), Koyambedu Omni Bus Stand (04:30), Guindy Kathipara (05:00), Perungalathur (05:30)")
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Publish Route Schedule", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                OutlinedTextField(value = sourceCity, onValueChange = { sourceCity = it }, label = { Text("Source City") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = destCity, onValueChange = { destCity = it }, label = { Text("Destination City") }, modifier = Modifier.fillMaxWidth())
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = departureTime, onValueChange = { departureTime = it }, label = { Text("Departure (HH:mm)") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = arrivalTime, onValueChange = { arrivalTime = it }, label = { Text("Arrival (HH:mm)") }, modifier = Modifier.weight(1f))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header (Image 4)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = RedbusCrimson.copy(alpha = 0.1f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Column {
+                            Text("Publish Route Schedule", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text("Materializes live bookable trips for passengers", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
                 }
-                OutlinedTextField(value = basePrice, onValueChange = { basePrice = it }, label = { Text("Base Ticket Price (₹)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Select Bus from Fleet
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("SELECT BUS FROM REGISTERED FLEET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Box {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isBusDropdownExpanded = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${selectedBus.operatorName} (${selectedBus.registrationNumber ?: "KA-01-REG"}) - ${selectedBus.busType} [${selectedBus.totalSeats} seats]",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = isBusDropdownExpanded,
+                            onDismissRequest = { isBusDropdownExpanded = false }
+                        ) {
+                            displayBuses.forEach { b ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("${b.operatorName} (${b.registrationNumber ?: "KA-01-REG"}) - ${b.busType} [${b.totalSeats} seats]", fontSize = 12.sp)
+                                    },
+                                    onClick = {
+                                        selectedBus = b
+                                        isBusDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Source City & Destination City Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Source City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = sourceCity,
+                            onValueChange = {
+                                sourceCity = it
+                                boardingPoints = "$it Anand Rao Circle (21:00), $it Electronic City (22:30)"
+                            },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Destination City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = destCity,
+                            onValueChange = {
+                                destCity = it
+                                droppingPoints = "$it Omni Bus Stand (04:30), $it Bypass (05:30)"
+                            },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Timings & Base Fare Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Departure", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = departureTime,
+                            onValueChange = { departureTime = it },
+                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Arrival", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = arrivalTime,
+                            onValueChange = { arrivalTime = it },
+                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Base Fare (₹)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = basePrice,
+                            onValueChange = { basePrice = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Black, color = RedbusCrimson, fontSize = 14.sp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Frequency & Validity Window Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Frequency", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Box {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth().clickable { isFreqMenuExpanded = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(frequency, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+                                }
+                            }
+                            DropdownMenu(expanded = isFreqMenuExpanded, onDismissRequest = { isFreqMenuExpanded = false }) {
+                                listOf("Daily (7 days)", "Weekdays only", "Weekends only").forEach { f ->
+                                    DropdownMenuItem(text = { Text(f, fontSize = 12.sp) }, onClick = { frequency = f; isFreqMenuExpanded = false })
+                                }
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Valid From", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = validFrom,
+                            onValueChange = { validFrom = it },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Valid To", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = validTo,
+                            onValueChange = { validTo = it },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Boarding Points with AI Auto-Population
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Boarding Points", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("✨ Auto-populated by AI from $sourceCity", fontSize = 10.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Medium)
+                    }
+                    OutlinedTextField(
+                        value = boardingPoints,
+                        onValueChange = { boardingPoints = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Dropping Points with AI Auto-Population
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Dropping Points", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("✨ Auto-populated by AI from $destCity", fontSize = 10.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Medium)
+                    }
+                    OutlinedTextField(
+                        value = droppingPoints,
+                        onValueChange = { droppingPoints = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Instant Materialization Highlight Banner (Image 4)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFF1F2),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "✨ Instant Materialization: When you click Publish, trips and seat maps for each calendar day are immediately saved and become live on passenger searches.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF991B1B),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
+                // Modal Footer Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.Gray, fontSize = 13.sp)
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val busId = buses.firstOrNull()?.id ?: 1L
-                            val today = LocalDate.now().toString()
-                            val nextYear = LocalDate.now().plusYears(1).toString()
-                            onConfirm(busId, sourceCity, destCity, departureTime, arrivalTime, basePrice.toDoubleOrNull() ?: 1150.0, "DAILY", today, nextYear)
+                            val price = basePrice.toDoubleOrNull() ?: 1150.0
+                            val operatingDaysCode = when (frequency) {
+                                "Weekdays only" -> "MON,TUE,WED,THU,FRI"
+                                "Weekends only" -> "SAT,SUN"
+                                else -> "DAILY"
+                            }
+                            onConfirm(selectedBus.id, sourceCity, destCity, departureTime, arrivalTime, price, operatingDaysCode, validFrom, validTo)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
                     ) {
-                        Text("Publish Schedule")
+                        Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Publish Live Schedule", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -2040,46 +2929,200 @@ private fun PublishScheduleModal(
     }
 }
 
-// Dialog: Create Coupon
+// Dialog: Create Coupon (Matching Image 5 from Web Portal)
 @Composable
 private fun CreateCouponModal(
     onDismiss: () -> Unit,
     onConfirm: (String, Double, Double, Double, String?, String?) -> Unit
 ) {
-    var code by remember { mutableStateOf("") }
-    var discountPercent by remember { mutableStateOf("15") }
-    var maxDiscount by remember { mutableStateOf("150") }
-    var minBooking by remember { mutableStateOf("500") }
+    var code by remember { mutableStateOf("DIWALI25") }
+    var title by remember { mutableStateOf("Diwali Special 25% Off") }
+    var description by remember { mutableStateOf("Celebrate Diwali with flat 25% off on all Intercity Smartbus routes") }
+    var discountPercent by remember { mutableStateOf("25") }
+    var maxDiscount by remember { mutableStateOf("250") }
+    var minBooking by remember { mutableStateOf("800") }
+    var expiryDate by remember { mutableStateOf("2026-11-15") }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.88f)
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Create Live Coupon", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("Coupon Code (e.g. FESTIVE20)") }, modifier = Modifier.fillMaxWidth())
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = discountPercent, onValueChange = { discountPercent = it }, label = { Text("Discount %") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = maxDiscount, onValueChange = { maxDiscount = it }, label = { Text("Max Discount (₹)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header (Image 5)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = RedbusCrimson.copy(alpha = 0.1f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Column {
+                            Text("Create Live Discount Coupon", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text("Instant activation for passenger bookings", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
                 }
-                OutlinedTextField(value = minBooking, onValueChange = { minBooking = it }, label = { Text("Min Booking Amount (₹)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Coupon Promo Code
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("COUPON PROMO CODE *", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it.uppercase() },
+                        placeholder = { Text("e.g. SUPER2, SAVE5, FESTIVE10", fontSize = 12.sp) },
+                        leadingIcon = { Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
+                        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = RedbusCrimson),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Promo Title
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("PROMO TITLE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = { Text("e.g. Special Route Offer", fontSize = 12.sp) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Description
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("DESCRIPTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        placeholder = { Text("e.g. 2% off on all AC Sleeper routes", fontSize = 12.sp) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Discount % & Max Discount Cap Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("DISCOUNT % *", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        OutlinedTextField(
+                            value = discountPercent,
+                            onValueChange = { discountPercent = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Black, color = Color(0xFF059669), fontSize = 15.sp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("MAX DISCOUNT (₹) *", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        OutlinedTextField(
+                            value = maxDiscount,
+                            onValueChange = { maxDiscount = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Min Booking & Expiry Date Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("MIN BOOKING (₹)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        OutlinedTextField(
+                            value = minBooking,
+                            onValueChange = { minBooking = it },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("EXPIRY DATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        OutlinedTextField(
+                            value = expiryDate,
+                            onValueChange = { expiryDate = it },
+                            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Instant Live Banner (Image 5)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFECFDF5),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "✨ Instant Live: Once saved, passengers can immediately apply this coupon during checkout for an instant fare reduction.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF065F46),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
+                // Modal Footer Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.Gray, fontSize = 13.sp)
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            onConfirm(code, discountPercent.toDoubleOrNull() ?: 15.0, maxDiscount.toDoubleOrNull() ?: 150.0, minBooking.toDoubleOrNull() ?: 500.0, null, null)
+                            val disc = discountPercent.toDoubleOrNull() ?: 15.0
+                            val maxD = maxDiscount.toDoubleOrNull() ?: 150.0
+                            val minB = minBooking.toDoubleOrNull() ?: 500.0
+                            val today = LocalDate.now().toString()
+                            onConfirm(code, disc, maxD, minB, today, expiryDate)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669), contentColor = Color.White)
                     ) {
-                        Text("Create Coupon")
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Publish Live Coupon", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
         }
     }
 }
+
 

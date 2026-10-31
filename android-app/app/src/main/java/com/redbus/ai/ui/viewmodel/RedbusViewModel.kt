@@ -1648,12 +1648,26 @@ class RedbusViewModel(
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
+        updateOperatorProfile(companyName, contactPerson, phone, null, null, onSuccess, onError)
+    }
+
+    fun updateOperatorProfile(
+        companyName: String?,
+        contactPerson: String?,
+        phone: String?,
+        kycDocUrl: String?,
+        bankAccountRef: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             repository.updateOperatorProfile(
                 UpdateOperatorProfileRequest(
                     companyName = companyName?.trim(),
                     contactPerson = contactPerson?.trim(),
-                    phone = phone?.trim()
+                    phone = phone?.trim(),
+                    kycDocUrl = kycDocUrl?.trim(),
+                    bankAccountRef = bankAccountRef?.trim()
                 )
             ).fold(
                 onSuccess = { updated ->
