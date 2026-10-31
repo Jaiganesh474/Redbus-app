@@ -5,6 +5,19 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+fun getGitCommitCount(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
+        val countStr = process.inputStream.bufferedReader().readText().trim()
+        countStr.toIntOrNull() ?: 100
+    } catch (_: Exception) {
+        100
+    }
+}
+
+val gitCommitCount = getGitCommitCount()
+val dynamicVersionName = "v1.${gitCommitCount / 10}.${gitCommitCount % 10}"
+
 android {
     namespace = "com.redbus.ai"
     compileSdk = 35
@@ -13,14 +26,15 @@ android {
         applicationId = "com.redbus.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-AI"
+        versionCode = gitCommitCount
+        versionName = dynamicVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
         buildConfigField("String", "API_BASE_URL", "\"https://redbus-api.duckdns.org/api/v1/\"")
+        buildConfigField("String", "APP_VERSION_NAME", "\"$dynamicVersionName\"")
     }
 
     buildTypes {

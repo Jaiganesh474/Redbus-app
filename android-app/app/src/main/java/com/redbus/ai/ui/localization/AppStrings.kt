@@ -435,3 +435,4 @@ object AppStrings {
         return dict[lang] ?: dict[Lang.ENGLISH] ?: key
     }
 }
+

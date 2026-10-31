@@ -1,5 +1,7 @@
 package com.redbus.ai.ui.screens
 
+import com.redbus.ai.BuildConfig
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -2088,7 +2090,7 @@ fun ProfileAndWalletScreen(
                 }
 
                 Text(
-                    text = "V82.7.2",
+                    text = BuildConfig.APP_VERSION_NAME,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
