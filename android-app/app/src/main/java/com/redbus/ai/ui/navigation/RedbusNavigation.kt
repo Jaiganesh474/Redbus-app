@@ -59,6 +59,7 @@ private fun navigateToTab(navController: NavHostController, tabRoute: String) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RedbusAiApp(viewModel: RedbusViewModel) {
     val uiState by viewModel.uiState.collectAsState()
@@ -98,6 +99,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         }
 
         Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 // Dedicated Status Bar Cutout so time, signal, Wi-Fi & battery are always visible
                 // in both Light Mode (dark status bar icons) and Dark Mode (white status bar icons)
@@ -109,51 +111,53 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                 )
             },
             bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 10.dp
-                ) {
-                    bottomNavTabs.forEach { tab ->
-                        val selected = activeTabRoute == tab.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                if (tab.route == ScreenRoute.SearchResults.route &&
-                                    (currentRoute == ScreenRoute.SeatSelection.route || currentRoute == ScreenRoute.Checkout.route)
-                                ) {
-                                    navController.popBackStack(ScreenRoute.SearchResults.route, inclusive = false)
-                                } else {
-                                    navigateToTab(navController, tab.route)
-                                }
-                            },
-                            icon = {
-                                tab.icon?.let {
-                                    Icon(imageVector = it, contentDescription = tab.label)
-                                }
-                            },
-                            label = {
-                                val translatedLabel = when (tab) {
-                                    ScreenRoute.Home -> AppStrings.get("nav_home", uiState.selectedLanguage)
-                                    ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
-                                    ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
-                                    ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
-                                    ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
-                                    else -> tab.label
-                                }
-                                Text(
-                                    text = translatedLabel,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
+                if (!WindowInsets.isImeVisible) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 10.dp
+                    ) {
+                        bottomNavTabs.forEach { tab ->
+                            val selected = activeTabRoute == tab.route
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = {
+                                    if (tab.route == ScreenRoute.SearchResults.route &&
+                                        (currentRoute == ScreenRoute.SeatSelection.route || currentRoute == ScreenRoute.Checkout.route)
+                                    ) {
+                                        navController.popBackStack(ScreenRoute.SearchResults.route, inclusive = false)
+                                    } else {
+                                        navigateToTab(navController, tab.route)
+                                    }
+                                },
+                                icon = {
+                                    tab.icon?.let {
+                                        Icon(imageVector = it, contentDescription = tab.label)
+                                    }
+                                },
+                                label = {
+                                    val translatedLabel = when (tab) {
+                                        ScreenRoute.Home -> AppStrings.get("nav_home", uiState.selectedLanguage)
+                                        ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
+                                        ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
+                                        ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
+                                        ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
+                                        else -> tab.label
+                                    }
+                                    Text(
+                                        text = translatedLabel,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Color.White,
+                                    selectedTextColor = RedbusCrimson,
+                                    indicatorColor = RedbusCrimson,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                selectedTextColor = RedbusCrimson,
-                                indicatorColor = RedbusCrimson,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        )
+                        }
                     }
                 }
             }

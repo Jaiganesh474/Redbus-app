@@ -141,13 +141,11 @@ fun AiCopilotScreen(
             }
         }
 
-        // Bottom Message Input Bar with ime & navigationBars padding
+        // Bottom Message Input Bar directly above keyboard
         Surface(
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 10.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
