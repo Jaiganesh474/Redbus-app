@@ -1855,9 +1855,9 @@ private fun CouponsTabContent(
 
         val coupons = uiState.operatorCoupons.ifEmpty {
             listOf(
-                Coupon(id = 1L, code = "FIRSTBUS", discountPercentage = 15.0, maxDiscountAmount = 150.0, minBookingAmount = 500.0, isActive = true),
-                Coupon(id = 2L, code = "WEEKEND20", discountPercentage = 20.0, maxDiscountAmount = 250.0, minBookingAmount = 800.0, isActive = true),
-                Coupon(id = 3L, code = "SUPERFAST", discountPercentage = 10.0, maxDiscountAmount = 100.0, minBookingAmount = 400.0, isActive = true)
+                Coupon(id = 1, code = "FIRSTBUS", discountPercentage = 15, maxDiscountAmount = 150.0, minBookingAmount = 500.0),
+                Coupon(id = 2, code = "WEEKEND20", discountPercentage = 20, maxDiscountAmount = 250.0, minBookingAmount = 800.0),
+                Coupon(id = 3, code = "SUPERFAST", discountPercentage = 10, maxDiscountAmount = 100.0, minBookingAmount = 400.0)
             )
         }
 
