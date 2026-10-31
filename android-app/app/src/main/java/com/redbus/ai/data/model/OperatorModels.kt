@@ -1,9 +1,5 @@
 package com.redbus.ai.data.model
 
-import com.google.gson.annotations.SerializedName
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class OperatorRegisterRequest(
     val companyName: String,
     val contactPerson: String,
@@ -12,7 +8,6 @@ data class OperatorRegisterRequest(
     val password: String
 )
 
-@Serializable
 data class UpdateOperatorProfileRequest(
     val companyName: String? = null,
     val contactPerson: String? = null,
@@ -21,7 +16,6 @@ data class UpdateOperatorProfileRequest(
     val bankAccountRef: String? = null
 )
 
-@Serializable
 data class OperatorDto(
     val id: Long? = null,
     val userId: Long? = null,
@@ -39,7 +33,6 @@ data class OperatorDto(
     val totalRevenue: Double = 0.0
 )
 
-@Serializable
 data class OperatorAnalyticsDto(
     val operatorName: String? = null,
     val companyName: String? = null,
@@ -57,7 +50,6 @@ data class OperatorAnalyticsDto(
     val recentBookings: List<OperatorBookingDto> = emptyList()
 )
 
-@Serializable
 data class RouteStat(
     val routeName: String = "",
     val bookingCount: Long = 0,
@@ -66,7 +58,6 @@ data class RouteStat(
     val occupancyPercentage: Double = 0.0
 )
 
-@Serializable
 data class BusStat(
     val registrationNumber: String = "",
     val busType: String = "",
@@ -74,13 +65,11 @@ data class BusStat(
     val revenue: Double = 0.0
 )
 
-@Serializable
 data class DailyTimelineStat(
     val date: String = "",
     val revenue: Double = 0.0
 )
 
-@Serializable
 data class OperatorBookingDto(
     val id: Long? = null,
     val pnr: String = "",
@@ -99,7 +88,6 @@ data class OperatorBookingDto(
     val bookingTime: String? = null
 )
 
-@Serializable
 data class OperatorPassengerManifestDto(
     val bookingId: Long? = null,
     val pnr: String = "",
@@ -126,7 +114,6 @@ data class OperatorPassengerManifestDto(
     val status: String? = "CONFIRMED"
 )
 
-@Serializable
 data class OperatorRefundDto(
     val bookingId: Long? = null,
     val pnr: String = "",
@@ -148,7 +135,6 @@ data class OperatorRefundDto(
     val approvedAt: String? = null
 )
 
-@Serializable
 data class OperatorWalletLedgerDto(
     val operatorId: Long? = null,
     val companyName: String? = null,
@@ -159,7 +145,6 @@ data class OperatorWalletLedgerDto(
     val transactions: List<WalletTransactionItem> = emptyList()
 )
 
-@Serializable
 data class WalletTransactionItem(
     val id: Long? = null,
     val pnr: String? = null,
@@ -170,7 +155,6 @@ data class WalletTransactionItem(
     val createdAt: String? = null
 )
 
-@Serializable
 data class OperatorAiPriceIntelligenceDto(
     val corridor: String = "",
     val myRouteId: Long? = null,
@@ -188,7 +172,6 @@ data class OperatorAiPriceIntelligenceDto(
     val competitorBenchmarks: List<CompetitorBenchmark> = emptyList()
 )
 
-@Serializable
 data class CompetitorBenchmark(
     val operatorName: String = "",
     val busType: String = "",
@@ -197,7 +180,6 @@ data class CompetitorBenchmark(
     val differenceFromMe: Double = 0.0
 )
 
-@Serializable
 data class BusCreateRequest(
     val operatorName: String,
     val busType: String,
@@ -207,7 +189,6 @@ data class BusCreateRequest(
     val photoUrls: String? = null
 )
 
-@Serializable
 data class BusResponseDto(
     val id: Long = 0,
     val operatorId: Long? = null,
@@ -222,7 +203,6 @@ data class BusResponseDto(
     val createdAt: String? = null
 )
 
-@Serializable
 data class ScheduleCreateRequest(
     val busId: Long,
     val sourceCity: String,
@@ -237,7 +217,6 @@ data class ScheduleCreateRequest(
     val validTo: String
 )
 
-@Serializable
 data class ScheduleResponseDto(
     val id: Long = 0,
     val operatorId: Long? = null,
@@ -258,7 +237,6 @@ data class ScheduleResponseDto(
     val createdAt: String? = null
 )
 
-@Serializable
 data class CreateCouponRequest(
     val code: String,
     val discountPercentage: Double,
