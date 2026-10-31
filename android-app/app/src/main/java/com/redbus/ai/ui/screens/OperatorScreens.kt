@@ -1,5 +1,6 @@
 package com.redbus.ai.ui.screens
 
+import coil.compose.AsyncImage
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -808,6 +809,7 @@ fun OperatorHubScreen(
     uiState: RedbusUiState,
     onRefresh: () -> Unit,
     onCreateBus: (String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
+    onUpdateBus: (Long, String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
     onDeleteBus: (Long, () -> Unit, (String) -> Unit) -> Unit,
     onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit,
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
@@ -817,6 +819,9 @@ fun OperatorHubScreen(
     onNavigateToAiHelp: () -> Unit
 ) {
     var activeSubTab by remember { mutableIntStateOf(0) }
+    var editingBus by remember { mutableStateOf<BusResponseDto?>(null) }
+    var manifestScheduleFilter by remember { mutableStateOf("ALL") }
+
     // Sub-Tabs list matching Image 1:
     // 0: Real-Time Sales, 1: AI Price Intelligence, 2: Refunds & Audit, 3: redBus Wallet, 4: My Fleet, 5: Active Schedules, 6: Passenger Manifest, 7: Coupons, 8: Agency Profile
     val subTabs = listOf(
@@ -1023,9 +1028,13 @@ fun OperatorHubScreen(
                     }
                 }
                 2 -> {
-                    // REFUNDS & AUDIT TAB
+                    // REFUNDS & AUDIT TAB (Matching Image 2)
                     item {
-                        RefundsTabContent(uiState = uiState, onApproveRefund = onApproveRefund)
+                        RefundsTabContent(
+                            uiState = uiState,
+                            onApproveRefund = onApproveRefund,
+                            onRefreshQueue = onRefresh
+                        )
                     }
                 }
                 3 -> {
@@ -1035,28 +1044,38 @@ fun OperatorHubScreen(
                     }
                 }
                 4 -> {
-                    // MY FLEET TAB
+                    // MY FLEET TAB (Matching Image 4)
                     item {
                         MyFleetTabContent(
                             uiState = uiState,
                             onAddBusClick = { showAddBusModal = true },
+                            onEditBusClick = { bus -> editingBus = bus },
                             onDeleteBus = onDeleteBus
                         )
                     }
                 }
                 5 -> {
-                    // ACTIVE SCHEDULES TAB
+                    // ACTIVE SCHEDULES TAB (Matching Image 5)
                     item {
                         ActiveSchedulesTabContent(
                             uiState = uiState,
-                            onPublishScheduleClick = { showPublishScheduleModal = true }
+                            onPublishScheduleClick = { showPublishScheduleModal = true },
+                            onViewPassengerList = { schedId ->
+                                manifestScheduleFilter = schedId.toString()
+                                activeSubTab = 6
+                            },
+                            onViewLive = onNavigateToSearch
                         )
                     }
                 }
                 6 -> {
-                    // PASSENGER MANIFEST TAB
+                    // PASSENGER MANIFEST TAB (Matching Image 1)
                     item {
-                        PassengerManifestTabContent(uiState = uiState)
+                        PassengerManifestTabContent(
+                            uiState = uiState,
+                            selectedScheduleId = manifestScheduleFilter,
+                            onScheduleIdChange = { manifestScheduleFilter = it }
+                        )
                     }
                 }
                 7 -> {
@@ -1125,6 +1144,17 @@ fun OperatorHubScreen(
             onDismiss = { showCreateCouponModal = false },
             onConfirm = { code, disc, maxDisc, minBook, from, to ->
                 onCreateCoupon(code, disc, maxDisc, minBook, from, to, { showCreateCouponModal = false }, {})
+            }
+        )
+    }
+
+    // Modal: Edit Bus in Fleet (Matching Image 3)
+    editingBus?.let { busToEdit ->
+        EditBusModal(
+            bus = busToEdit,
+            onDismiss = { editingBus = null },
+            onConfirm = { id, opName, busType, regNo, totalSeats, amenities, photos ->
+                onUpdateBus(id, opName, busType, regNo, totalSeats, amenities, photos, { editingBus = null }, {})
             }
         )
     }
@@ -1457,78 +1487,289 @@ private fun AiPriceIntelligenceTabContent(uiState: RedbusUiState) {
 }
 
 /**
- * 2. Refunds & Audit Tab Content
+ * 2. Refunds & Audit Tab Content (Matching Image 2 from Web Portal)
  */
 @Composable
 private fun RefundsTabContent(
     uiState: RedbusUiState,
-    onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit
+    onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
+    onRefreshQueue: () -> Unit = {}
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Refunds & Audit Requests", fontWeight = FontWeight.Black, fontSize = 18.sp)
-        Text("Review passenger cancellation requests & audit approvals", fontSize = 12.sp, color = Color.Gray)
-
-        val refunds = uiState.operatorRefunds.ifEmpty {
-            listOf(
-                OperatorRefundDto(
-                    pnr = "RB-2026-9AA120",
-                    passengerName = "Suresh K",
-                    sourceCity = "Bangalore",
-                    destinationCity = "Chennai",
-                    seatNumbers = listOf("U1"),
-                    totalPaid = 1200.0,
-                    refundAmount = 1080.0,
-                    refundStatus = "REQUESTED",
-                    cancellationReason = "Passenger requested trip date change"
-                )
+    val refunds = uiState.operatorRefunds.ifEmpty {
+        listOf(
+            OperatorRefundDto(
+                pnr = "RB-2026-8KE7T2",
+                passengerName = "leo",
+                contactPhone = "8939129572",
+                sourceCity = "Bangalore",
+                destinationCity = "Chennai",
+                busName = "ZingBus",
+                seatNumbers = listOf("S7"),
+                totalPaid = 1155.0,
+                refundAmount = 0.0,
+                refundDestination = "redBus Wallet",
+                refundStatus = "DISBURSED",
+                refundStage = "COMPLETED",
+                cancellationReason = "Customer requested trip date change",
+                travelDate = "2026-10-31"
+            ),
+            OperatorRefundDto(
+                pnr = "RB-2026-9AA120",
+                passengerName = "Suresh K",
+                contactPhone = "9876543210",
+                sourceCity = "Bangalore",
+                destinationCity = "Chennai",
+                busName = "Intercity SmartBus",
+                seatNumbers = listOf("U1"),
+                totalPaid = 1200.0,
+                refundAmount = 1080.0,
+                refundDestination = "redBus Wallet",
+                refundStatus = "REQUESTED",
+                refundStage = "OPERATOR_AUDIT",
+                cancellationReason = "Passenger personal emergency",
+                travelDate = "2026-11-02"
             )
+        )
+    }
+
+    val pendingCount = refunds.count { it.refundStatus == "REQUESTED" || it.refundStage == "OPERATOR_AUDIT" }
+    val completedCount = refunds.count { it.refundStatus == "APPROVED" || it.refundStatus == "DISBURSED" || it.refundStage == "COMPLETED" }
+    val totalRefundedAmount = refunds.filter { it.refundStatus == "APPROVED" || it.refundStatus == "DISBURSED" || it.refundStage == "COMPLETED" }
+        .sumOf { it.refundAmount }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Dark Hero Header Card (Image 2)
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = RedbusCrimson.copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "OPERATOR PASSENGER CANCELLATION AUDIT & DISBURSEMENT",
+                                color = Color(0xFFFCA5A5),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.White.copy(alpha = 0.1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                        modifier = Modifier.clickable { onRefreshQueue() }
+                    ) {
+                        Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Refresh Queue", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Refund Audit & Wallet Settlement Console",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+
+                Text(
+                    text = "Inspect passenger cancellation requests, verify reason and itinerary, and disburse refund amounts directly from your operator redBus wallet in real time.",
+                    fontSize = 11.5.sp,
+                    color = Color(0xFF94A3B8),
+                    lineHeight = 15.sp
+                )
+            }
         }
 
-        refunds.forEach { item ->
+        // 3 Summary KPI Cards (Image 2)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Card 1: Pending
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("PENDING OPERATOR AUDIT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("$pendingCount Requests", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFFD97706))
+                    Text("Awaiting disbursement approval", fontSize = 9.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            // Card 2: Completed
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("COMPLETED & DISBURSED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("$completedCount Refunds", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color(0xFF059669))
+                    Text("Debited from operator wallet", fontSize = 9.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            // Card 3: Total Refunded
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("TOTAL REFUNDED AMOUNT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text("₹${String.format("%.2f", totalRefundedAmount)}", fontSize = 15.sp, fontWeight = FontWeight.Black, color = RedbusCrimson)
+                    Text("Settled to passenger wallets/banks", fontSize = 9.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+
+        // Passenger Cancellation & Refund Queue List
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Refresh, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Passenger Cancellation & Refund Queue", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+            Text("Showing ${refunds.size} total cancellations", fontSize = 11.sp, color = Color.Gray)
+        }
+
+        refunds.forEach { item ->
+            val isDisbursed = item.refundStatus == "APPROVED" || item.refundStatus == "DISBURSED" || item.refundStage == "COMPLETED"
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(item.passengerName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("PNR: ${item.pnr}", fontSize = 12.sp, color = RedbusCrimson)
+                            Text("PNR: ${item.pnr}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = RedbusCrimson)
+                            item.travelDate?.let { Text(it, fontSize = 10.sp, color = Color.Gray) }
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (item.refundStatus == "APPROVED") Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f)
+                            color = if (isDisbursed) Color(0xFFECFDF5) else Color(0xFFFEF3C7),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isDisbursed) Color(0xFFA7F3D0) else Color(0xFFFDE68A))
                         ) {
-                            Text(
-                                text = item.refundStatus,
-                                color = if (item.refundStatus == "APPROVED") Color(0xFF059669) else Color(0xFFD97706),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
+                            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (isDisbursed) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                }
+                                Text(
+                                    text = if (isDisbursed) "DISBURSED" else "PENDING AUDIT",
+                                    color = if (isDisbursed) Color(0xFF065F46) else Color(0xFFB45309),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 
-                    Text("Refund Amount: ₹${item.refundAmount.toInt()} (Paid ₹${item.totalPaid.toInt()})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    item.cancellationReason?.let {
-                        Text("Reason: $it", fontSize = 11.sp, color = Color.Gray)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text(item.passengerName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            item.contactPhone?.let { Text(it, fontSize = 11.sp, color = Color.Gray) }
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("${item.sourceCity} → ${item.destinationCity}", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            item.busName?.let { Text(it, fontSize = 11.sp, color = Color.Gray) }
+                        }
                     }
 
-                    if (item.refundStatus != "APPROVED") {
+                    // Details row: Seat, Total Paid, Refund, Destination
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("SEAT(S)", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text(item.seatNumbers.joinToString(", ").ifEmpty { "S7" }, fontWeight = FontWeight.Black, fontSize = 13.sp, color = RedbusCrimson)
+                        }
+                        Column {
+                            Text("TOTAL PAID", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("₹${item.totalPaid.toInt()}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                        Column {
+                            Text("REFUND AMOUNT", fontSize = 9.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("₹${item.refundAmount.toInt()}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFF059669))
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF10B981).copy(alpha = 0.12f)
+                        ) {
+                            Row(modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CreditCard, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(10.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(item.refundDestination ?: "redBus Wallet", color = Color(0xFF059669), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    item.cancellationReason?.let {
+                        Text("Reason: $it", fontSize = 11.sp, color = Color.Gray, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+
+                    if (!isDisbursed) {
                         Button(
                             onClick = { onApproveRefund(item.pnr, {}, {}) },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.White),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().height(38.dp)
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Approve Refund", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Approve & Disburse Refund", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    } else {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Text("Completed", fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1615,86 +1856,377 @@ private fun OperatorWalletTabContent(uiState: RedbusUiState) {
 }
 
 /**
- * 4. My Fleet Tab Content
+ * Helper: Bus Photo Studio Carousel (Matching Image 3 & Image 4)
+ */
+@Composable
+private fun BusPhotoStudioCarousel(
+    busName: String,
+    busType: String,
+    photoUrls: String?,
+    modifier: Modifier = Modifier
+) {
+    val stockPhotos = listOf(
+        "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80"
+    )
+    val parsedUrls = photoUrls?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+    val photos = if (parsedUrls.size >= 4) parsedUrls else stockPhotos
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF0F172A))
+        ) {
+            AsyncImage(
+                model = photos[currentIndex % photos.size],
+                contentDescription = busName,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+
+            // Dark gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
+                            startY = 100f
+                        )
+                    )
+            )
+
+            // Top Badges (Image 3 & 4)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF1E293B).copy(alpha = 0.9f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(12.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Operator Verified Studio", color = Color(0xFFFDE68A), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color.Black.copy(alpha = 0.6f)
+                    ) {
+                        Text(
+                            text = "${(currentIndex % photos.size) + 1} / ${photos.size}",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Fullscreen, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+
+            // Left / Right Navigation Arrows
+            IconButton(
+                onClick = {
+                    currentIndex = if (currentIndex > 0) currentIndex - 1 else photos.size - 1
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 6.dp)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f))
+            ) {
+                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(16.dp))
+            }
+
+            IconButton(
+                onClick = {
+                    currentIndex = (currentIndex + 1) % photos.size
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 6.dp)
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f))
+            ) {
+                Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(16.dp))
+            }
+
+            // Bottom Coach Name Label
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp)
+            ) {
+                Text(busName, color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Text(busType, color = Color(0xFFFCA5A5), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        // 4 Thumbnails below photo
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            photos.take(4).forEachIndexed { i, url ->
+                val isSel = (currentIndex % photos.size) == i
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (isSel) 2.dp else 1.dp,
+                            color = if (isSel) Color(0xFFF59E0B) else Color(0xFFE2E8F0),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { currentIndex = i }
+                ) {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 4. My Fleet Tab Content (Matching Image 4 from Web Portal)
  */
 @Composable
 private fun MyFleetTabContent(
     uiState: RedbusUiState,
     onAddBusClick: () -> Unit,
+    onEditBusClick: (BusResponseDto) -> Unit,
     onDeleteBus: (Long, () -> Unit, (String) -> Unit) -> Unit
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val buses = uiState.operatorBuses.ifEmpty {
+        listOf(
+            BusResponseDto(
+                id = 1L,
+                operatorName = "Intercity SmartBus",
+                busType = "BharatBenz AC Sleeper (2+1)",
+                registrationNumber = "TN-12AU-1221",
+                totalSeats = 30,
+                amenities = "WiFi, Charging Point, Water Bottle, Blanket, Live Tracking, Emergency Exit",
+                rating = 4.8
+            ),
+            BusResponseDto(
+                id = 2L,
+                operatorName = "ZingBus",
+                busType = "Scania AC Seater (2+2)",
+                registrationNumber = "TN-12-AU-3232",
+                totalSeats = 40,
+                amenities = "WiFi, Charging Point, Water Bottle, Blanket, Live Tracking, Emergency Exit",
+                rating = 4.7
+            )
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header (Image 4)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Operator Fleet Management", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text("Registered buses & seat layout configurations", fontSize = 12.sp, color = Color.Gray)
+                Text("Registered Fleet", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text("Buses and custom seat layouts managed by your transport company", fontSize = 11.5.sp, color = Color.Gray)
             }
             Button(
                 onClick = onAddBusClick,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Add Bus", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("+ Add Bus", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-        }
-
-        val buses = uiState.operatorBuses.ifEmpty {
-            listOf(
-                BusResponseDto(id = 1L, operatorName = "Intercity Smartbus", busType = "Scania AC Multi-Axle Sleeper (2+1)", registrationNumber = "KA-01-F-9921", totalSeats = 36, amenities = "WiFi, Charging, Water, Blankets", rating = 4.8),
-                BusResponseDto(id = 2L, operatorName = "Intercity Smartbus", busType = "Volvo 9600 Luxury Seater (2+2)", registrationNumber = "TN-09-BK-4412", totalSeats = 45, amenities = "WiFi, AC, Reading Light", rating = 4.7)
-            )
         }
 
         buses.forEach { bus ->
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Photo Studio Carousel (Image 4 top)
+                    BusPhotoStudioCarousel(
+                        busName = bus.operatorName,
+                        busType = bus.busType,
+                        photoUrls = bus.photoUrls
+                    )
+
+                    // Plate Pill & Status Badge
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(bus.busType, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF10B981).copy(alpha = 0.15f)
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFF1F5F9),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1))
                         ) {
                             Text(
-                                text = "★ ${bus.rating ?: 4.8}",
-                                color = Color(0xFF059669),
-                                fontSize = 11.sp,
+                                text = bus.registrationNumber ?: "TN-12AU-1221",
+                                fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFECFDF5),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                        ) {
+                            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF059669)))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Active", color = Color(0xFF065F46), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    // Bus Name & Bus Type
+                    Column {
+                        Text(bus.operatorName, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        Text(bus.busType, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = RedbusCrimson)
+                    }
+
+                    // 2-Column Specs Box: Total Capacity & Layout Style
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Column {
+                            Text("Total Capacity", fontSize = 10.sp, color = Color.Gray)
+                            Text("${bus.totalSeats} Seats", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
+                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color(0xFFE2E8F0)))
+                        Column {
+                            Text("Layout Style", fontSize = 10.sp, color = Color.Gray)
+                            Text(
+                                if (bus.busType.contains("Sleeper")) "2+1 Double Deck" else "2+2 Single Deck",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
                             )
                         }
                     }
 
-                    Text("Reg: ${bus.registrationNumber ?: "KA-01-TEMP"} • Total Seats: ${bus.totalSeats}", fontSize = 12.sp, color = Color.Gray)
-                    bus.amenities?.let {
-                        Text("Amenities: $it", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Amenities chips
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("AMENITIES", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray, letterSpacing = 0.5.sp)
+                        val amenitiesList = bus.amenities?.split(",")?.map { it.trim() } ?: listOf("WiFi", "Charging Point", "Water Bottle", "Blanket", "Live Tracking", "Emergency Exit")
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(amenitiesList) { a ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFF1F5F9)
+                                ) {
+                                    Text(
+                                        text = a,
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF475569),
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
 
+                    // Footer Actions (Image 4 bottom)
+                    HorizontalDivider(color = Color(0xFFF1F5F9))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(
-                            onClick = { onDeleteBus(bus.id, {}, {}) },
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Remove Bus", fontSize = 12.sp)
+                        Text("📸 4 Photos Active", fontSize = 10.5.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Edit Button
+                            OutlinedButton(
+                                onClick = { onEditBusClick(bus) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF334155))
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Edit", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            // Delete Button
+                            Button(
+                                onClick = { onDeleteBus(bus.id, {}, {}) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEF2F2), contentColor = Color(0xFFDC2626))
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("Delete", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            // AI Studio Button
+                            Button(
+                                onClick = { onEditBusClick(bus) },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson.copy(alpha = 0.1f), contentColor = RedbusCrimson)
+                            ) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("AI Studio", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -1703,67 +2235,416 @@ private fun MyFleetTabContent(
     }
 }
 
+// Dialog: Edit Bus in Fleet (Matching Image 3 from Web Portal)
+@Composable
+private fun EditBusModal(
+    bus: BusResponseDto,
+    onDismiss: () -> Unit,
+    onConfirm: (Long, String, String, String?, Int, String?, String?) -> Unit
+) {
+    var operatorName by remember { mutableStateOf(bus.operatorName) }
+    var regNo by remember { mutableStateOf(bus.registrationNumber ?: "") }
+    var totalSeats by remember { mutableStateOf(bus.totalSeats.toString()) }
+    var busType by remember { mutableStateOf(bus.busType) }
+    var amenities by remember { mutableStateOf(bus.amenities ?: "WiFi,Charging Point,Water Bottle,Blanket,Live Tracking,Emergency Exit") }
+    var photoUrls by remember { mutableStateOf(bus.photoUrls ?: "") }
+    var isTypeMenuExpanded by remember { mutableStateOf(false) }
+
+    val busTypeOptions = listOf(
+        "AC Sleeper (2+1) - 30/36 Berths",
+        "Non-AC Sleeper (2+1) - 30/36 Berths",
+        "AC Seater (2+2) - 40/48 Seats",
+        "Non-AC Seater (2+2) - 40/48 Seats",
+        "Volvo Multi-Axle AC Sleeper",
+        "Scania Multi-Axle AC Seater",
+        "Electric AC Luxury Coach"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header (Image 3)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = RedbusCrimson.copy(alpha = 0.1f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Column {
+                            Text("Edit Bus in Fleet", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text("Update registration, seating layout and amenities", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Operator / Brand Name
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Operator / Brand Name", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = operatorName,
+                        onValueChange = { operatorName = it },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Registration No. * & Total Seats * Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.weight(1.2f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Registration No. *", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = regNo,
+                            onValueChange = { regNo = it.uppercase() },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Column(modifier = Modifier.weight(0.8f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Total Seats *", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = totalSeats,
+                            onValueChange = { totalSeats = it },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Bus & Layout Type Dropdown
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Bus & Layout Type", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Box {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isTypeMenuExpanded = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(busType, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = isTypeMenuExpanded,
+                            onDismissRequest = { isTypeMenuExpanded = false }
+                        ) {
+                            busTypeOptions.forEach { opt ->
+                                DropdownMenuItem(
+                                    text = { Text(opt, fontSize = 12.sp) },
+                                    onClick = {
+                                        busType = opt
+                                        isTypeMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Amenities
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Amenities (Comma separated)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = amenities,
+                        onValueChange = { amenities = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Bus Photos / AI Suite Visual Carousel (Image 3)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Bus Photos / AI Suite", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFFEF3C7),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                            modifier = Modifier.clickable {
+                                photoUrls = "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957"
+                            }
+                        ) {
+                            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("Cycle AI Bus Models", color = Color(0xFFB45309), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    BusPhotoStudioCarousel(
+                        busName = operatorName,
+                        busType = busType,
+                        photoUrls = photoUrls
+                    )
+                }
+
+                // Modal Footer Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.Gray, fontSize = 13.sp)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val seats = totalSeats.toIntOrNull() ?: bus.totalSeats
+                            onConfirm(bus.id, operatorName, busType, regNo, seats, amenities, photoUrls)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
+                    ) {
+                        Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
 /**
- * 5. Active Schedules Tab Content
+ * 5. Active Schedules Tab Content (Matching Image 5 from Web Portal)
  */
 @Composable
 private fun ActiveSchedulesTabContent(
     uiState: RedbusUiState,
-    onPublishScheduleClick: () -> Unit
+    onPublishScheduleClick: () -> Unit,
+    onViewPassengerList: (Long) -> Unit = {},
+    onViewLive: () -> Unit = {}
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val schedules = uiState.operatorSchedules.ifEmpty {
+        listOf(
+            ScheduleResponseDto(
+                id = 1L,
+                busName = "Intercity SmartBus",
+                busType = "BharatBenz AC Sleeper (2+1)",
+                sourceCity = "Bangalore",
+                destinationCity = "Chennai",
+                departureTime = "23:30:00",
+                arrivalTime = "05:30:00",
+                basePrice = 650.0,
+                operatingDays = "DAILY",
+                validFrom = "2026-09-25",
+                validTo = "2026-10-25"
+            ),
+            ScheduleResponseDto(
+                id = 2L,
+                busName = "ZingBus",
+                busType = "Scania AC Seater (2+2)",
+                sourceCity = "Chennai",
+                destinationCity = "Coimbatore",
+                departureTime = "21:30:00",
+                arrivalTime = "05:00:00",
+                basePrice = 1299.0,
+                operatingDays = "DAILY",
+                validFrom = "2026-09-25",
+                validTo = "2026-10-25"
+            ),
+            ScheduleResponseDto(
+                id = 3L,
+                busName = "Intercity SmartBus",
+                busType = "Scania AC Sleeper (2+1)",
+                sourceCity = "Chennai",
+                destinationCity = "Bangalore",
+                departureTime = "18:00:00",
+                arrivalTime = "05:30:00",
+                basePrice = 1150.0,
+                operatingDays = "DAILY",
+                validFrom = "2026-10-01",
+                validTo = "2026-11-01"
+            )
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header (Image 5)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Active Route Schedules", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text("Published daily trips on redBus marketplace", fontSize = 12.sp, color = Color.Gray)
+                Text("Active Published Schedules", fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text("Recurring services automatically materialized as bookable daily trips on redBus", fontSize = 11.5.sp, color = Color.Gray)
             }
             Button(
                 onClick = onPublishScheduleClick,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Publish", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("+ Publish Schedule", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-        }
-
-        val schedules = uiState.operatorSchedules.ifEmpty {
-            listOf(
-                ScheduleResponseDto(id = 1L, busName = "Scania AC Sleeper", sourceCity = "Bangalore", destinationCity = "Chennai", departureTime = "17:00", arrivalTime = "04:30", basePrice = 1150.0, operatingDays = "DAILY"),
-                ScheduleResponseDto(id = 2L, busName = "Volvo 9600 Seater", sourceCity = "Bangalore", destinationCity = "Chennai", departureTime = "21:30", arrivalTime = "05:00", basePrice = 980.0, operatingDays = "DAILY"),
-                ScheduleResponseDto(id = 3L, busName = "Scania AC Sleeper", sourceCity = "Chennai", destinationCity = "Bangalore", departureTime = "18:00", arrivalTime = "05:30", basePrice = 1150.0, operatingDays = "DAILY")
-            )
         }
 
         schedules.forEach { sched ->
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("${sched.sourceCity} → ${sched.destinationCity}", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("${sched.departureTime} - ${sched.arrivalTime} • ${sched.operatingDays}", fontSize = 12.sp, color = Color.Gray)
-                        sched.busName?.let { Text(it, fontSize = 11.sp, color = RedbusCrimson) }
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Route & Status Badge
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "${sched.sourceCity} → ${sched.destinationCity}",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFECFDF5),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                            ) {
+                                Text(
+                                    text = "ACTIVE",
+                                    color = Color(0xFF065F46),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("₹${sched.basePrice.toInt()}", fontWeight = FontWeight.Black, fontSize = 16.sp)
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF10B981).copy(alpha = 0.15f)
-                        ) {
-                            Text("ACTIVE", color = Color(0xFF059669), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+
+                    // Bus Name & Layout
+                    Text(
+                        text = "${sched.busName ?: "Intercity SmartBus"} (${sched.busType ?: "AC Sleeper (2+1)"})",
+                        fontSize = 12.5.sp,
+                        color = Color(0xFF475569),
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    // Timings, Days, Validity Range
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(14.dp))
+                        Text(
+                            text = "${sched.departureTime} - ${sched.arrivalTime}",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("•", color = Color.Gray, fontSize = 11.sp)
+                        Text(
+                            text = sched.operatingDays,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF334155)
+                        )
+                        Text("•", color = Color.Gray, fontSize = 11.sp)
+                        Text(
+                            text = "Valid: ${sched.validFrom ?: "2026-09-25"} to ${sched.validTo ?: "2026-10-25"}",
+                            fontSize = 10.5.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                    // Base Fare & Actions (Passenger List, View Live)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("BASE FARE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            Text("₹${sched.basePrice.toInt()}", fontWeight = FontWeight.Black, fontSize = 18.sp, color = RedbusCrimson)
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Passenger List Button
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = RedbusCrimson.copy(alpha = 0.08f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.25f)),
+                                modifier = Modifier.clickable { onViewPassengerList(sched.id) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Description, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Passenger List", color = RedbusCrimson, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // View Live Button
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFF1F5F9),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                                modifier = Modifier.clickable { onViewLive() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("View Live", color = Color(0xFF1E293B), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(12.dp))
+                                }
+                            }
                         }
                     }
                 }
@@ -1773,51 +2654,548 @@ private fun ActiveSchedulesTabContent(
 }
 
 /**
- * 6. Passenger Manifest Tab Content
+ * 6. Passenger Manifest Tab Content (Matching Image 1 from Web Portal)
  */
 @Composable
-private fun PassengerManifestTabContent(uiState: RedbusUiState) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Today's Passenger Manifest", fontWeight = FontWeight.Black, fontSize = 18.sp)
-        Text("Boarding list & passenger verified seat assignments", fontSize = 12.sp, color = Color.Gray)
+private fun PassengerManifestTabContent(
+    uiState: RedbusUiState,
+    selectedScheduleId: String = "ALL",
+    onScheduleIdChange: (String) -> Unit = {}
+) {
+    var selectedDatePreset by remember { mutableStateOf("Today") }
+    var manifestDate by remember { mutableStateOf(LocalDate.now().toString()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var scheduleFilter by remember { mutableStateOf(selectedScheduleId) }
+    var isScheduleDropdownOpen by remember { mutableStateOf(false) }
 
-        val manifest = uiState.operatorManifest.ifEmpty {
-            listOf(
-                OperatorPassengerManifestDto(seatNumber = "S7", passengerName = "leo", age = 25, gender = "MALE", boardingPoint = "Majestic Anand Rao Circle", droppingPoint = "Perungalathur", contactPhone = "+91 8939129572", pnr = "RB-2026-8KE7T2"),
-                OperatorPassengerManifestDto(seatNumber = "L1", passengerName = "Jaiganesh", age = 28, gender = "MALE", boardingPoint = "Electronic City", droppingPoint = "Koyambedu", contactPhone = "+91 9876543210", pnr = "RB-2026-4XA991")
+    val boardedMap = remember { mutableStateMapOf<String, Boolean>() }
+
+    val allManifest = uiState.operatorManifest.ifEmpty {
+        listOf(
+            OperatorPassengerManifestDto(
+                bookingId = 1L,
+                pnr = "RB-2026-8KE7T2",
+                passengerName = "leo",
+                age = 25,
+                gender = "MALE",
+                seatNumber = "S7",
+                seatType = "SEATER",
+                berthLabel = "Seater",
+                seatDisplay = "S7 (Seater)",
+                sourceCity = "Bangalore",
+                destinationCity = "Chennai",
+                departureTime = "17:00:00",
+                arrivalTime = "04:30:00",
+                boardingPoint = "Majestic Anand Rao Circle (21:00)",
+                droppingPoint = "Perungalathur (04:30)",
+                contactPhone = "+91 8939129572",
+                busOperator = "ZingBus",
+                busType = "Scania AC Seater (2+2)",
+                status = "CONFIRMED"
+            ),
+            OperatorPassengerManifestDto(
+                bookingId = 2L,
+                pnr = "RB-2026-4XA991",
+                passengerName = "Jaiganesh",
+                age = 28,
+                gender = "MALE",
+                seatNumber = "L1",
+                seatType = "SLEEPER",
+                deck = "LOWER",
+                berthLabel = "Lower Berth",
+                seatDisplay = "L1 (Lower Berth)",
+                sourceCity = "Bangalore",
+                destinationCity = "Chennai",
+                departureTime = "23:30:00",
+                arrivalTime = "05:30:00",
+                boardingPoint = "Electronic City Toll (22:30)",
+                droppingPoint = "Koyambedu Omni Bus Stand (04:30)",
+                contactPhone = "+91 9876543210",
+                busOperator = "Intercity SmartBus",
+                busType = "BharatBenz AC Sleeper (2+1)",
+                status = "CONFIRMED"
             )
+        )
+    }
+
+    // Filter passengers by search query
+    val filteredPassengers = allManifest.filter { p ->
+        val query = searchQuery.trim().lowercase()
+        if (query.isEmpty()) true
+        else {
+            p.passengerName.lowercase().contains(query) ||
+            p.pnr.lowercase().contains(query) ||
+            p.seatNumber.lowercase().contains(query) ||
+            (p.contactPhone?.lowercase()?.contains(query) == true)
+        }
+    }
+
+    val totalBookings = filteredPassengers.size
+    val verifiedCount = filteredPassengers.count { p -> boardedMap["${p.pnr}_${p.seatNumber}"] == true }
+    val lowerBerths = filteredPassengers.count { it.berthLabel == "Lower Berth" || (it.deck == "LOWER" && it.seatType == "SLEEPER") }
+    val upperBerths = filteredPassengers.count { it.berthLabel == "Upper Berth" || (it.deck == "UPPER" && it.seatType == "SLEEPER") }
+    val seaterSeats = filteredPassengers.count { it.seatType == "SEATER" || it.berthLabel == "Seater" }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Tab Header & Action Buttons (Image 1)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = RedbusCrimson.copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            text = "Conductor Boarding Chart",
+                            color = RedbusCrimson,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF1F5F9)
+                    ) {
+                        Text(
+                            text = "Official Passenger Manifest",
+                            color = Color(0xFF475569),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Daily Passenger Verification & Onboarding Roster", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text("Filter by travel date to fetch real-time passenger rosters with Lower/Upper berths, seater numbers, boarding landmarks & contact numbers.", fontSize = 11.sp, color = Color.Gray, lineHeight = 14.sp)
+            }
         }
 
-        manifest.forEach { p ->
+        // Action Buttons Row (Download PDF Chart, Print Sheet, Refresh)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = { },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Download PDF Chart", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+                onClick = { },
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Print Sheet", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            IconButton(onClick = { }) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.Gray)
+            }
+        }
+
+        // Filter Controls Card (Date, Route, Search)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Select Journey Date Row
+                Text("SELECT JOURNEY DATE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf("Today", "Tomorrow", "Day After").forEach { preset ->
+                        val isSel = selectedDatePreset == preset
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSel) RedbusCrimson else Color(0xFFF1F5F9),
+                            modifier = Modifier.clickable {
+                                selectedDatePreset = preset
+                                manifestDate = when (preset) {
+                                    "Tomorrow" -> LocalDate.now().plusDays(1).toString()
+                                    "Day After" -> LocalDate.now().plusDays(2).toString()
+                                    else -> LocalDate.now().toString()
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = preset,
+                                color = if (isSel) Color.White else Color(0xFF334155),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+
+                    // Date Input Box
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(manifestDate, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Icon(Icons.Default.DateRange, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+
+                // Filter by Route Schedule Dropdown
+                Text("FILTER BY ROUTE SCHEDULE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Box {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                        modifier = Modifier.fillMaxWidth().clickable { isScheduleDropdownOpen = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (scheduleFilter == "ALL") "Bangalore → Chennai (23:30:00)" else scheduleFilter,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = isScheduleDropdownOpen,
+                        onDismissRequest = { isScheduleDropdownOpen = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Bangalore → Chennai (23:30:00)", fontSize = 12.sp) },
+                            onClick = { scheduleFilter = "Bangalore → Chennai (23:30:00)"; isScheduleDropdownOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Chennai → Coimbatore (21:30:00)", fontSize = 12.sp) },
+                            onClick = { scheduleFilter = "Chennai → Coimbatore (21:30:00)"; isScheduleDropdownOpen = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("All Routes & Schedules", fontSize = 12.sp) },
+                            onClick = { scheduleFilter = "ALL"; isScheduleDropdownOpen = false }
+                        )
+                    }
+                }
+
+                // Search Passengers Box
+                Text("SEARCH PASSENGERS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Name, Seat, PNR, Phone...", fontSize = 11.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // 5 KPI Metric Cards Row (Image 1)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Card 1: Total Bookings
             Card(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.width(130.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("TOTAL BOOKINGS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text("$totalBookings", fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text("Passengers on chart", fontSize = 9.sp, color = Color.Gray)
+                }
+            }
+
+            // Card 2: Conductor Verified
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.width(135.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("CONDUCTOR VERIFIED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text("$verifiedCount / $totalBookings", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF059669))
+                    val pct = if (totalBookings > 0) Math.round((verifiedCount.toFloat() / totalBookings) * 100) else 0
+                    Text("$pct% Boarded", fontSize = 9.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Card 3: Lower Berths
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                modifier = Modifier.width(130.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("LOWER BERTHS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
+                    Text("$lowerBerths", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF065F46))
+                    Text("Ground deck sleepers", fontSize = 9.sp, color = Color(0xFF059669))
+                }
+            }
+
+            // Card 4: Upper Berths
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2FF)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
+                modifier = Modifier.width(130.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("UPPER BERTHS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4338CA))
+                    Text("$upperBerths", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF4338CA))
+                    Text("Upper deck sleepers", fontSize = 9.sp, color = Color(0xFF6366F1))
+                }
+            }
+
+            // Card 5: Seater Seats
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                modifier = Modifier.width(130.dp)
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text("SEATER SEATS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                    Text("$seaterSeats", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFFB45309))
+                    Text("Push-back seats", fontSize = 9.sp, color = Color(0xFFD97706))
+                }
+            }
+        }
+
+        // Passenger Roster List or Empty State (Image 1)
+        if (filteredPassengers.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = RedbusCrimson.copy(alpha = 0.12f),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(p.seatNumber, fontWeight = FontWeight.Black, color = RedbusCrimson, fontSize = 12.sp)
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("${p.passengerName} (${p.age ?: 25} yrs • ${p.gender ?: "M"})", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("Boarding: ${p.boardingPoint ?: "Majestic"}", fontSize = 11.sp, color = Color.Gray)
-                            Text("PNR: ${p.pnr} • ${p.contactPhone ?: "+91 9876543210"}", fontSize = 11.sp, color = Color(0xFF0284C7))
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = RedbusCrimson.copy(alpha = 0.1f),
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Description, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(28.dp))
                         }
                     }
-                    Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF10B981).copy(alpha = 0.15f)) {
-                        Text("BOOKED", color = Color(0xFF059669), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+
+                    Text("No Passengers Booked for $manifestDate", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(
+                        text = "There are currently no passenger reservations for this journey date. Switch the date picker above or check active daily schedules.",
+                        fontSize = 11.5.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 15.sp
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                selectedDatePreset = "Today"
+                                manifestDate = LocalDate.now().toString()
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("View Today's Manifest", fontSize = 11.sp)
+                        }
+
+                        Button(
+                            onClick = {
+                                selectedDatePreset = "Tomorrow"
+                                manifestDate = LocalDate.now().plusDays(1).toString()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
+                        ) {
+                            Text("View Tomorrow's Manifest", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        } else {
+            // Passenger cards list
+            filteredPassengers.forEachIndexed { idx, p ->
+                val passengerKey = "${p.pnr}_${p.seatNumber}"
+                val isBoarded = boardedMap[passengerKey] == true
+                val isLower = p.berthLabel == "Lower Berth" || (p.deck == "LOWER" && p.seatType == "SLEEPER")
+                val isUpper = p.berthLabel == "Upper Berth" || (p.deck == "UPPER" && p.seatType == "SLEEPER")
+                val isSeater = p.seatType == "SEATER" || p.berthLabel == "Seater"
+
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (isBoarded) Color(0xFFF0FDF4) else MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isBoarded) Color(0xFFA7F3D0) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Conductor checkbox
+                                IconButton(
+                                    onClick = {
+                                        boardedMap[passengerKey] = !isBoarded
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isBoarded) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                        contentDescription = "Verify",
+                                        tint = if (isBoarded) Color(0xFF059669) else Color.Gray,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Text("#${idx + 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+
+                                Surface(shape = CircleShape, color = Color(0xFFF1F5F9), modifier = Modifier.size(28.dp)) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(p.passengerName.firstOrNull()?.toString()?.uppercase() ?: "P", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
+
+                                Column {
+                                    Text(
+                                        text = p.passengerName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        textDecoration = if (isBoarded) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+                                    )
+                                    Text("${p.gender ?: "Adult"}, ${p.age ?: 25} yrs", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+
+                            // Seat tag
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = when {
+                                    isLower -> Color(0xFFECFDF5)
+                                    isUpper -> Color(0xFFEEF2FF)
+                                    else -> Color(0xFFFFFBEB)
+                                },
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    when {
+                                        isLower -> Color(0xFFA7F3D0)
+                                        isUpper -> Color(0xFFC7D2FE)
+                                        else -> Color(0xFFFDE68A)
+                                    }
+                                )
+                            ) {
+                                Text(
+                                    text = p.seatDisplay ?: p.seatNumber,
+                                    color = when {
+                                        isLower -> Color(0xFF065F46)
+                                        isUpper -> Color(0xFF4338CA)
+                                        else -> Color(0xFFB45309)
+                                    },
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        // Route & Bus
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("${p.sourceCity ?: "Bangalore"} → ${p.destinationCity ?: "Chennai"}", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                            Text("${p.busOperator ?: "Coach"} (${p.busType ?: "AC Sleeper"})", fontSize = 10.5.sp, color = Color.Gray)
+                        }
+
+                        // Boarding & Dropping landmarks
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFF8FAFC))
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Boarding: ${p.boardingPoint ?: "Main Stand"} (${p.departureTime ?: "17:00"})",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Dropping: ${p.droppingPoint ?: "City Centre"}",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF475569)
+                                )
+                            }
+                        }
+
+                        // Contact & PNR
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Phone: ${p.contactPhone ?: "+91 9876543210"}", fontSize = 11.sp, color = Color(0xFF0284C7), fontWeight = FontWeight.SemiBold)
+                            Text("PNR: ${p.pnr}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RedbusCrimson)
+                        }
                     }
                 }
             }

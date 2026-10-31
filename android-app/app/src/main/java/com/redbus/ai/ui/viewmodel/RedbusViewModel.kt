@@ -1505,6 +1505,47 @@ class RedbusViewModel(
         }
     }
 
+    fun updateBus(
+        busId: Long,
+        operatorName: String,
+        busType: String,
+        registrationNumber: String?,
+        totalSeats: Int,
+        amenities: String?,
+        photoUrls: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.updateBus(
+                busId,
+                BusCreateRequest(
+                    operatorName = operatorName.trim(),
+                    busType = busType.trim(),
+                    registrationNumber = registrationNumber?.trim(),
+                    totalSeats = totalSeats,
+                    amenities = amenities?.trim(),
+                    photoUrls = photoUrls
+                )
+            ).fold(
+                onSuccess = { updated ->
+                    _uiState.update {
+                        it.copy(
+                            operatorBuses = it.operatorBuses.map { b -> if (b.id == busId) updated else b },
+                            operatorActionMessage = "Bus ${updated.registrationNumber ?: ""} updated successfully"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to update bus")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
     fun deleteBus(busId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             repository.deleteBus(busId).fold(

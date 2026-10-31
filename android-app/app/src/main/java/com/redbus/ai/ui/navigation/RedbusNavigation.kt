@@ -426,6 +426,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             uiState = uiState,
                             onRefresh = viewModel::fetchOperatorDashboardData,
                             onCreateBus = viewModel::createBus,
+                            onUpdateBus = viewModel::updateBus,
                             onDeleteBus = viewModel::deleteBus,
                             onCreateSchedule = viewModel::createSchedule,
                             onApproveRefund = viewModel::approveRefund,

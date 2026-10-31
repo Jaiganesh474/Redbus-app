@@ -235,6 +235,10 @@ class RedbusRepository(
         runCatching { api.createBus(request) }
     }
 
+    suspend fun updateBus(id: Long, request: BusCreateRequest): Result<BusResponseDto> = withContext(Dispatchers.IO) {
+        runCatching { api.updateBus(id, request) }
+    }
+
     suspend fun deleteBus(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching { api.deleteBus(id) }
     }

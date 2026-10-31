@@ -181,6 +181,9 @@ interface RedbusApiService {
     @POST("operator/buses")
     suspend fun createBus(@Body request: BusCreateRequest): BusResponseDto
 
+    @PUT("operator/buses/{id}")
+    suspend fun updateBus(@Path("id") id: Long, @Body request: BusCreateRequest): BusResponseDto
+
     @DELETE("operator/buses/{id}")
     suspend fun deleteBus(@Path("id") id: Long)
 
