@@ -806,7 +806,7 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Scrollable Middle Ticket Card Container (Properly bounded so bottom Share button is ALWAYS completely visible)
                 Box(
@@ -1211,7 +1211,7 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
                 Button(
@@ -1256,7 +1256,7 @@ private fun ViewTicketDetailsModal(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
             }
         }
     }

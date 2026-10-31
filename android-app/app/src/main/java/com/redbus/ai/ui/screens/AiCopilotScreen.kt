@@ -77,7 +77,7 @@ fun AiCopilotScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "RedBus AI Travel Copilot",
+                        text = "Ray Travel Assistant",
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black
@@ -143,7 +143,7 @@ fun AiCopilotScreen(
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
-                    placeholder = { Text("Ask AI about seats, delays, or coupons...") },
+                    placeholder = { Text("Ask Ray about seats, delays, or coupons...") },
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier.weight(1f)
@@ -226,7 +226,7 @@ private fun ChatBubble(
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "RedBus AI Assistant",
+                            text = "Ray Travel Assistant",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             color = AiViolet

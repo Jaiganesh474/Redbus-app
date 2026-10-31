@@ -1896,7 +1896,7 @@ private fun AllFiltersSheetModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 36.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 20.dp)
                     ) {
                         Button(
                             onClick = onDismiss,
@@ -1908,6 +1908,7 @@ private fun AllFiltersSheetModal(
                         ) {
                             Text("Apply Filters", fontWeight = FontWeight.Black, fontSize = 16.sp)
                         }
+                        Spacer(modifier = Modifier.height(28.dp))
                     }
                 }
             }

@@ -42,7 +42,7 @@ sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVe
     data object Home : ScreenRoute("home", "Home", Icons.Default.Home)
     data object SearchResults : ScreenRoute("search_results", "Buses", Icons.Default.DirectionsBus)
     data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
-    data object AiCopilot : ScreenRoute("ai_copilot", "AI Help", Icons.Default.AutoAwesome)
+    data object AiCopilot : ScreenRoute("ai_copilot", "Ask Ray", Icons.Default.AutoAwesome)
     data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
     data object Checkout : ScreenRoute("checkout", "Checkout")

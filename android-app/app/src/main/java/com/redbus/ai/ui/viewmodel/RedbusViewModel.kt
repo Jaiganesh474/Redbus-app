@@ -112,7 +112,7 @@ data class RedbusUiState(
         ChatMessageItem(
             id = "welcome-live",
             role = "assistant",
-            content = "Welcome to redBus AI! Ask me about live bus schedules, seat availability, active coupons, or your bookings.",
+            content = "Welcome to Ray Travel Assistant! Ask me about live bus schedules, seat availability, active coupons, or your bookings.",
             suggestedPrompts = listOf(
                 "Show AC Sleeper buses from Bangalore to Chennai today",
                 "What coupons are active right now?",

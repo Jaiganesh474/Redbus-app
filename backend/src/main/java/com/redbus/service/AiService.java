@@ -451,7 +451,7 @@ public class AiService {
 
         // Intent 1: Greetings & Help
         if (lower.matches("^(hi|hello|hey|hola|good\\s*(morning|afternoon|evening)|namaste|start|help|sup).*") || lower.equals("hi") || lower.equals("hello")) {
-            reply = "👋 **Hello! Welcome to redBus AI Assistant.**\n\n" +
+            reply = "👋 **Hello! Welcome to Ray Travel Assistant.**\n\n" +
                     "I can assist you with:\n" +
                     "• 🚌 **Finding & Searching Buses** (e.g. *'Buses from Bangalore to Chennai tomorrow'*)\n" +
                     "• 🎫 **Checking PNR Status & Trip Details**\n" +
@@ -775,7 +775,7 @@ public class AiService {
         // If Gemini API is configured, attempt intelligent answer
         if (isApiKeyConfigured()) {
             try {
-                String prompt = "You are the RedBus Customer Support AI assistant (RAY). Ground your answer in RedBus bus booking services in India.\n" +
+                String prompt = "You are Ray Travel Assistant, an intelligent AI travel assistant for redBus. Ground your answer in RedBus bus booking services in India.\n" +
                         (context.isBlank() ? "" : "Knowledge Base:\n" + context + "\n\n") +
                         "User Question: " + question + "\n\n" +
                         "Provide a helpful, friendly, natural conversational response. Avoid cluttering with asterisks or raw markdown stars. Mention redBus features, booking, routes, or policies where appropriate.";
