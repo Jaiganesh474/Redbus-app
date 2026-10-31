@@ -43,10 +43,13 @@ sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVe
     data object Home : ScreenRoute("home", "Home", Icons.Default.Home)
     data object SearchResults : ScreenRoute("search_results", "Buses", Icons.Default.DirectionsBus)
     data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
+    data object OperatorHub : ScreenRoute("operator_hub", "Operator Hub", Icons.Default.Storefront)
     data object AiCopilot : ScreenRoute("ai_copilot", "Ask Ray", Icons.Default.AutoAwesome)
     data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
     data object Checkout : ScreenRoute("checkout", "Checkout")
+    data object OperatorLogin : ScreenRoute("operator_login", "Operator Login")
+    data object OperatorRegister : ScreenRoute("operator_register", "Operator Register")
 }
 
 private fun navigateToTab(navController: NavHostController, tabRoute: String) {
@@ -77,13 +80,24 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         }
     }
 
-    val bottomNavTabs = listOf(
-        ScreenRoute.Home,
-        ScreenRoute.SearchResults,
-        ScreenRoute.MyTrips,
-        ScreenRoute.AiCopilot,
-        ScreenRoute.Profile
-    )
+    // Dynamic Navigation Tabs: Replaces Bookings (MyTrips) with Operator Hub when role is Operator
+    val bottomNavTabs = if (uiState.isOperator) {
+        listOf(
+            ScreenRoute.Home,
+            ScreenRoute.SearchResults,
+            ScreenRoute.OperatorHub,
+            ScreenRoute.AiCopilot,
+            ScreenRoute.Profile
+        )
+    } else {
+        listOf(
+            ScreenRoute.Home,
+            ScreenRoute.SearchResults,
+            ScreenRoute.MyTrips,
+            ScreenRoute.AiCopilot,
+            ScreenRoute.Profile
+        )
+    }
 
     // Keep the Bottom Navigation Bar visible across all tabs; highlight "Buses" during seat/checkout flow
     val activeTabRoute = when (currentRoute) {
@@ -139,6 +153,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                         ScreenRoute.Home -> AppStrings.get("nav_home", uiState.selectedLanguage)
                                         ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
                                         ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
+                                        ScreenRoute.OperatorHub -> "Operator Hub"
                                         ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
                                         ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
                                         else -> tab.label
@@ -372,8 +387,99 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         },
                         onSelectLanguage = viewModel::setLanguage,
                         onToggleBookingForWomen = viewModel::toggleBookingForWomen,
+                        onNavigateToOperatorLogin = {
+                            navController.navigate(ScreenRoute.OperatorLogin.route)
+                        },
                         onDeactivateAccount = { viewModel.deactivateAccount { navController.navigate(ScreenRoute.Home.route) } },
                         onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } }
+                    )
+                }
+
+                composable(ScreenRoute.OperatorHub.route) {
+                    if (!uiState.isOperator) {
+                        OperatorLoginScreen(
+                            uiState = uiState,
+                            onLoginWithEmail = { email, pass ->
+                                viewModel.loginWithEmail(email, pass) {
+                                    navigateToTab(navController, ScreenRoute.OperatorHub.route)
+                                }
+                            },
+                            onRequestMobileOtp = viewModel::requestMobileOtp,
+                            onVerifyMobileOtp = { phone, otp ->
+                                viewModel.verifyMobileOtpAndLogin(phone, otp) {
+                                    navigateToTab(navController, ScreenRoute.OperatorHub.route)
+                                }
+                            },
+                            onNavigateToRegister = {
+                                navController.navigate(ScreenRoute.OperatorRegister.route)
+                            },
+                            onNavigateToPassengerLogin = {
+                                navigateToTab(navController, ScreenRoute.Profile.route)
+                            }
+                        )
+                    } else {
+                        OperatorHubScreen(
+                            uiState = uiState,
+                            onRefresh = viewModel::fetchOperatorDashboardData,
+                            onCreateBus = viewModel::createBus,
+                            onDeleteBus = viewModel::deleteBus,
+                            onCreateSchedule = viewModel::createSchedule,
+                            onApproveRefund = viewModel::approveRefund,
+                            onCreateCoupon = viewModel::createOperatorCoupon,
+                            onUpdateProfile = viewModel::updateOperatorProfile,
+                            onNavigateToSearch = {
+                                navigateToTab(navController, ScreenRoute.SearchResults.route)
+                            },
+                            onNavigateToAiHelp = {
+                                navigateToTab(navController, ScreenRoute.AiCopilot.route)
+                            }
+                        )
+                    }
+                }
+
+                composable(ScreenRoute.OperatorLogin.route) {
+                    OperatorLoginScreen(
+                        uiState = uiState,
+                        onLoginWithEmail = { email, pass ->
+                            viewModel.loginWithEmail(email, pass) {
+                                navigateToTab(navController, ScreenRoute.OperatorHub.route)
+                            }
+                        },
+                        onRequestMobileOtp = viewModel::requestMobileOtp,
+                        onVerifyMobileOtp = { phone, otp ->
+                            viewModel.verifyMobileOtpAndLogin(phone, otp) {
+                                navigateToTab(navController, ScreenRoute.OperatorHub.route)
+                            }
+                        },
+                        onNavigateToRegister = {
+                            navController.navigate(ScreenRoute.OperatorRegister.route)
+                        },
+                        onNavigateToPassengerLogin = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+
+                composable(ScreenRoute.OperatorRegister.route) {
+                    OperatorRegisterScreen(
+                        uiState = uiState,
+                        onRegisterOperator = { company, contact, email, phone, pass, onSuccess, onError ->
+                            viewModel.registerOperator(
+                                companyName = company,
+                                contactPerson = contact,
+                                email = email,
+                                phone = phone,
+                                password = pass,
+                                onSuccess = {
+                                    onSuccess()
+                                    navigateToTab(navController, ScreenRoute.OperatorHub.route)
+                                },
+                                onError = onError
+                            )
+                        },
+                        onNavigateToLogin = {
+                            navController.popBackStack()
+                        }
                     )
                 }
             }

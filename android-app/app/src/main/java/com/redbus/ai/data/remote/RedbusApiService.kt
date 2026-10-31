@@ -159,6 +159,63 @@ interface RedbusApiService {
     @POST("auth/delete-account")
     suspend fun deleteAccount(@Body body: Map<String, String>): Map<String, String>
 
+    // 11. Bus Operator Portal Endpoints
+    @POST("auth/operator/register")
+    suspend fun registerOperator(@Body request: OperatorRegisterRequest): AuthResponse
+
+    @GET("operator/me")
+    suspend fun getOperatorProfile(): OperatorDto
+
+    @PUT("operator/me")
+    suspend fun updateOperatorProfile(@Body request: UpdateOperatorProfileRequest): OperatorDto
+
+    @GET("operator/analytics/overview")
+    suspend fun getOperatorAnalytics(): OperatorAnalyticsDto
+
+    @GET("operator/bookings")
+    suspend fun getOperatorBookings(): List<OperatorBookingDto>
+
+    @GET("operator/buses")
+    suspend fun getOperatorBuses(): List<BusResponseDto>
+
+    @POST("operator/buses")
+    suspend fun createBus(@Body request: BusCreateRequest): BusResponseDto
+
+    @DELETE("operator/buses/{id}")
+    suspend fun deleteBus(@Path("id") id: Long)
+
+    @GET("operator/schedules")
+    suspend fun getOperatorSchedules(): List<ScheduleResponseDto>
+
+    @POST("operator/schedules")
+    suspend fun createSchedule(@Body request: ScheduleCreateRequest): ScheduleResponseDto
+
+    @GET("operator/manifest")
+    suspend fun getPassengerManifest(
+        @Query("date") date: String? = null,
+        @Query("busId") busId: Long? = null,
+        @Query("scheduleId") scheduleId: Long? = null
+    ): List<OperatorPassengerManifestDto>
+
+    @GET("operator/refunds")
+    suspend fun getOperatorRefunds(): List<OperatorRefundDto>
+
+    @POST("operator/refunds/{pnr}/approve")
+    suspend fun approveRefund(@Path("pnr") pnr: String): CancelBookingResponse
+
+    @GET("operator/ai/price-intelligence")
+    suspend fun getAiPriceIntelligence(): List<OperatorAiPriceIntelligenceDto>
+
+    @GET("operator/wallet/ledger")
+    suspend fun getOperatorWalletLedger(): OperatorWalletLedgerDto
+
+    @GET("operator/coupons")
+    suspend fun getOperatorCoupons(): List<Coupon>
+
+    @POST("operator/coupons")
+    suspend fun createOperatorCoupon(@Body request: CreateCouponRequest): Coupon
+
+
     companion object {
         fun create(): RedbusApiService {
             val authInterceptor = Interceptor { chain ->

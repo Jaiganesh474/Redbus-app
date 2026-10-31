@@ -123,7 +123,24 @@ data class RedbusUiState(
     ),
     val isAiTyping: Boolean = false,
     val selectedLanguage: String = SessionManager.getLanguage(),
-    val isBookingForWomen: Boolean = false
+    val isBookingForWomen: Boolean = false,
+    // Operator Portal State
+    val isOperator: Boolean = user?.let {
+        it.role.contains("OPERATOR", ignoreCase = true) || it.role.contains("ADMIN", ignoreCase = true)
+    } ?: false,
+    val operatorProfile: OperatorDto? = null,
+    val operatorAnalytics: OperatorAnalyticsDto? = null,
+    val operatorBookings: List<OperatorBookingDto> = emptyList(),
+    val operatorBuses: List<BusResponseDto> = emptyList(),
+    val operatorSchedules: List<ScheduleResponseDto> = emptyList(),
+    val operatorManifest: List<OperatorPassengerManifestDto> = emptyList(),
+    val operatorRefunds: List<OperatorRefundDto> = emptyList(),
+    val operatorPricingIntelligence: List<OperatorAiPriceIntelligenceDto> = emptyList(),
+    val operatorWalletLedger: OperatorWalletLedgerDto? = null,
+    val operatorCoupons: List<Coupon> = emptyList(),
+    val isOperatorLoading: Boolean = false,
+    val operatorActionMessage: String? = null,
+    val operatorErrorMessage: String? = null
 )
 
 class RedbusViewModel(
@@ -212,13 +229,18 @@ class RedbusViewModel(
         viewModelScope.launch {
             repository.getMe().onSuccess { freshUser ->
                 SessionManager.updateUser(freshUser)
+                val isOp = freshUser.role.contains("OPERATOR", ignoreCase = true) || freshUser.role.contains("ADMIN", ignoreCase = true)
                 _uiState.update {
                     it.copy(
                         user = freshUser,
                         isAuthenticated = true,
+                        isOperator = isOp,
                         contactEmail = freshUser.email,
                         contactPhone = freshUser.phone.orEmpty()
                     )
+                }
+                if (isOp) {
+                    fetchOperatorDashboardData()
                 }
             }
         }
@@ -244,18 +266,23 @@ class RedbusViewModel(
             repository.login(email, password)
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
+                    val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
                             user = res.user,
                             token = res.token,
                             isAuthenticated = true,
+                            isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
                             authSuccessMessage = "Logged in as ${res.user.name}"
                         )
                     }
                     refreshAuthenticatedAccountData()
+                    if (isOp) {
+                        fetchOperatorDashboardData()
+                    }
                     onSuccess()
                 }
                 .onFailure { err ->
@@ -344,6 +371,7 @@ class RedbusViewModel(
             repository.loginWithMobileOtp(formattedPhone, otp)
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
+                    val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
@@ -351,12 +379,16 @@ class RedbusViewModel(
                             user = res.user,
                             token = res.token,
                             isAuthenticated = true,
+                            isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
                             authSuccessMessage = "Logged in as ${res.user.name}"
                         )
                     }
                     refreshAuthenticatedAccountData()
+                    if (isOp) {
+                        fetchOperatorDashboardData()
+                    }
                     onSuccess()
                 }
                 .onFailure { err ->
@@ -377,6 +409,17 @@ class RedbusViewModel(
                 user = null,
                 token = null,
                 isAuthenticated = false,
+                isOperator = false,
+                operatorProfile = null,
+                operatorAnalytics = null,
+                operatorBookings = emptyList(),
+                operatorBuses = emptyList(),
+                operatorSchedules = emptyList(),
+                operatorManifest = emptyList(),
+                operatorRefunds = emptyList(),
+                operatorPricingIntelligence = emptyList(),
+                operatorWalletLedger = null,
+                operatorCoupons = emptyList(),
                 savedTravellers = emptyList(),
                 myBookings = emptyList(),
                 pnrSearchResult = null,
@@ -1323,6 +1366,310 @@ class RedbusViewModel(
                     )
                 }
             }
+        }
+    }
+
+    // ==========================================
+    // OPERATOR PORTAL ACTIONS
+    // ==========================================
+
+    fun fetchOperatorDashboardData() {
+        if (!_uiState.value.isOperator) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOperatorLoading = true, operatorErrorMessage = null) }
+
+            repository.getOperatorProfile().onSuccess { op ->
+                _uiState.update { it.copy(operatorProfile = op) }
+            }
+
+            repository.getOperatorAnalytics().onSuccess { analytics ->
+                _uiState.update { it.copy(operatorAnalytics = analytics) }
+            }
+
+            repository.getOperatorBuses().onSuccess { buses ->
+                _uiState.update { it.copy(operatorBuses = buses) }
+            }
+
+            repository.getOperatorSchedules().onSuccess { schedules ->
+                _uiState.update { it.copy(operatorSchedules = schedules) }
+            }
+
+            repository.getOperatorBookings().onSuccess { bookings ->
+                _uiState.update { it.copy(operatorBookings = bookings) }
+            }
+
+            repository.getPassengerManifest(null, null, null).onSuccess { manifest ->
+                _uiState.update { it.copy(operatorManifest = manifest) }
+            }
+
+            repository.getOperatorRefunds().onSuccess { refunds ->
+                _uiState.update { it.copy(operatorRefunds = refunds) }
+            }
+
+            repository.getAiPriceIntelligence().onSuccess { pricing ->
+                _uiState.update { it.copy(operatorPricingIntelligence = pricing) }
+            }
+
+            repository.getOperatorWalletLedger().onSuccess { ledger ->
+                _uiState.update { it.copy(operatorWalletLedger = ledger) }
+            }
+
+            repository.getOperatorCoupons().onSuccess { coupons ->
+                _uiState.update { it.copy(operatorCoupons = coupons) }
+            }
+
+            _uiState.update { it.copy(isOperatorLoading = false) }
+        }
+    }
+
+    fun registerOperator(
+        companyName: String,
+        contactPerson: String,
+        email: String,
+        phone: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAuthLoading = true, authError = null) }
+            repository.registerOperator(
+                OperatorRegisterRequest(
+                    companyName = companyName.trim(),
+                    contactPerson = contactPerson.trim(),
+                    email = email.trim(),
+                    phone = phone.trim(),
+                    password = password
+                )
+            ).fold(
+                onSuccess = { res ->
+                    SessionManager.saveSession(res.token, res.user)
+                    _uiState.update {
+                        it.copy(
+                            user = res.user,
+                            token = res.token,
+                            isAuthenticated = true,
+                            isOperator = true,
+                            isAuthLoading = false,
+                            authSuccessMessage = "Operator fleet registered successfully!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to register operator account")
+                    _uiState.update { it.copy(isAuthLoading = false, authError = msg) }
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun createBus(
+        operatorName: String,
+        busType: String,
+        regNo: String?,
+        totalSeats: Int,
+        amenities: String?,
+        photoUrls: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.createBus(
+                BusCreateRequest(
+                    operatorName = operatorName.trim(),
+                    busType = busType.trim(),
+                    registrationNumber = regNo?.trim(),
+                    totalSeats = totalSeats,
+                    amenities = amenities,
+                    photoUrls = photoUrls
+                )
+            ).fold(
+                onSuccess = { created ->
+                    _uiState.update {
+                        it.copy(
+                            operatorBuses = listOf(created) + it.operatorBuses,
+                            operatorActionMessage = "Bus ${created.busType} added to fleet!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to create bus")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun deleteBus(busId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            repository.deleteBus(busId).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            operatorBuses = it.operatorBuses.filter { b -> b.id != busId },
+                            operatorActionMessage = "Bus removed from fleet"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to delete bus")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun createSchedule(
+        busId: Long,
+        sourceCity: String,
+        destinationCity: String,
+        departureTime: String,
+        arrivalTime: String,
+        basePrice: Double,
+        operatingDays: String = "DAILY",
+        validFrom: String,
+        validTo: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.createSchedule(
+                ScheduleCreateRequest(
+                    busId = busId,
+                    sourceCity = sourceCity.trim(),
+                    destinationCity = destinationCity.trim(),
+                    departureTime = departureTime.trim(),
+                    arrivalTime = arrivalTime.trim(),
+                    basePrice = basePrice,
+                    operatingDays = operatingDays,
+                    validFrom = validFrom,
+                    validTo = validTo
+                )
+            ).fold(
+                onSuccess = { created ->
+                    _uiState.update {
+                        it.copy(
+                            operatorSchedules = listOf(created) + it.operatorSchedules,
+                            operatorActionMessage = "Route schedule published successfully!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to publish schedule")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun approveRefund(pnr: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            repository.approveRefund(pnr).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            operatorRefunds = it.operatorRefunds.map { r ->
+                                if (r.pnr == pnr) r.copy(refundStatus = "APPROVED") else r
+                            },
+                            operatorActionMessage = "Refund for PNR $pnr approved!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to approve refund")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun createOperatorCoupon(
+        code: String,
+        discountPercentage: Double,
+        maxDiscountAmount: Double,
+        minBookingAmount: Double,
+        validFrom: String?,
+        validTo: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.createOperatorCoupon(
+                CreateCouponRequest(
+                    code = code.trim().uppercase(),
+                    discountPercentage = discountPercentage,
+                    maxDiscountAmount = maxDiscountAmount,
+                    minBookingAmount = minBookingAmount,
+                    validFrom = validFrom,
+                    validTo = validTo
+                )
+            ).fold(
+                onSuccess = { coupon ->
+                    _uiState.update {
+                        it.copy(
+                            operatorCoupons = listOf(coupon) + it.operatorCoupons,
+                            operatorActionMessage = "Coupon ${coupon.code} created and live!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to create coupon")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun fetchPassengerManifest(date: String?, busId: Long?, scheduleId: Long?) {
+        viewModelScope.launch {
+            repository.getPassengerManifest(date, busId, scheduleId).onSuccess { manifest ->
+                _uiState.update { it.copy(operatorManifest = manifest) }
+            }
+        }
+    }
+
+    fun updateOperatorProfile(
+        companyName: String?,
+        contactPerson: String?,
+        phone: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.updateOperatorProfile(
+                UpdateOperatorProfileRequest(
+                    companyName = companyName?.trim(),
+                    contactPerson = contactPerson?.trim(),
+                    phone = phone?.trim()
+                )
+            ).fold(
+                onSuccess = { updated ->
+                    _uiState.update {
+                        it.copy(
+                            operatorProfile = updated,
+                            operatorActionMessage = "Operator profile updated successfully"
+                        )
+                    }
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to update profile")
+                    onError(msg)
+                }
+            )
         }
     }
 

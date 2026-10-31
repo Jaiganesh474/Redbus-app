@@ -205,4 +205,73 @@ class RedbusRepository(
     suspend fun deleteAccount(password: String): Result<Map<String, String>> = withContext(Dispatchers.IO) {
         runCatching { api.deleteAccount(mapOf("password" to password)) }
     }
+
+    // Operator Endpoints
+    suspend fun registerOperator(request: OperatorRegisterRequest): Result<AuthResponse> = withContext(Dispatchers.IO) {
+        runCatching { api.registerOperator(request) }
+    }
+
+    suspend fun getOperatorProfile(): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorProfile() }
+    }
+
+    suspend fun updateOperatorProfile(request: UpdateOperatorProfileRequest): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.updateOperatorProfile(request) }
+    }
+
+    suspend fun getOperatorAnalytics(): Result<OperatorAnalyticsDto> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorAnalytics() }
+    }
+
+    suspend fun getOperatorBookings(): Result<List<OperatorBookingDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorBookings() }
+    }
+
+    suspend fun getOperatorBuses(): Result<List<BusResponseDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorBuses() }
+    }
+
+    suspend fun createBus(request: BusCreateRequest): Result<BusResponseDto> = withContext(Dispatchers.IO) {
+        runCatching { api.createBus(request) }
+    }
+
+    suspend fun deleteBus(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { api.deleteBus(id) }
+    }
+
+    suspend fun getOperatorSchedules(): Result<List<ScheduleResponseDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorSchedules() }
+    }
+
+    suspend fun createSchedule(request: ScheduleCreateRequest): Result<ScheduleResponseDto> = withContext(Dispatchers.IO) {
+        runCatching { api.createSchedule(request) }
+    }
+
+    suspend fun getPassengerManifest(date: String?, busId: Long?, scheduleId: Long?): Result<List<OperatorPassengerManifestDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getPassengerManifest(date, busId, scheduleId) }
+    }
+
+    suspend fun getOperatorRefunds(): Result<List<OperatorRefundDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorRefunds() }
+    }
+
+    suspend fun approveRefund(pnr: String): Result<CancelBookingResponse> = withContext(Dispatchers.IO) {
+        runCatching { api.approveRefund(pnr) }
+    }
+
+    suspend fun getAiPriceIntelligence(): Result<List<OperatorAiPriceIntelligenceDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getAiPriceIntelligence() }
+    }
+
+    suspend fun getOperatorWalletLedger(): Result<OperatorWalletLedgerDto> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorWalletLedger() }
+    }
+
+    suspend fun getOperatorCoupons(): Result<List<Coupon>> = withContext(Dispatchers.IO) {
+        runCatching { api.getOperatorCoupons() }
+    }
+
+    suspend fun createOperatorCoupon(request: CreateCouponRequest): Result<Coupon> = withContext(Dispatchers.IO) {
+        runCatching { api.createOperatorCoupon(request) }
+    }
 }

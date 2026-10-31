@@ -1580,7 +1580,8 @@ fun ProfileAndWalletScreen(
     onDeleteAccount: (String) -> Unit = {},
     onNavigateToBookings: () -> Unit = {},
     onSelectLanguage: (String) -> Unit = {},
-    onToggleBookingForWomen: (Boolean) -> Unit = {}
+    onToggleBookingForWomen: (Boolean) -> Unit = {},
+    onNavigateToOperatorLogin: () -> Unit = {}
 ) {
     if (!uiState.isAuthenticated || uiState.user == null) {
         LiveAuthScreen(
@@ -1589,7 +1590,8 @@ fun ProfileAndWalletScreen(
             onRegisterAccount = onRegisterAccount,
             onRequestMobileOtp = onRequestMobileOtp,
             onVerifyMobileOtp = onVerifyMobileOtp,
-            onToggleDarkTheme = onToggleDarkTheme
+            onToggleDarkTheme = onToggleDarkTheme,
+            onNavigateToOperatorLogin = onNavigateToOperatorLogin
         )
         return
     }
@@ -3762,7 +3764,8 @@ private fun LiveAuthScreen(
     onRegisterAccount: (String, String, String, String) -> Unit,
     onRequestMobileOtp: (String) -> Unit,
     onVerifyMobileOtp: (String, String) -> Unit,
-    onToggleDarkTheme: () -> Unit
+    onToggleDarkTheme: () -> Unit,
+    onNavigateToOperatorLogin: () -> Unit = {}
 ) {
     var authTab by remember { mutableIntStateOf(0) } // 0 = Email Login, 1 = Mobile OTP, 2 = Sign Up
     var name by remember { mutableStateOf("") }
@@ -4065,6 +4068,31 @@ private fun LiveAuthScreen(
                                 )
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToOperatorLogin() }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🚌 Bus Operator or Fleet Owner? ",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Access Partner Portal →",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RedbusCrimson
+                        )
                     }
                 }
             }
