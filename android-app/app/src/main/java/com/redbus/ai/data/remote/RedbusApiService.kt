@@ -218,6 +218,12 @@ interface RedbusApiService {
     @POST("operator/coupons")
     suspend fun createOperatorCoupon(@Body request: CreateCouponRequest): Coupon
 
+    @DELETE("operator/coupons/{id}")
+    suspend fun deleteOperatorCoupon(@Path("id") id: Long)
+
+    @DELETE("coupons/{id}")
+    suspend fun deleteCoupon(@Path("id") id: Long)
+
 
     companion object {
         fun create(): RedbusApiService {

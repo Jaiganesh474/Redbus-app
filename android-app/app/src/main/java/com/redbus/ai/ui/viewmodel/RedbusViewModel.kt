@@ -210,7 +210,12 @@ class RedbusViewModel(
 
         viewModelScope.launch {
             repository.getAvailableCoupons().onSuccess { coupons ->
-                _uiState.update { it.copy(availableCoupons = coupons) }
+                _uiState.update {
+                    it.copy(
+                        availableCoupons = coupons,
+                        operatorCoupons = if (it.operatorCoupons.isEmpty()) coupons else it.operatorCoupons
+                    )
+                }
             }
         }
 
@@ -1418,6 +1423,16 @@ class RedbusViewModel(
                 _uiState.update { it.copy(operatorCoupons = coupons) }
             }
 
+            repository.getAvailableCoupons().onSuccess { availCoupons ->
+                _uiState.update { state ->
+                    val combined = (state.operatorCoupons + availCoupons).distinctBy { it.code }
+                    state.copy(
+                        operatorCoupons = combined,
+                        availableCoupons = availCoupons
+                    )
+                }
+            }
+
             _uiState.update { it.copy(isOperatorLoading = false) }
         }
     }
@@ -1659,15 +1674,86 @@ class RedbusViewModel(
                 onSuccess = { coupon ->
                     _uiState.update {
                         it.copy(
-                            operatorCoupons = listOf(coupon) + it.operatorCoupons,
+                            operatorCoupons = listOf(coupon) + it.operatorCoupons.filterNot { c -> c.code.equals(coupon.code, ignoreCase = true) },
                             operatorActionMessage = "Coupon ${coupon.code} created and live!"
                         )
                     }
-                    fetchOperatorDashboardData()
+                    refreshCoupons()
                     onSuccess()
                 },
                 onFailure = { err ->
                     val msg = extractErrorMessage(err, "Failed to create coupon")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun refreshCoupons() {
+        viewModelScope.launch {
+            val opCoupons = repository.getOperatorCoupons().getOrNull() ?: emptyList()
+            val availCoupons = repository.getAvailableCoupons().getOrNull() ?: emptyList()
+            val merged = (opCoupons + availCoupons).distinctBy { it.code }
+            _uiState.update { state ->
+                state.copy(
+                    operatorCoupons = if (merged.isNotEmpty()) merged else state.operatorCoupons,
+                    availableCoupons = if (availCoupons.isNotEmpty()) availCoupons else state.availableCoupons
+                )
+            }
+        }
+    }
+
+    fun createQuick2PercentCoupon(
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val randomSuffix = (10..99).random()
+        val code = "OP2SAVE$randomSuffix"
+        val expiryDate = LocalDate.now().plusDays(30).toString()
+        val today = LocalDate.now().toString()
+        createOperatorCoupon(
+            code = code,
+            discountPercentage = 2.0,
+            maxDiscountAmount = 150.0,
+            minBookingAmount = 100.0,
+            validFrom = today,
+            validTo = expiryDate,
+            onSuccess = {
+                _uiState.update {
+                    it.copy(operatorActionMessage = "Live coupon $code (2% OFF) activated immediately!")
+                }
+                refreshCoupons()
+                onSuccess()
+            },
+            onError = onError
+        )
+    }
+
+    fun deleteOperatorCoupon(
+        id: Long,
+        code: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            repository.deleteOperatorCoupon(id).fold(
+                onSuccess = {
+                    _uiState.update { state ->
+                        state.copy(
+                            operatorCoupons = state.operatorCoupons.filterNot {
+                                (id > 0 && it.id == id) || it.code.equals(code, ignoreCase = true)
+                            },
+                            availableCoupons = state.availableCoupons.filterNot {
+                                (id > 0 && it.id == id) || it.code.equals(code, ignoreCase = true)
+                            },
+                            operatorActionMessage = "Coupon $code deactivated successfully."
+                        )
+                    }
+                    refreshCoupons()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to deactivate coupon $code")
                     onError(msg)
                 }
             )

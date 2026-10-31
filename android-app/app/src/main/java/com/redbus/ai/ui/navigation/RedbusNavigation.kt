@@ -431,6 +431,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             onCreateSchedule = viewModel::createSchedule,
                             onApproveRefund = viewModel::approveRefund,
                             onCreateCoupon = viewModel::createOperatorCoupon,
+                            onCreateQuick2PercentCoupon = viewModel::createQuick2PercentCoupon,
+                            onDeleteCoupon = viewModel::deleteOperatorCoupon,
                             onUpdateProfile = { comp, cont, ph, kyc, bank, sc, er ->
                                 viewModel.updateOperatorProfile(comp, cont, ph, kyc, bank, sc, er)
                             },

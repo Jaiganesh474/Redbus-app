@@ -814,6 +814,8 @@ fun OperatorHubScreen(
     onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit,
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
     onCreateCoupon: (String, Double, Double, Double, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
+    onCreateQuick2PercentCoupon: (() -> Unit, (String) -> Unit) -> Unit = { _, _ -> },
+    onDeleteCoupon: (Long, String, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _ -> },
     onUpdateProfile: (String?, String?, String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToAiHelp: () -> Unit
@@ -1079,11 +1081,18 @@ fun OperatorHubScreen(
                     }
                 }
                 7 -> {
-                    // COUPONS TAB
+                    // COUPONS TAB (Matching Web Portal: redbusai.app/operator Coupons)
                     item {
                         CouponsTabContent(
                             uiState = uiState,
-                            onCreateCouponClick = { showCreateCouponModal = true }
+                            onCreateCouponClick = { showCreateCouponModal = true },
+                            onQuick2PercentClick = {
+                                onCreateQuick2PercentCoupon({}, {})
+                            },
+                            onDeleteCouponClick = { id, code ->
+                                onDeleteCoupon(id, code, {}, {})
+                            },
+                            onRefreshClick = onRefresh
                         )
                     }
                 }
@@ -3204,66 +3213,602 @@ private fun PassengerManifestTabContent(
 }
 
 /**
- * 7. Coupons Tab Content
+ * 7. Coupons Tab Content (Matching Web Portal: https://www.redbusai.app/operator Coupons)
  */
 @Composable
 private fun CouponsTabContent(
     uiState: RedbusUiState,
-    onCreateCouponClick: () -> Unit
+    onCreateCouponClick: () -> Unit,
+    onQuick2PercentClick: () -> Unit,
+    onDeleteCouponClick: (Long, String) -> Unit,
+    onRefreshClick: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("Operator Live Coupons", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text("Promotional discount codes for your fleet", fontSize = 12.sp, color = Color.Gray)
-            }
-            Button(
-                onClick = onCreateCouponClick,
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+    var couponToDelete by remember { mutableStateOf<Coupon?>(null) }
+    var isQuickPromoLoading by remember { mutableStateOf(false) }
+
+    // Merge operator coupons with availableCoupons so live public coupons (FIRSTBUS, RBTRIP, SAVE2, OP2SAVE...)
+    // and operator custom coupons are both displayed seamlessly
+    val displayCoupons = remember(uiState.operatorCoupons, uiState.availableCoupons) {
+        val map = linkedMapOf<String, Coupon>()
+        uiState.operatorCoupons.forEach { c -> map[c.code] = c }
+        uiState.availableCoupons.forEach { c ->
+            if (!map.containsKey(c.code)) map[c.code] = c
+        }
+        map.values.toList()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Top Header Row (Matching Image Header & Action Buttons)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Create", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.ConfirmationNumber,
+                            contentDescription = null,
+                            tint = RedbusCrimson,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Promotions & Live Coupons",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Create instant discount codes for passengers booking your buses. All coupons go live immediately!",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        lineHeight = 16.sp
+                    )
+                }
+
+                // Refresh button
+                IconButton(
+                    onClick = onRefreshClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Sync Coupons",
+                        tint = RedbusCrimson
+                    )
+                }
+            }
+
+            // Action Buttons: "⚡ 1-Click 2% Live Promo" & "+ Create Custom Coupon"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // 1-Click 2% Live Promo (Gradient Emerald-Teal)
+                Button(
+                    onClick = {
+                        isQuickPromoLoading = true
+                        onQuick2PercentClick()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF059669),
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFF059669), Color(0xFF0D9488))
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text("⚡", fontSize = 14.sp)
+                            Text(
+                                text = "1-Click 2% Live Promo",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+                }
+
+                // Create Custom Coupon (Crimson Red)
+                Button(
+                    onClick = onCreateCouponClick,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RedbusCrimson,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Create Custom Coupon",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
 
-        val coupons = uiState.operatorCoupons.ifEmpty {
-            listOf(
-                Coupon(id = 1, code = "FIRSTBUS", discountPercentage = 15, maxDiscountAmount = 150.0, minBookingAmount = 500.0),
-                Coupon(id = 2, code = "WEEKEND20", discountPercentage = 20, maxDiscountAmount = 250.0, minBookingAmount = 800.0),
-                Coupon(id = 3, code = "SUPERFAST", discountPercentage = 10, maxDiscountAmount = 100.0, minBookingAmount = 400.0)
-            )
-        }
-
-        coupons.forEach { c ->
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        // Action feedback message
+        uiState.operatorActionMessage?.let { msg ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFDCFCE7),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF15803D),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = msg,
+                        color = Color(0xFF166534),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // Instant Live Alert Banner (Matching Image: Green Banner with % and REAL-TIME SYNC)
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFFECFDF5),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // % Icon Badge
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFD1FAE5),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "%",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp,
+                                color = Color(0xFF047857)
+                            )
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Instant 2% to 50% Passenger Booking Discounts",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.5.sp,
+                            color = Color(0xFF064E3B)
+                        )
+                        Text(
+                            text = "Coupons published here are instantly discoverable by travellers on the checkout page and can be applied with 1 click.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF065F46),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Real-time sync badge
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFA7F3D0).copy(alpha = 0.8f)
+                ) {
+                    Text(
+                        text = "REAL-TIME SYNC",
+                        color = Color(0xFF064E3B),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Coupons List / Grid (Matching Image Coupon Cards)
+        if (displayCoupons.isEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFFEF2F2),
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.ConfirmationNumber,
+                                contentDescription = null,
+                                tint = RedbusCrimson,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "No Custom Coupons Created Yet",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                    Text(
+                        text = "Attract more passengers to your routes! Create a 2% or 5% discount coupon to boost your occupancy.",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = onQuick2PercentClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                        ) {
+                            Text("⚡ Create 2% Promo Instantly", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = onCreateCouponClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                        ) {
+                            Text("+ Custom Coupon", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        } else {
+            displayCoupons.forEach { coupon ->
+                CouponPromotionCard(
+                    coupon = coupon,
+                    onDeleteClick = {
+                        couponToDelete = coupon
+                    }
+                )
+            }
+        }
+    }
+
+    // Confirmation Dialog: Deactivate / Delete Coupon
+    couponToDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { couponToDelete = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = Color(0xFFDC2626)
+                )
+            },
+            title = {
+                Text(
+                    text = "Deactivate Coupon ${target.code}?",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 17.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete and deactivate coupon ${target.code}? Passengers will no longer be able to discover or apply this discount at checkout.",
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = target.id
+                        val code = target.code
+                        couponToDelete = null
+                        onDeleteCouponClick(id, code)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Deactivate", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { couponToDelete = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Individual Coupon Card Matching Image from redbusai.app/operator
+ */
+@Composable
+private fun CouponPromotionCard(
+    coupon: Coupon,
+    onDeleteClick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Card Top Row: Code Pill + LIVE Pill vs. Discount % OFF
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                // Left: Code & Title
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Code badge with light pink bg and red border
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFFEF2F2),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA))
+                        ) {
+                            Text(
+                                text = coupon.code,
+                                color = RedbusCrimson,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.5.sp,
+                                letterSpacing = 0.5.sp,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        // LIVE status pill
+                        val isLive = coupon.isActive ?: true
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isLive) Color(0xFFDCFCE7) else Color(0xFFF1F5F9)
+                        ) {
+                            Text(
+                                text = if (isLive) "LIVE" else "INACTIVE",
+                                color = if (isLive) Color(0xFF166534) else Color(0xFF64748B),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = coupon.displayTitle,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Text(
+                        text = coupon.displayDescription,
+                        fontSize = 11.5.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Right: Big % OFF (Matching Image: Green bold discount number)
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "${coupon.discountPercentage.toInt()}%",
+                        color = Color(0xFF059669),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = "OFF",
+                        color = Color.Gray,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Card Middle: 3-Column Stats Box (MAX CAP | MIN BOOKING | REDEMPTIONS)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(c.code, fontWeight = FontWeight.Black, fontSize = 16.sp, color = RedbusCrimson)
-                        }
-                        Text("${c.discountPercentage.toInt()}% OFF up to ₹${c.maxDiscountAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Text("Min booking: ₹${c.minBookingAmount.toInt()}", fontSize = 11.sp, color = Color.Gray)
+                    // Column 1: Max Cap
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "MAX CAP",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "₹${coupon.maxDiscountAmount.toInt()}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
-                    Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF10B981).copy(alpha = 0.15f)) {
-                        Text("ACTIVE", color = Color(0xFF059669), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color(0xFFE2E8F0))
+                    )
+
+                    // Column 2: Min Booking
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "MIN BOOKING",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "₹${coupon.minBookingAmount.toInt()}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color(0xFFE2E8F0))
+                    )
+
+                    // Column 3: Redemptions
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "REDEMPTIONS",
+                            color = Color.Gray,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${coupon.timesUsed ?: 0}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Color(0xFF7C3AED)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = Color(0xFFF1F5F9))
+
+            // Card Footer: Expiry Date + Trash Delete Icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "Expires: ${coupon.displayExpiry}",
+                        fontSize = 11.5.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                // Delete Trash Button
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Coupon",
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

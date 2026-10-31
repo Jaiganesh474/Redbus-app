@@ -1603,6 +1603,7 @@ fun ProfileAndWalletScreen(
     val user = uiState.user
 
     // Modals & Sheets Visibility States
+    var showLiveCouponsModal by remember { mutableStateOf(false) }
     var showPersonalInformationModal by remember { mutableStateOf(false) }
     var showPassengersModal by remember { mutableStateOf(false) }
     var showHelpFaqModal by remember { mutableStateOf(false) }
@@ -1939,6 +1940,14 @@ fun ProfileAndWalletScreen(
                         trailingBadge = "₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)}",
                         onClick = onOpenWallet
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    AccountMenuRowItem(
+                        icon = Icons.Default.ConfirmationNumber,
+                        iconTint = RedbusCrimson,
+                        title = "Promotions & Live Coupons",
+                        trailingBadge = "${uiState.availableCoupons.size.coerceAtLeast(4)} Live",
+                        onClick = { showLiveCouponsModal = true }
+                    )
                 }
             }
         }
@@ -2099,6 +2108,18 @@ fun ProfileAndWalletScreen(
                 )
             }
         }
+    }
+
+    // 0. Modal: Promotions & Live Coupons (Synced with redbusai.app/operator)
+    if (showLiveCouponsModal) {
+        PassengerLiveCouponsModal(
+            coupons = uiState.availableCoupons.ifEmpty { uiState.operatorCoupons },
+            onDismiss = { showLiveCouponsModal = false },
+            onNavigateToOperatorHub = {
+                showLiveCouponsModal = false
+                onNavigateToOperatorLogin()
+            }
+        )
     }
 
     // 1. Modal: Personal Information
@@ -4090,6 +4111,324 @@ private fun LiveAuthScreen(
                         Text(
                             text = "Access Partner Portal →",
                             fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RedbusCrimson
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Passenger View Modal: Promotions & Live Coupons
+ * Fetches real-time synced coupons from https://redbus-api.duckdns.org/api/v1/coupons/available (redbusai.app/operator)
+ */
+@Composable
+private fun PassengerLiveCouponsModal(
+    coupons: List<Coupon>,
+    onDismiss: () -> Unit,
+    onNavigateToOperatorHub: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var copiedCode by remember { mutableStateOf<String?>(null) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.9f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp)
+                ) {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = RedbusCrimson.copy(alpha = 0.1f),
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.ConfirmationNumber,
+                                        contentDescription = null,
+                                        tint = RedbusCrimson,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "Promotions & Live Coupons",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 17.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Real-time discounts from redbusai.app",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Real-Time Sync Banner
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFECFDF5),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFD1FAE5),
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("%", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color(0xFF047857))
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Instant Passenger Booking Discounts",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF064E3B)
+                                    )
+                                    Text(
+                                        text = "Apply on checkout for immediate fare reduction",
+                                        fontSize = 10.5.sp,
+                                        color = Color(0xFF065F46)
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFFA7F3D0).copy(alpha = 0.8f)
+                            ) {
+                                Text(
+                                    text = "REAL-TIME SYNC",
+                                    color = Color(0xFF064E3B),
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    copiedCode?.let { code ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFDCFCE7),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "✓ Coupon code $code copied! Paste it during checkout.",
+                                color = Color(0xFF166534),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Coupons Scroll List
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(coupons) { coupon ->
+                            Card(
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = Color(0xFFFEF2F2),
+                                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA))
+                                                ) {
+                                                    Text(
+                                                        text = coupon.code,
+                                                        color = RedbusCrimson,
+                                                        fontFamily = FontFamily.Monospace,
+                                                        fontWeight = FontWeight.Black,
+                                                        fontSize = 13.sp,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    )
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFFDCFCE7)
+                                                ) {
+                                                    Text(
+                                                        text = "LIVE",
+                                                        color = Color(0xFF166534),
+                                                        fontSize = 9.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = coupon.displayTitle,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = coupon.displayDescription,
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "${coupon.discountPercentage.toInt()}%",
+                                                color = Color(0xFF059669),
+                                                fontSize = 22.sp,
+                                                fontWeight = FontWeight.Black
+                                            )
+                                            Text("OFF", color = Color.Gray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    // Stats Row
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceEvenly
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("MAX CAP", color = Color.Gray, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                                                Text("₹${coupon.maxDiscountAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("MIN BOOKING", color = Color.Gray, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                                                Text("₹${coupon.minBookingAmount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("EXPIRES", color = Color.Gray, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                                                Text(coupon.displayExpiry, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+
+                                    // Action: Copy Code Button
+                                    Button(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                            clipboard?.setPrimaryClip(
+                                                android.content.ClipData.newPlainText("Coupon Code", coupon.code)
+                                            )
+                                            copiedCode = coupon.code
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentPadding = PaddingValues(vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = if (copiedCode == coupon.code) "✓ COPIED TO CLIPBOARD" else "COPY CODE: ${coupon.code}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Operator Callout at Bottom
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToOperatorHub() }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Fleet Operator? ",
+                            fontSize = 11.5.sp,
+                            color = Color.Gray
+                        )
+                        Text(
+                            text = "Manage & create coupons in Operator Hub →",
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = RedbusCrimson
                         )

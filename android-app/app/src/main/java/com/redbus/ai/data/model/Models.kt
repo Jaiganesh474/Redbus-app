@@ -271,17 +271,35 @@ data class CancelBookingResponse(
 )
 
 data class Coupon(
-    val id: Int = 0,
-    val operatorId: Int? = null,
+    val id: Long = 0,
+    val operatorId: Long? = null,
     val operatorName: String? = null,
     val code: String = "",
     val title: String? = null,
     val description: String? = null,
-    val discountPercentage: Int = 0,
+    val discountPercentage: Double = 0.0,
     val maxDiscountAmount: Double = 0.0,
     val minBookingAmount: Double = 0.0,
-    val expiryDate: String? = null
-)
+    val validFrom: String? = null,
+    val validTo: String? = null,
+    val expiryDate: String? = null,
+    val usageLimit: Int? = null,
+    val timesUsed: Int? = null,
+    val isActive: Boolean? = true,
+    val createdAt: String? = null
+) {
+    val displayExpiry: String
+        get() = validTo?.takeIf { it.isNotBlank() } ?: expiryDate?.takeIf { it.isNotBlank() } ?: "Never"
+
+    val displayDiscountPercent: Int
+        get() = discountPercentage.toInt()
+
+    val displayTitle: String
+        get() = title?.takeIf { it.isNotBlank() } ?: "${displayDiscountPercent}% Off Live Promo"
+
+    val displayDescription: String
+        get() = description?.takeIf { it.isNotBlank() } ?: "Valid on bookings with min amount ₹${minBookingAmount.toInt()}"
+}
 
 data class ValidateCouponRequest(
     val code: String,

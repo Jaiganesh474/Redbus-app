@@ -278,4 +278,15 @@ class RedbusRepository(
     suspend fun createOperatorCoupon(request: CreateCouponRequest): Result<Coupon> = withContext(Dispatchers.IO) {
         runCatching { api.createOperatorCoupon(request) }
     }
+
+    suspend fun deleteOperatorCoupon(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            try {
+                api.deleteOperatorCoupon(id)
+            } catch (e: Exception) {
+                // Also attempt fallback to /coupons/{id}
+                api.deleteCoupon(id)
+            }
+        }
+    }
 }
