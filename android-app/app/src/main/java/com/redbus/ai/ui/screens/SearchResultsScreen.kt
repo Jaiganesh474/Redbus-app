@@ -1557,7 +1557,7 @@ private fun BusRouteCard3D(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${route.availableSeats} " + AppStrings.get("seats_left", uiState.selectedLanguage),
+                        text = "${route.availableSeats} " + AppStrings.get("seats_left"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (route.availableSeats <= 10) WarningAmber else RatingEmerald
@@ -1675,7 +1675,7 @@ private fun BusRouteCard3D(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp)
                 ) {
                     Text(
-                        text = AppStrings.get("view_seats", uiState.selectedLanguage),
+                        text = AppStrings.get("view_seats"),
                         fontWeight = FontWeight.Black,
                         fontSize = 13.sp
                     )
@@ -2123,7 +2123,7 @@ fun AskRayFloatingPillButton(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = AppStrings.get("ask_ray_btn", uiState.selectedLanguage),
+                    text = AppStrings.get("ask_ray_btn"),
                     color = Color.White,
                     fontWeight = FontWeight.Black,
                     fontSize = 15.sp,

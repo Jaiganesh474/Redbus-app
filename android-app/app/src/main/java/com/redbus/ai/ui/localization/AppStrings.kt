@@ -1,5 +1,7 @@
 package com.redbus.ai.ui.localization
 
+import com.redbus.ai.data.local.SessionManager
+
 /**
  * Multi-language localization dictionary for redBus AI Mobile Application.
  * Supports English, Tamil (தமிழ்), Hindi (हिंदी), Kannada (ಕನ್ನಡ), Telugu (తెలుగు), and Malayalam (മലയാളം).
@@ -429,8 +431,9 @@ object AppStrings {
         )
     )
 
-    fun get(key: String, selectedLanguage: String?): String {
-        val lang = Lang.parse(selectedLanguage)
+    fun get(key: String, selectedLanguage: String? = null): String {
+        val langName = selectedLanguage ?: SessionManager.getLanguage()
+        val lang = Lang.parse(langName)
         val dict = translations[key] ?: return key
         return dict[lang] ?: dict[Lang.ENGLISH] ?: key
     }

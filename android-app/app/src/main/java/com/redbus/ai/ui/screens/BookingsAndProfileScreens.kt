@@ -1253,7 +1253,7 @@ private fun ViewTicketDetailsModal(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = AppStrings.get("share_ticket", uiState.selectedLanguage),
+                        text = AppStrings.get("share_ticket"),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
