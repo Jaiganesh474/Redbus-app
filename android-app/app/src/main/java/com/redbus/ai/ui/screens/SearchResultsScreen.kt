@@ -56,6 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.ui.theme.*
+import com.redbus.ai.ui.localization.AppStrings
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import com.redbus.ai.ui.viewmodel.RouteFilter
 import java.time.LocalDate
@@ -697,7 +698,7 @@ fun SearchResultsScreen(
                                     modifier = Modifier.clickable { isFilterPanelExpanded = !isFilterPanelExpanded }
                                 ) {
                                     Text(
-                                        text = "Filter buses",
+                                        text = AppStrings.get("filter_buses", uiState.selectedLanguage),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.onSurface
@@ -742,7 +743,7 @@ fun SearchResultsScreen(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "All Filters",
+                                            text = AppStrings.get("all_filters", uiState.selectedLanguage),
                                             color = RedbusCrimson,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold
@@ -1055,7 +1056,7 @@ fun SearchResultsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${displayedRoutes.size} buses found",
+                                text = "${displayedRoutes.size} " + AppStrings.get("buses_found", uiState.selectedLanguage),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1066,7 +1067,7 @@ fun SearchResultsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "Sort by:",
+                                    text = AppStrings.get("sort_by", uiState.selectedLanguage),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1556,7 +1557,7 @@ private fun BusRouteCard3D(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${route.availableSeats} seats left",
+                        text = "${route.availableSeats} " + AppStrings.get("seats_left", uiState.selectedLanguage),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (route.availableSeats <= 10) WarningAmber else RatingEmerald
@@ -1674,7 +1675,7 @@ private fun BusRouteCard3D(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp)
                 ) {
                     Text(
-                        text = "View Seats",
+                        text = AppStrings.get("view_seats", uiState.selectedLanguage),
                         fontWeight = FontWeight.Black,
                         fontSize = 13.sp
                     )
@@ -2122,7 +2123,7 @@ fun AskRayFloatingPillButton(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Ask Ray",
+                    text = AppStrings.get("ask_ray_btn", uiState.selectedLanguage),
                     color = Color.White,
                     fontWeight = FontWeight.Black,
                     fontSize = 15.sp,

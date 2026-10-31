@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.redbus.ai.ui.localization.AppStrings
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,11 +45,20 @@ fun AiCopilotScreen(
     onSelectRoute: (RouteItem) -> Unit = {}
 ) {
     var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    // Auto scroll to bottom when messages update
+    LaunchedEffect(uiState.chatMessages.size, uiState.isAiTyping) {
+        if (uiState.chatMessages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.chatMessages.size - 1)
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .imePadding()
     ) {
         // AI Header Banner
         Box(
@@ -77,13 +88,13 @@ fun AiCopilotScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Ray Travel Assistant",
+                        text = AppStrings.get("ray_assistant_title", uiState.selectedLanguage),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        text = "Smart Seat Advisor • Delay Predictor • Fare Optimizer",
+                        text = AppStrings.get("ray_subtitle", uiState.selectedLanguage),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 12.sp
                     )
@@ -93,6 +104,7 @@ fun AiCopilotScreen(
 
         // Chat Messages Stream
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
@@ -129,10 +141,13 @@ fun AiCopilotScreen(
             }
         }
 
-        // Bottom Message Input Bar
+        // Bottom Message Input Bar with ime & navigationBars padding
         Surface(
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 10.dp
+            shadowElevation = 10.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
         ) {
             Row(
                 modifier = Modifier
@@ -143,7 +158,9 @@ fun AiCopilotScreen(
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
-                    placeholder = { Text("Ask Ray about seats, delays, or coupons...") },
+                    placeholder = {
+                        Text(AppStrings.get("ask_ray_placeholder", uiState.selectedLanguage))
+                    },
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier.weight(1f)

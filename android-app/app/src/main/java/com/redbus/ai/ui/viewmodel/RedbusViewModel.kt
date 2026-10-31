@@ -122,7 +122,7 @@ data class RedbusUiState(
         )
     ),
     val isAiTyping: Boolean = false,
-    val selectedLanguage: String = "English",
+    val selectedLanguage: String = SessionManager.getLanguage(),
     val isBookingForWomen: Boolean = false
 )
 
@@ -438,6 +438,7 @@ class RedbusViewModel(
     }
 
     fun setLanguage(lang: String) {
+        SessionManager.setLanguage(lang)
         _uiState.update { it.copy(selectedLanguage = lang) }
     }
 

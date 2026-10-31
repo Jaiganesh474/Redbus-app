@@ -10,6 +10,7 @@ object SessionManager {
     private const val KEY_TOKEN = "redbus_token"
     private const val KEY_USER = "redbus_user"
     private const val KEY_DARK_MODE = "redbus_dark_mode"
+    private const val KEY_LANGUAGE = "redbus_selected_language"
 
     private var prefs: SharedPreferences? = null
     private val gson = Gson()
@@ -70,6 +71,14 @@ object SessionManager {
 
     fun setDarkMode(enabled: Boolean) {
         prefs?.edit()?.putBoolean(KEY_DARK_MODE, enabled)?.apply()
+    }
+
+    fun getLanguage(): String {
+        return prefs?.getString(KEY_LANGUAGE, "English") ?: "English"
+    }
+
+    fun setLanguage(lang: String) {
+        prefs?.edit()?.putString(KEY_LANGUAGE, lang)?.apply()
     }
 }
 

@@ -49,6 +49,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.redbus.ai.data.model.BookingDetails
 import com.redbus.ai.ui.theme.*
+import com.redbus.ai.ui.localization.AppStrings
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import java.time.LocalDate
 import java.time.LocalTime
@@ -1250,7 +1251,7 @@ private fun ViewTicketDetailsModal(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Share your ticket",
+                        text = AppStrings.get("share_ticket", uiState.selectedLanguage),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1832,7 +1833,7 @@ fun ProfileAndWalletScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Try redBus in your language",
+                    text = AppStrings.get("try_redbus_in_your_language", uiState.selectedLanguage),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1872,7 +1873,7 @@ fun ProfileAndWalletScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "My details",
+                    text = AppStrings.get("my_details", uiState.selectedLanguage),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1916,7 +1917,7 @@ fun ProfileAndWalletScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Payments",
+                    text = AppStrings.get("payments", uiState.selectedLanguage),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -1942,7 +1943,7 @@ fun ProfileAndWalletScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "More",
+                    text = AppStrings.get("more", uiState.selectedLanguage),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground

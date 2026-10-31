@@ -37,6 +37,7 @@ import com.redbus.ai.ui.screens.*
 import com.redbus.ai.ui.theme.RedBusAITheme
 import com.redbus.ai.ui.theme.RedbusCrimson
 import com.redbus.ai.ui.viewmodel.RedbusViewModel
+import com.redbus.ai.ui.localization.AppStrings
 
 sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVector? = null) {
     data object Home : ScreenRoute("home", "Home", Icons.Default.Home)
@@ -131,8 +132,16 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 }
                             },
                             label = {
+                                val translatedLabel = when (tab) {
+                                    ScreenRoute.Home -> AppStrings.get("nav_home", uiState.selectedLanguage)
+                                    ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
+                                    ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
+                                    ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
+                                    ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
+                                    else -> tab.label
+                                }
                                 Text(
-                                    text = tab.label,
+                                    text = translatedLabel,
                                     fontSize = 11.sp,
                                     fontWeight = if (selected) FontWeight.Black else FontWeight.Medium
                                 )

@@ -64,6 +64,7 @@ import com.redbus.ai.data.model.Banner
 import com.redbus.ai.data.model.BookingDetails
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.ui.theme.*
+import com.redbus.ai.ui.localization.AppStrings
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import java.time.LocalDate
 import java.time.YearMonth
@@ -230,7 +231,7 @@ fun HomeScreen(
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Text(
-                                        text = "Wallet",
+                                        text = AppStrings.get("wallet", uiState.selectedLanguage),
                                         color = Color(0xFF1E293B),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -263,7 +264,7 @@ fun HomeScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.PersonOutline,
-                                        contentDescription = "My Account",
+                                        contentDescription = AppStrings.get("my_account", uiState.selectedLanguage),
                                         tint = Color(0xFF1E293B),
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -284,7 +285,7 @@ fun HomeScreen(
 
                     // Heading: "Book bus tickets"
                     Text(
-                        text = "Book bus tickets",
+                        text = AppStrings.get("book_bus_tickets", uiState.selectedLanguage),
                         fontSize = 23.sp,
                         fontWeight = FontWeight.Black,
                         color = if (uiState.isDarkTheme) Color.White else Color(0xFF111827)
@@ -315,7 +316,7 @@ fun HomeScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Lowest price guaranteed*",
+                                    text = AppStrings.get("lowest_price_guaranteed", uiState.selectedLanguage),
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
@@ -359,7 +360,7 @@ fun HomeScreen(
                                                 Spacer(modifier = Modifier.width(14.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        text = "From",
+                                                        text = AppStrings.get("from", uiState.selectedLanguage),
                                                         fontSize = 12.sp,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         fontWeight = FontWeight.Medium
@@ -399,7 +400,7 @@ fun HomeScreen(
                                                 Spacer(modifier = Modifier.width(14.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        text = "To",
+                                                        text = AppStrings.get("to", uiState.selectedLanguage),
                                                         fontSize = 12.sp,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         fontWeight = FontWeight.Medium
@@ -473,7 +474,7 @@ fun HomeScreen(
                                             Spacer(modifier = Modifier.width(14.dp))
                                             Column {
                                                 Text(
-                                                    text = "Date of Journey",
+                                                    text = AppStrings.get("date_of_journey", uiState.selectedLanguage),
                                                     fontSize = 12.sp,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     fontWeight = FontWeight.Medium
@@ -490,12 +491,12 @@ fun HomeScreen(
 
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             PinkDatePill(
-                                                label = "Today",
+                                                label = AppStrings.get("today", uiState.selectedLanguage),
                                                 selected = uiState.travelDate == todayStr,
                                                 onClick = { onSelectDate(todayStr) }
                                             )
                                             PinkDatePill(
-                                                label = "Tomorrow",
+                                                label = AppStrings.get("tomorrow", uiState.selectedLanguage),
                                                 selected = uiState.travelDate == tomorrowStr,
                                                 onClick = { onSelectDate(tomorrowStr) }
                                             )
@@ -528,13 +529,13 @@ fun HomeScreen(
                                             Spacer(modifier = Modifier.width(14.dp))
                                             Column {
                                                 Text(
-                                                    text = "Booking for women",
+                                                    text = AppStrings.get("booking_for_women", uiState.selectedLanguage),
                                                     fontSize = 15.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
-                                                    text = "Know more",
+                                                    text = AppStrings.get("know_more", uiState.selectedLanguage),
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium,
                                                     color = Color(0xFF2563EB),
@@ -586,7 +587,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
-                            text = "Search buses",
+                            text = AppStrings.get("search_buses", uiState.selectedLanguage),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -689,7 +690,7 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "AUTHORIZED & VERIFIED BUS PARTNERS",
+                            text = AppStrings.get("verified_partners", uiState.selectedLanguage),
                             color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -705,7 +706,7 @@ fun HomeScreen(
             item {
                 Column(modifier = Modifier.padding(top = 20.dp)) {
                     Text(
-                        text = "Upcoming trips",
+                        text = AppStrings.get("upcoming_trips", uiState.selectedLanguage),
                         fontSize = 21.sp,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.onBackground,
