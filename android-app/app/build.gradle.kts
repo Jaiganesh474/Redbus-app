@@ -5,17 +5,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-fun getGitCommitCount(): Int {
+fun fetchGitCommitCount(): Int {
     return try {
         val process = ProcessBuilder("git", "rev-list", "--count", "HEAD").start()
         val countStr = process.inputStream.bufferedReader().readText().trim()
         countStr.toIntOrNull() ?: 100
-    } catch (_: Exception) {
+    } catch (e: Exception) {
         100
     }
 }
 
-val gitCommitCount = getGitCommitCount()
+val gitCommitCount = fetchGitCommitCount()
 val dynamicVersionName = "v1.${gitCommitCount / 10}.${gitCommitCount % 10}"
 
 android {
