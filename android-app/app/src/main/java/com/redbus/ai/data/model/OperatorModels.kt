@@ -67,7 +67,8 @@ data class BusStat(
 
 data class DailyTimelineStat(
     val date: String = "",
-    val revenue: Double = 0.0
+    val revenue: Double = 0.0,
+    val ticketsSold: Long = 0
 )
 
 data class OperatorBookingDto(
