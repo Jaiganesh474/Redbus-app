@@ -285,6 +285,21 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["OperatorSchedules", "OperatorAnalytics", "Route"],
     }),
+    updateSchedule: builder.mutation<ScheduleResponse, { id: number; body: any }>({
+      query: ({ id, body }) => ({
+        url: `/operator/schedules/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["OperatorSchedules", "OperatorAnalytics", "Route"],
+    }),
+    deleteSchedule: builder.mutation<{ message: string; id: number }, number>({
+      query: (id) => ({
+        url: `/operator/schedules/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["OperatorSchedules", "OperatorAnalytics", "Route"],
+    }),
     getOperatorAnalytics: builder.query<OperatorAnalytics, void>({
       query: () => "/operator/analytics/overview",
       providesTags: ["OperatorAnalytics"],
@@ -765,6 +780,8 @@ export const {
   useDeleteBusMutation,
   useGetOperatorSchedulesQuery,
   useCreateScheduleMutation,
+  useUpdateScheduleMutation,
+  useDeleteScheduleMutation,
   useGetOperatorAnalyticsQuery,
   useGetOperatorBookingsQuery,
   useGetOperatorManifestQuery,

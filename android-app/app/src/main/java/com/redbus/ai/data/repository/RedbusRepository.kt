@@ -251,6 +251,14 @@ class RedbusRepository(
         runCatching { api.createSchedule(request) }
     }
 
+    suspend fun updateSchedule(id: Long, request: ScheduleCreateRequest): Result<ScheduleResponseDto> = withContext(Dispatchers.IO) {
+        runCatching { api.updateSchedule(id, request) }
+    }
+
+    suspend fun deleteSchedule(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { api.deleteSchedule(id); Unit }
+    }
+
     suspend fun getPassengerManifest(date: String?, busId: Long?, scheduleId: Long?): Result<List<OperatorPassengerManifestDto>> = withContext(Dispatchers.IO) {
         runCatching { api.getPassengerManifest(date, busId, scheduleId) }
     }

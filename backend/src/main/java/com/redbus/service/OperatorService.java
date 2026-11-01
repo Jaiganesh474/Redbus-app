@@ -136,8 +136,72 @@ public class OperatorService {
 
     public List<ScheduleResponseDto> getOperatorSchedules(Long operatorId) {
         return scheduleRepository.findByOperatorId(operatorId).stream()
+                .filter(s -> !"INACTIVE".equalsIgnoreCase(s.getStatus()) && !"DELETED".equalsIgnoreCase(s.getStatus()))
                 .map(this::mapToScheduleDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ScheduleResponseDto updateSchedule(Long operatorId, Long scheduleId, ScheduleCreateRequest req) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new IllegalArgumentException("Schedule not found with ID: " + scheduleId));
+
+        if (!schedule.getOperator().getId().equals(operatorId)) {
+            throw new IllegalArgumentException("Unauthorized to update this schedule");
+        }
+
+        if (req.getBusId() != null && (schedule.getBus() == null || !schedule.getBus().getId().equals(req.getBusId()))) {
+            Bus bus = busRepository.findById(req.getBusId())
+                    .orElseThrow(() -> new IllegalArgumentException("Bus not found with ID: " + req.getBusId()));
+            schedule.setBus(bus);
+        }
+
+        if (req.getSourceCity() != null && !req.getSourceCity().trim().isEmpty()) {
+            schedule.setSourceCity(req.getSourceCity().trim());
+        }
+        if (req.getDestinationCity() != null && !req.getDestinationCity().trim().isEmpty()) {
+            schedule.setDestinationCity(req.getDestinationCity().trim());
+        }
+        if (req.getBoardingPoints() != null && !req.getBoardingPoints().trim().isEmpty()) {
+            schedule.setBoardingPoints(req.getBoardingPoints().trim());
+        }
+        if (req.getDroppingPoints() != null && !req.getDroppingPoints().trim().isEmpty()) {
+            schedule.setDroppingPoints(req.getDroppingPoints().trim());
+        }
+        if (req.getDepartureTime() != null) {
+            schedule.setDepartureTime(req.getDepartureTime());
+        }
+        if (req.getArrivalTime() != null) {
+            schedule.setArrivalTime(req.getArrivalTime());
+        }
+        if (req.getOperatingDays() != null && !req.getOperatingDays().trim().isEmpty()) {
+            schedule.setOperatingDays(req.getOperatingDays().trim().toUpperCase());
+        }
+        if (req.getBasePrice() != null) {
+            schedule.setBasePrice(req.getBasePrice());
+        }
+        if (req.getValidFrom() != null) {
+            schedule.setValidFrom(req.getValidFrom());
+        }
+        if (req.getValidTo() != null) {
+            schedule.setValidTo(req.getValidTo());
+        }
+
+        Schedule saved = scheduleRepository.save(schedule);
+        return mapToScheduleDto(saved);
+    }
+
+    @Transactional
+    public void deleteSchedule(Long operatorId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new IllegalArgumentException("Schedule not found with ID: " + scheduleId));
+
+        if (!schedule.getOperator().getId().equals(operatorId)) {
+            throw new IllegalArgumentException("Unauthorized to delete this schedule");
+        }
+
+        schedule.setStatus("INACTIVE");
+        scheduleRepository.save(schedule);
     }
 
     @Transactional

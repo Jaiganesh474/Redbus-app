@@ -1627,6 +1627,78 @@ class RedbusViewModel(
         }
     }
 
+    fun updateSchedule(
+        scheduleId: Long,
+        busId: Long,
+        sourceCity: String,
+        destinationCity: String,
+        departureTime: String,
+        arrivalTime: String,
+        basePrice: Double,
+        operatingDays: String = "DAILY",
+        validFrom: String,
+        validTo: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.updateSchedule(
+                scheduleId,
+                ScheduleCreateRequest(
+                    busId = busId,
+                    sourceCity = sourceCity.trim(),
+                    destinationCity = destinationCity.trim(),
+                    departureTime = departureTime.trim(),
+                    arrivalTime = arrivalTime.trim(),
+                    basePrice = basePrice,
+                    operatingDays = operatingDays,
+                    validFrom = validFrom,
+                    validTo = validTo
+                )
+            ).fold(
+                onSuccess = { updated ->
+                    _uiState.update {
+                        it.copy(
+                            operatorSchedules = it.operatorSchedules.map { s -> if (s.id == scheduleId) updated else s },
+                            operatorActionMessage = "Schedule updated successfully!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to update schedule")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
+    fun deleteSchedule(
+        scheduleId: Long,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.deleteSchedule(scheduleId).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            operatorSchedules = it.operatorSchedules.filter { s -> s.id != scheduleId },
+                            operatorActionMessage = "Schedule deleted successfully!"
+                        )
+                    }
+                    fetchOperatorDashboardData()
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    val msg = extractErrorMessage(err, "Failed to delete schedule")
+                    onError(msg)
+                }
+            )
+        }
+    }
+
     fun approveRefund(pnr: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             repository.approveRefund(pnr).fold(

@@ -129,6 +129,23 @@ public class OperatorController {
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
+    @PutMapping("/schedules/{id}")
+    public ResponseEntity<ScheduleResponseDto> updateSchedule(
+            @PathVariable Long id,
+            @Valid @RequestBody ScheduleCreateRequest req
+    ) {
+        Operator op = getAuthenticatedOperator();
+        ScheduleResponseDto updated = operatorService.updateSchedule(op.getId(), id, req);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/schedules/{id}")
+    public ResponseEntity<Map<String, Object>> deleteSchedule(@PathVariable Long id) {
+        Operator op = getAuthenticatedOperator();
+        operatorService.deleteSchedule(op.getId(), id);
+        return ResponseEntity.ok(Map.of("message", "Schedule deleted successfully", "id", id));
+    }
+
     @GetMapping("/analytics/overview")
     public ResponseEntity<OperatorAnalyticsDto> getAnalytics() {
         Operator op = getAuthenticatedOperator();

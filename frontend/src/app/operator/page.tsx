@@ -15,6 +15,8 @@ import {
   useUpdateBusMutation,
   useDeleteBusMutation,
   useCreateScheduleMutation,
+  useUpdateScheduleMutation,
+  useDeleteScheduleMutation,
   useCreateCouponMutation,
   useDeleteCouponMutation,
   useUploadBusImageMutation,
@@ -95,6 +97,7 @@ export default function OperatorPortalPage() {
   // Modals
   const [isAddBusOpen, setIsAddBusOpen] = useState(false);
   const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<any | null>(null);
   const [isAddCouponOpen, setIsAddCouponOpen] = useState(false);
 
   // Form states - Add Coupon
@@ -461,6 +464,8 @@ export default function OperatorPortalPage() {
   const [updateBusMutation, { isLoading: isUpdatingBus }] = useUpdateBusMutation();
   const [deleteBusMutation, { isLoading: isDeletingBus }] = useDeleteBusMutation();
   const [createScheduleMutation, { isLoading: isCreatingSchedule }] = useCreateScheduleMutation();
+  const [updateScheduleMutation, { isLoading: isUpdatingSchedule }] = useUpdateScheduleMutation();
+  const [deleteScheduleMutation, { isLoading: isDeletingSchedule }] = useDeleteScheduleMutation();
   const [createCouponMutation, { isLoading: isCreatingCoupon }] = useCreateCouponMutation();
   const [deleteCouponMutation, { isLoading: isDeletingCoupon }] = useDeleteCouponMutation();
   const [uploadBusImageMutation, { isLoading: isUploadingImage }] = useUploadBusImageMutation();
@@ -705,7 +710,7 @@ export default function OperatorPortalPage() {
     }
 
     try {
-      const res = await createScheduleMutation({
+      const payload = {
         busId: Number(targetBusId),
         sourceCity: sourceCity.trim(),
         destinationCity: destinationCity.trim(),
@@ -717,17 +722,57 @@ export default function OperatorPortalPage() {
         validTo,
         boardingPoints,
         droppingPoints,
-      }).unwrap();
+      };
 
-      setFormSuccess(
-        `Schedule published! Generated ${res.materializedTripsCount || "30+"} live trips immediately searchable for passengers!`
-      );
+      if (editingSchedule) {
+        await updateScheduleMutation({ id: editingSchedule.id, body: payload }).unwrap();
+        setFormSuccess(`Schedule "${sourceCity} → ${destinationCity}" updated successfully!`);
+      } else {
+        const res = await createScheduleMutation(payload).unwrap();
+        setFormSuccess(
+          `Schedule published! Generated ${res.materializedTripsCount || "30+"} live trips immediately searchable for passengers!`
+        );
+      }
+
       setIsAddScheduleOpen(false);
+      setEditingSchedule(null);
       refetchSchedules();
       refetchAnalytics();
       setTimeout(() => setFormSuccess(""), 5000);
     } catch (err: any) {
-      setFormError(err?.data?.message || "Failed to create schedule.");
+      setFormError(err?.data?.message || (editingSchedule ? "Failed to update schedule." : "Failed to create schedule."));
+    }
+  };
+
+  const handleOpenEditSchedule = (sch: any) => {
+    setEditingSchedule(sch);
+    setScheduleBusId(sch.busId || (buses.length > 0 ? buses[0].id : null));
+    setSourceCity(sch.sourceCity || "");
+    setDestinationCity(sch.destinationCity || "");
+    setDepartureTime(sch.departureTime ? sch.departureTime.slice(0, 5) : "21:30");
+    setArrivalTime(sch.arrivalTime ? sch.arrivalTime.slice(0, 5) : "05:30");
+    setBasePrice(sch.basePrice || 850);
+    setOperatingDays(sch.operatingDays || "DAILY");
+    setValidFrom(sch.validFrom || "2026-11-01");
+    setValidTo(sch.validTo || "2026-12-01");
+    setBoardingPoints(sch.boardingPoints || "");
+    setDroppingPoints(sch.droppingPoints || "");
+    setIsAddScheduleOpen(true);
+  };
+
+  const handleDeleteSchedule = async (scheduleId: number, routeName: string) => {
+    if (!window.confirm(`Are you sure you want to delete schedule "${routeName}"? This will deactivate future unbooked trips.`)) {
+      return;
+    }
+    try {
+      await deleteScheduleMutation(scheduleId).unwrap();
+      setFormSuccess(`Schedule "${routeName}" deleted successfully.`);
+      refetchSchedules();
+      refetchAnalytics();
+      setTimeout(() => setFormSuccess(""), 4000);
+    } catch (err: any) {
+      setFormError(err?.data?.message || "Failed to delete schedule.");
+      setTimeout(() => setFormError(""), 4000);
     }
   };
 
@@ -1888,6 +1933,25 @@ export default function OperatorPortalPage() {
                         <span>View Live</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSchedule(sch)}
+                        className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1 cursor-pointer shadow-xs"
+                        title="Edit Schedule"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isDeletingSchedule}
+                        onClick={() => handleDeleteSchedule(sch.id, `${sch.sourceCity} → ${sch.destinationCity}`)}
+                        className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1 cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Delete Schedule"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -3029,12 +3093,19 @@ export default function OperatorPortalPage() {
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Publish Route Schedule</h3>
-                  <p className="text-xs text-gray-500">Materializes live bookable trips for passengers</p>
+                  <h3 className="text-base font-bold text-gray-900">
+                    {editingSchedule ? "Edit Route Schedule" : "Publish Route Schedule"}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {editingSchedule ? "Update timings, fares, and active days for this corridor" : "Materializes live bookable trips for passengers"}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsAddScheduleOpen(false)}
+                onClick={() => {
+                  setIsAddScheduleOpen(false);
+                  setEditingSchedule(null);
+                }}
                 className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
@@ -3224,17 +3295,22 @@ export default function OperatorPortalPage() {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddScheduleOpen(false)}
+                  onClick={() => {
+                    setIsAddScheduleOpen(false);
+                    setEditingSchedule(null);
+                  }}
                   className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreatingSchedule || buses.length === 0}
+                  disabled={isCreatingSchedule || isUpdatingSchedule || buses.length === 0}
                   className="px-6 py-2 bg-[#d84e55] hover:bg-[#b83e44] text-white text-xs font-bold rounded-xl shadow-md shadow-red-500/20 disabled:opacity-50 cursor-pointer"
                 >
-                  {isCreatingSchedule ? "Publishing Trips..." : "Publish Live Schedule"}
+                  {isCreatingSchedule || isUpdatingSchedule
+                    ? (editingSchedule ? "Saving Changes..." : "Publishing Trips...")
+                    : (editingSchedule ? "Save Schedule Changes" : "Publish Live Schedule")}
                 </button>
               </div>
             </form>

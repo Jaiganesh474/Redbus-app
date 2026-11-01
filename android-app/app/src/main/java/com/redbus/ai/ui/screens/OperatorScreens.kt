@@ -831,6 +831,8 @@ fun OperatorHubScreen(
     onUpdateBus: (Long, String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
     onDeleteBus: (Long, () -> Unit, (String) -> Unit) -> Unit,
     onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit,
+    onUpdateSchedule: (Long, Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
+    onDeleteSchedule: (Long, () -> Unit, (String) -> Unit) -> Unit = { _, _, _ -> },
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
     onCreateCoupon: (String, Double, Double, Double, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
     onCreateQuick2PercentCoupon: (() -> Unit, (String) -> Unit) -> Unit = { _, _ -> },
@@ -841,6 +843,8 @@ fun OperatorHubScreen(
 ) {
     var activeSubTab by remember { mutableIntStateOf(0) }
     var editingBus by remember { mutableStateOf<BusResponseDto?>(null) }
+    var editingSchedule by remember { mutableStateOf<ScheduleResponseDto?>(null) }
+    var scheduleToDelete by remember { mutableStateOf<ScheduleResponseDto?>(null) }
     var manifestScheduleFilter by remember { mutableStateOf("ALL") }
 
     // Sub-Tabs list matching Image 1:
@@ -1083,7 +1087,17 @@ fun OperatorHubScreen(
                     item {
                         ActiveSchedulesTabContent(
                             uiState = uiState,
-                            onPublishScheduleClick = { showPublishScheduleModal = true },
+                            onPublishScheduleClick = {
+                                editingSchedule = null
+                                showPublishScheduleModal = true
+                            },
+                            onEditScheduleClick = { sched ->
+                                editingSchedule = sched
+                                showPublishScheduleModal = true
+                            },
+                            onDeleteScheduleClick = { sched ->
+                                scheduleToDelete = sched
+                            },
                             onViewPassengerList = { schedId ->
                                 manifestScheduleFilter = schedId.toString()
                                 activeSubTab = 6
@@ -1146,13 +1160,60 @@ fun OperatorHubScreen(
         )
     }
 
-    // Modal: Publish Route Schedule
+    // Modal: Publish / Edit Route Schedule
     if (showPublishScheduleModal) {
         PublishScheduleModal(
+            editingSchedule = editingSchedule,
             buses = uiState.operatorBuses,
-            onDismiss = { showPublishScheduleModal = false },
+            onDismiss = {
+                showPublishScheduleModal = false
+                editingSchedule = null
+            },
             onConfirm = { busId, src, dest, dep, arr, price, days, from, to ->
-                onCreateSchedule(busId, src, dest, dep, arr, price, days, from, to, { showPublishScheduleModal = false }, {})
+                val currentEdit = editingSchedule
+                if (currentEdit != null) {
+                    onUpdateSchedule(currentEdit.id, busId, src, dest, dep, arr, price, days, from, to, {
+                        showPublishScheduleModal = false
+                        editingSchedule = null
+                    }, {})
+                } else {
+                    onCreateSchedule(busId, src, dest, dep, arr, price, days, from, to, {
+                        showPublishScheduleModal = false
+                        editingSchedule = null
+                    }, {})
+                }
+            }
+        )
+    }
+
+    // Modal: Delete Schedule Confirmation Dialog
+    scheduleToDelete?.let { sched ->
+        AlertDialog(
+            onDismissRequest = { scheduleToDelete = null },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = RedbusCrimson) },
+            title = { Text("Delete Route Schedule", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete the schedule for ${sched.sourceCity} → ${sched.destinationCity} (${sched.departureTime})?\n\nThis will stop generating recurring passenger trips on redBus.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteSchedule(sched.id, { scheduleToDelete = null }, {})
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete Schedule", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { scheduleToDelete = null }) {
+                    Text("Cancel", color = Color.Gray, fontSize = 12.sp)
+                }
             }
         )
     }
@@ -2777,6 +2838,8 @@ private fun EditBusModal(
 private fun ActiveSchedulesTabContent(
     uiState: RedbusUiState,
     onPublishScheduleClick: () -> Unit,
+    onEditScheduleClick: (ScheduleResponseDto) -> Unit = {},
+    onDeleteScheduleClick: (ScheduleResponseDto) -> Unit = {},
     onViewPassengerList: (Long) -> Unit = {},
     onViewLive: () -> Unit = {}
 ) {
@@ -2830,25 +2893,25 @@ private fun ActiveSchedulesTabContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header (Image 5)
+        // Header (Image 5 - properly spaced with right-aligned Publish button)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text("Active Published Schedules", fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text("Recurring services automatically materialized as bookable daily trips on redBus", fontSize = 11.5.sp, color = Color.Gray)
+            Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                Text("Active Published Schedules", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text("Recurring services automatically materialized as bookable daily trips on redBus", fontSize = 11.sp, color = Color.Gray, lineHeight = 14.sp)
             }
             Button(
                 onClick = onPublishScheduleClick,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Publish Schedule", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Publish Schedule", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, softWrap = false)
             }
         }
 
@@ -2925,7 +2988,7 @@ private fun ActiveSchedulesTabContent(
 
                     HorizontalDivider(color = Color(0xFFF1F5F9))
 
-                    // Base Fare & Actions (Passenger List, View Live)
+                    // Base Fare & Actions (Edit, Delete, Manifest, View Live)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -2936,38 +2999,75 @@ private fun ActiveSchedulesTabContent(
                             Text("₹${sched.basePrice.toInt()}", fontWeight = FontWeight.Black, fontSize = 18.sp, color = RedbusCrimson)
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Edit Schedule Button (Amber)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFEF3C7),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                modifier = Modifier.clickable { onEditScheduleClick(sched) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Edit", color = Color(0xFFB45309), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Delete Schedule Button (Rose)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFEE2E2),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3)),
+                                modifier = Modifier.clickable { onDeleteScheduleClick(sched) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Delete", color = Color(0xFFB91C1C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             // Passenger List Button
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = RedbusCrimson.copy(alpha = 0.08f),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.25f)),
                                 modifier = Modifier.clickable { onViewPassengerList(sched.id) }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.Description, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Passenger List", color = RedbusCrimson, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.Description, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("List", color = RedbusCrimson, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
                             // View Live Button
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = Color(0xFFF1F5F9),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
                                 modifier = Modifier.clickable { onViewLive() }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("View Live", color = Color(0xFF1E293B), fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(12.dp))
+                                    Text("Live", color = Color(0xFF1E293B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(11.dp))
                                 }
                             }
                         }
@@ -4748,7 +4848,7 @@ private fun AgencyProfileTabContent(
     }
 }
 
-// Dialog: Add Bus to Fleet (Matching Image 2 from Web Portal)
+// Dialog: Add Bus to Fleet (Matching Image 1 & 4 from Web Portal)
 @Composable
 private fun AddBusModal(
     onDismiss: () -> Unit,
@@ -4767,9 +4867,45 @@ private fun AddBusModal(
         "Mercedes-Benz Silver Jet Club",
         "GreenVolt Zero-Emission E-Bus"
     )
+    val presetSuites = mapOf(
+        "Volvo 9600 Crimson Flagship" to listOf(
+            "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1540518614846-7ede433c4550?auto=format&fit=crop&w=1200&q=80"
+        ),
+        "Scania Touring Ocean Blue" to listOf(
+            "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1540518614846-7ede433c4550?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80"
+        ),
+        "Royal Maharaja Double Decker" to listOf(
+            "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1540518614846-7ede433c4550?auto=format&fit=crop&w=1200&q=80"
+        ),
+        "Mercedes-Benz Silver Jet Club" to listOf(
+            "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80"
+        ),
+        "GreenVolt Zero-Emission E-Bus" to listOf(
+            "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
+            "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?auto=format&fit=crop&w=1200&q=80"
+        )
+    )
+
     var selectedPreset by remember { mutableStateOf(presetThemes[0]) }
+    var currentPhotoIndex by remember { mutableIntStateOf(0) }
     var photoSuiteReady by remember { mutableStateOf(true) }
     var isTypeMenuExpanded by remember { mutableStateOf(false) }
+
+    val currentPhotos = presetSuites[selectedPreset] ?: presetSuites.values.first()
 
     val busTypeOptions = listOf(
         "AC Sleeper (2+1)",
@@ -4795,7 +4931,7 @@ private fun AddBusModal(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header (Image 2)
+                // Header (Image 1)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -4829,7 +4965,7 @@ private fun AddBusModal(
                     OutlinedTextField(
                         value = operatorName,
                         onValueChange = { operatorName = it },
-                        placeholder = { Text("e.g. Royal Travels", fontSize = 12.sp) },
+                        placeholder = { Text("e.g. Intercity Smartbus", fontSize = 12.sp) },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -4923,7 +5059,7 @@ private fun AddBusModal(
                     )
                 }
 
-                // AI Bus Photo Studio Section (Image 2)
+                // AI Bus Photo Studio Section (Matching Image 1 & 4)
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
@@ -4960,15 +5096,20 @@ private fun AddBusModal(
                                 }
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = RedbusCrimson,
+                                    color = Color(0xFFDC2626),
                                     modifier = Modifier.clickable {
-                                        photoSuiteReady = true
+                                        currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.size
                                     }
                                 ) {
-                                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .background(Brush.horizontalGradient(listOf(Color(0xFFEA580C), Color(0xFFDC2626))))
+                                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                                         Spacer(modifier = Modifier.width(3.dp))
-                                        Text("Ask AI", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text("Regenerate AI Bus", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -4985,6 +5126,7 @@ private fun AddBusModal(
                                     border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) Color(0xFFF59E0B) else Color(0xFFE2E8F0)),
                                     modifier = Modifier.clickable {
                                         selectedPreset = theme
+                                        currentPhotoIndex = 0
                                         photoSuiteReady = true
                                     }
                                 ) {
@@ -4999,55 +5141,187 @@ private fun AddBusModal(
                             }
                         }
 
-                        // Active Suite Ready Banner
-                        if (photoSuiteReady) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color.White,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                        // Active Suite Ready Banner (Image 1 - with proper non-wrapping badge)
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color.White,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.weight(1f).padding(end = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(15.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Active Model: $operatorName - $selectedPreset",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFECFDF5),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                ) {
                                     Row(
-                                        modifier = Modifier.weight(1f, fill = false),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(15.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Active: $selectedPreset",
-                                            fontSize = 11.sp,
+                                            text = "4-Angle Bus Suite Ready",
+                                            color = Color(0xFF065F46),
+                                            fontSize = 10.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            softWrap = false
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = Color(0xFFECFDF5),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                }
+                            }
+                        }
+
+                        // 4-Angle Bus Photo Carousel / Slider (Image 1)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(190.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF0F172A))
+                        ) {
+                            AsyncImage(
+                                model = currentPhotos.getOrElse(currentPhotoIndex) { currentPhotos.first() },
+                                contentDescription = "Bus Angle View",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            // Top Badges Overlay
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color.Black.copy(alpha = 0.65f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "4-Angle Suite Ready",
-                                                color = Color(0xFF065F46),
-                                                fontSize = 10.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                softWrap = false
-                                            )
-                                        }
+                                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Operator Verified Studio", color = Color(0xFFFCD34D), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color.Black.copy(alpha = 0.65f)
+                                ) {
+                                    Text(
+                                        text = "${currentPhotoIndex + 1} / ${currentPhotos.size}",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            // Left and Right Arrows
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.Black.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clickable {
+                                            currentPhotoIndex = if (currentPhotoIndex > 0) currentPhotoIndex - 1 else currentPhotos.size - 1
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.Black.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clickable {
+                                            currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.size
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+
+                            // Bottom Info Overlay
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.BottomCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                                        )
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Column {
+                                    Text(operatorName.ifBlank { "Intercity Smartbus" }, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(busType, color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                }
+                            }
+                        }
+
+                        // 4 Angle Thumbnails (Image 1)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            currentPhotos.forEachIndexed { idx, url ->
+                                val isSelected = currentPhotoIndex == idx
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = androidx.compose.foundation.BorderStroke(2.dp, if (isSelected) Color(0xFFF59E0B) else Color.Transparent),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(46.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { currentPhotoIndex = idx }
+                                ) {
+                                    AsyncImage(
+                                        model = url,
+                                        contentDescription = "Angle $idx",
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 }
                             }
                         }
@@ -5060,13 +5334,13 @@ private fun AddBusModal(
                             modifier = Modifier.fillMaxWidth().clickable { }
                         ) {
                             Column(
-                                modifier = Modifier.padding(12.dp),
+                                modifier = Modifier.padding(10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
                             ) {
-                                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(22.dp))
                                 Text("Drag & drop coach photo or tap to upload", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                Text("PNG, JPG up to 5MB (Used in search results & ticket)", fontSize = 9.5.sp, color = Color.Gray)
+                                Text("PNG, JPG up to 5MB (Used in search results & ticket)", fontSize = 9.sp, color = Color.Gray)
                             }
                         }
                     }
@@ -5086,7 +5360,8 @@ private fun AddBusModal(
                         onClick = {
                             val reg = regNo.ifBlank { "KA-01-F-${(1000..9999).random()}" }
                             val seats = totalSeats.toIntOrNull() ?: 36
-                            onConfirm(operatorName, busType, reg, seats, amenities, selectedPreset)
+                            val joinedPhotos = currentPhotos.joinToString(",")
+                            onConfirm(operatorName, busType, reg, seats, amenities, joinedPhotos)
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
@@ -5101,9 +5376,183 @@ private fun AddBusModal(
     }
 }
 
-// Dialog: Publish Schedule (Matching Image 4 from Web Portal)
+// City suggestion model for Image 3 dropdown
+private data class ScheduleCityItem(
+    val name: String,
+    val state: String,
+    val badge: String? = null,
+    val badgeColor: Color = Color(0xFF10B981),
+    val subtext: String = ""
+)
+
+private val POPULAR_CITIES = listOf(
+    ScheduleCityItem("Bangalore", "Karnataka", "Operator Fleets Active", Color(0xFF10B981), "• BLR, Majestic, Electronic City"),
+    ScheduleCityItem("Chennai", "Tamil Nadu", "AI Discovered Transit", Color(0xFF8B5CF6), "• Koyambedu, Guindy, Perungalathur"),
+    ScheduleCityItem("Bhubaneswar", "Odisha", "Temple City", Color(0xFF3B82F6), "• BBI, Baramunda Omni Bus"),
+    ScheduleCityItem("Mysore", "Karnataka", "Heritage Hub", Color(0xFFF59E0B), "• MYS, Suburb Bus Stand"),
+    ScheduleCityItem("Varanasi", "Uttar Pradesh", "Spiritual Corridor", Color(0xFFEC4899), "• Cantt, Godowlia"),
+    ScheduleCityItem("Hyderabad", "Telangana", "Operator Fleets Active", Color(0xFF10B981), "• HYD, MGBS, Ameerpet"),
+    ScheduleCityItem("Coimbatore", "Tamil Nadu", "Industrial Hub", Color(0xFF8B5CF6), "• Gandhipuram, Omni Stand"),
+    ScheduleCityItem("Goa", "Goa", "Coastal Express", Color(0xFFF59E0B), "• Panaji, Mapusa, Margao"),
+    ScheduleCityItem("Mumbai", "Maharashtra", "Metro Route", Color(0xFF3B82F6), "• Dadar, Borivali, Vashi"),
+    ScheduleCityItem("Pune", "Maharashtra", "Expressway Hub", Color(0xFF10B981), "• Swargate, Wakad, Hinjewadi")
+)
+
+// Interactive Calendar Date Picker Dialog (Matching Image 2)
+@Composable
+private fun ScheduleDatePickerDialog(
+    initialDate: String,
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var displayedMonth by remember {
+        mutableStateOf(
+            try {
+                java.time.YearMonth.parse(initialDate.take(7))
+            } catch (e: Exception) {
+                java.time.YearMonth.now()
+            }
+        )
+    }
+
+    var selectedDay by remember {
+        mutableStateOf(
+            try {
+                LocalDate.parse(initialDate)
+            } catch (e: Exception) {
+                LocalDate.now()
+            }
+        )
+    }
+
+    val daysInMonth = displayedMonth.lengthOfMonth()
+    val firstDayOfWeek = displayedMonth.atDay(1).dayOfWeek.value % 7 // 0 = Sunday
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+            modifier = Modifier.width(320.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Header (Month, Year with Nav Arrows - Image 2)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${displayedMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }}, ${displayedMonth.year}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color(0xFF1E293B)
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(
+                            onClick = { displayedMonth = displayedMonth.minusMonths(1) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Prev Month", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                        }
+                        IconButton(
+                            onClick = { displayedMonth = displayedMonth.plusMonths(1) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next Month", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Weekday Row (Su Mo Tu We Th Fr Sa)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa").forEach { day ->
+                        Text(
+                            text = day,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF64748B),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(36.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Calendar Grid
+                val totalCells = firstDayOfWeek + daysInMonth
+                val totalRows = (totalCells + 6) / 7
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (row in 0 until totalRows) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                            for (col in 0..6) {
+                                val dayNum = row * 7 + col - firstDayOfWeek + 1
+                                if (dayNum in 1..daysInMonth) {
+                                    val thisDate = displayedMonth.atDay(dayNum)
+                                    val isSelected = thisDate == selectedDay
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(if (isSelected) Color(0xFF2563EB) else Color.Transparent)
+                                            .clickable {
+                                                selectedDay = thisDate
+                                                onDateSelected(thisDate.toString())
+                                                onDismiss()
+                                            }
+                                    ) {
+                                        Text(
+                                            text = dayNum.toString(),
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else Color(0xFF1E293B)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.size(36.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Footer (Clear on left, Today on right - Image 2)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { onDismiss() }) {
+                        Text("Clear", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = {
+                        val today = LocalDate.now()
+                        onDateSelected(today.toString())
+                        onDismiss()
+                    }) {
+                        Text("Today", color = Color(0xFF2563EB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Dialog: Publish or Edit Route Schedule (Matching Image 2 & 3 from Web Portal)
 @Composable
 private fun PublishScheduleModal(
+    editingSchedule: ScheduleResponseDto? = null,
     buses: List<BusResponseDto>,
     onDismiss: () -> Unit,
     onConfirm: (Long, String, String, String, String, Double, String, String, String) -> Unit
@@ -5114,25 +5563,51 @@ private fun PublishScheduleModal(
             BusResponseDto(id = 2L, operatorName = "Intercity Smartbus", busType = "Volvo 9600 Luxury Seater (2+2)", registrationNumber = "TN-09-BK-4412", totalSeats = 45)
         )
     }
-    var selectedBus by remember { mutableStateOf(displayBuses.first()) }
+
+    var selectedBus by remember {
+        mutableStateOf(
+            if (editingSchedule != null) {
+                displayBuses.find { it.id == editingSchedule.busId } ?: displayBuses.first()
+            } else {
+                displayBuses.first()
+            }
+        )
+    }
     var isBusDropdownExpanded by remember { mutableStateOf(false) }
 
-    var sourceCity by remember { mutableStateOf("Bangalore") }
-    var destCity by remember { mutableStateOf("Chennai") }
-    var departureTime by remember { mutableStateOf("17:00") }
-    var arrivalTime by remember { mutableStateOf("04:30") }
-    var basePrice by remember { mutableStateOf("1150") }
-    var frequency by remember { mutableStateOf("Daily (7 days)") }
+    var sourceCity by remember { mutableStateOf(editingSchedule?.sourceCity ?: "Bangalore") }
+    var destCity by remember { mutableStateOf(editingSchedule?.destinationCity ?: "Chennai") }
+    var isSourceMenuExpanded by remember { mutableStateOf(false) }
+    var isDestMenuExpanded by remember { mutableStateOf(false) }
+
+    var departureTime by remember { mutableStateOf(editingSchedule?.departureTime?.take(5) ?: "21:30") }
+    var arrivalTime by remember { mutableStateOf(editingSchedule?.arrivalTime?.take(5) ?: "05:30") }
+    var basePrice by remember { mutableStateOf(editingSchedule?.basePrice?.toInt()?.toString() ?: "850") }
+    var frequency by remember {
+        mutableStateOf(
+            when (editingSchedule?.operatingDays) {
+                "MON,TUE,WED,THU,FRI" -> "Weekdays only"
+                "SAT,SUN" -> "Weekends only"
+                else -> "Daily (7 days)"
+            }
+        )
+    }
     var isFreqMenuExpanded by remember { mutableStateOf(false) }
-    var validFrom by remember { mutableStateOf(LocalDate.now().toString()) }
-    var validTo by remember { mutableStateOf(LocalDate.now().plusYears(1).toString()) }
+
+    var validFrom by remember { mutableStateOf(editingSchedule?.validFrom ?: LocalDate.now().toString()) }
+    var validTo by remember { mutableStateOf(editingSchedule?.validTo ?: LocalDate.now().plusMonths(1).toString()) }
+
+    var showFromDatePicker by remember { mutableStateOf(false) }
+    var showToDatePicker by remember { mutableStateOf(false) }
 
     var boardingPoints by remember {
-        mutableStateOf("Majestic Anand Rao Circle (21:00), Shantinagar Bus Stand (21:30), Madiwala Petrol Bunk (22:00), Electronic City Toll (22:30)")
+        mutableStateOf("${sourceCity} Central Omni Bus Stand (21:30), ${sourceCity} Highway Toll Plaza (22:15)")
     }
     var droppingPoints by remember {
-        mutableStateOf("Poonamallee Bypass (04:00), Koyambedu Omni Bus Stand (04:30), Guindy Kathipara (05:00), Perungalathur (05:30)")
+        mutableStateOf("Perungalathur (04:30), Guindy (05:15), Koyambedu Omni Bus Stand (05:30)")
     }
+
+    val isEditing = editingSchedule != null
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -5149,7 +5624,7 @@ private fun PublishScheduleModal(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Header (Image 4)
+                // Header (Image 2 & 3)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -5166,8 +5641,8 @@ private fun PublishScheduleModal(
                             }
                         }
                         Column {
-                            Text("Publish Route Schedule", fontWeight = FontWeight.Black, fontSize = 17.sp)
-                            Text("Materializes live bookable trips for passengers", fontSize = 11.sp, color = Color.Gray)
+                            Text(if (isEditing) "Edit Route Schedule" else "Publish Route Schedule", fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text(if (isEditing) "Update live route timings, fares and operational window" else "Materializes live bookable trips for passengers", fontSize = 11.sp, color = Color.Gray)
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -5179,7 +5654,7 @@ private fun PublishScheduleModal(
 
                 // Select Bus from Fleet
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("SELECT BUS FROM REGISTERED FLEET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text("SELECT BUS FROM FLEET", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                     Box {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -5222,47 +5697,179 @@ private fun PublishScheduleModal(
                     }
                 }
 
-                // Source City & Destination City Row
+                // Source City & Destination City Row with Rich Dropdown (Matching Image 3)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Source City
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Source City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = sourceCity,
-                            onValueChange = {
-                                sourceCity = it
-                                boardingPoints = "$it Anand Rao Circle (21:00), $it Electronic City (22:30)"
-                            },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Source City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Box {
+                            OutlinedTextField(
+                                value = sourceCity,
+                                onValueChange = {
+                                    sourceCity = it
+                                    isSourceMenuExpanded = true
+                                    boardingPoints = "${it} Central Omni Bus Stand (21:30), ${it} Toll Plaza (22:15)"
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isSourceMenuExpanded = !isSourceMenuExpanded }) {
+                                        Icon(if (isSourceMenuExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            DropdownMenu(
+                                expanded = isSourceMenuExpanded,
+                                onDismissRequest = { isSourceMenuExpanded = false },
+                                modifier = Modifier.width(280.dp)
+                            ) {
+                                val filtered = POPULAR_CITIES.filter { it.name.contains(sourceCity, ignoreCase = true) }.ifEmpty { POPULAR_CITIES }
+                                filtered.forEach { city ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = RedbusCrimson.copy(alpha = 0.1f),
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(city.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(city.state, fontSize = 10.sp, color = Color.Gray)
+                                                    }
+                                                    if (city.badge != null) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = city.badgeColor.copy(alpha = 0.15f)
+                                                        ) {
+                                                            Text(
+                                                                text = city.badge,
+                                                                fontSize = 9.sp,
+                                                                color = city.badgeColor,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                if (city.name.equals(sourceCity, ignoreCase = true)) {
+                                                    Icon(Icons.Default.Check, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            sourceCity = city.name
+                                            boardingPoints = "${city.name} Central Omni Bus Stand (21:30), ${city.name} Toll Plaza (22:15)"
+                                            isSourceMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
 
+                    // Destination City
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Destination City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = destCity,
-                            onValueChange = {
-                                destCity = it
-                                droppingPoints = "$it Omni Bus Stand (04:30), $it Bypass (05:30)"
-                            },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp)) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Destination City", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Box {
+                            OutlinedTextField(
+                                value = destCity,
+                                onValueChange = {
+                                    destCity = it
+                                    isDestMenuExpanded = true
+                                    droppingPoints = "Perungalathur (04:30), Guindy (05:15), ${it} Omni Bus Stand (05:30)"
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isDestMenuExpanded = !isDestMenuExpanded }) {
+                                        Icon(if (isDestMenuExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            DropdownMenu(
+                                expanded = isDestMenuExpanded,
+                                onDismissRequest = { isDestMenuExpanded = false },
+                                modifier = Modifier.width(280.dp)
+                            ) {
+                                val filtered = POPULAR_CITIES.filter { it.name.contains(destCity, ignoreCase = true) }.ifEmpty { POPULAR_CITIES }
+                                filtered.forEach { city ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color(0xFF0284C7).copy(alpha = 0.1f),
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(city.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(city.state, fontSize = 10.sp, color = Color.Gray)
+                                                    }
+                                                    if (city.badge != null) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = city.badgeColor.copy(alpha = 0.15f)
+                                                        ) {
+                                                            Text(
+                                                                text = city.badge,
+                                                                fontSize = 9.sp,
+                                                                color = city.badgeColor,
+                                                                fontWeight = FontWeight.Bold,
+                                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                if (city.name.equals(destCity, ignoreCase = true)) {
+                                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            destCity = city.name
+                                            droppingPoints = "Perungalathur (04:30), Guindy (05:15), ${city.name} Omni Bus Stand (05:30)"
+                                            isDestMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Timings Row (Departure & Arrival)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Timings & Base Fare (3-Columns Image 2)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Departure Time", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Departure", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = departureTime,
                             onValueChange = { departureTime = it },
-                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
+                            trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
@@ -5270,24 +5877,17 @@ private fun PublishScheduleModal(
                     }
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Arrival Time", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Arrival", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = arrivalTime,
                             onValueChange = { arrivalTime = it },
-                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                }
 
-                // Base Fare & Frequency Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Base Fare (₹)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
@@ -5297,65 +5897,88 @@ private fun PublishScheduleModal(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Frequency Dropdown
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Frequency", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Box {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Frequency", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Box {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                .clickable { isFreqMenuExpanded = true }
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .clickable { isFreqMenuExpanded = true }
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(frequency, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
-                                }
+                                Text(frequency, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
                             }
-                            DropdownMenu(expanded = isFreqMenuExpanded, onDismissRequest = { isFreqMenuExpanded = false }) {
-                                listOf("Daily (7 days)", "Weekdays only", "Weekends only").forEach { f ->
-                                    DropdownMenuItem(text = { Text(f, fontSize = 12.sp) }, onClick = { frequency = f; isFreqMenuExpanded = false })
-                                }
+                        }
+                        DropdownMenu(expanded = isFreqMenuExpanded, onDismissRequest = { isFreqMenuExpanded = false }) {
+                            listOf("Daily (7 days)", "Weekdays only", "Weekends only").forEach { f ->
+                                DropdownMenuItem(text = { Text(f, fontSize = 12.sp) }, onClick = { frequency = f; isFreqMenuExpanded = false })
                             }
                         }
                     }
                 }
 
-                // Validity Window Row (Valid From & Valid To)
+                // Validity Window Row (Valid From & Valid To with Calendar Popup - Matching Image 2)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Valid From", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = validFrom,
-                            onValueChange = { validFrom = it },
-                            singleLine = true,
+                        Surface(
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clickable { showFromDatePicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(validFrom, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                            }
+                        }
                     }
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Valid To", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = validTo,
-                            onValueChange = { validTo = it },
-                            singleLine = true,
+                        Surface(
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clickable { showToDatePicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(validTo, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                            }
+                        }
                     }
                 }
 
@@ -5391,7 +6014,7 @@ private fun PublishScheduleModal(
                     )
                 }
 
-                // Instant Materialization Highlight Banner (Image 4)
+                // Instant Materialization Highlight Banner (Matching Image 2)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFFFF1F2),
@@ -5401,7 +6024,7 @@ private fun PublishScheduleModal(
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "✨ Instant Materialization: When you click Publish, trips and seat maps for each calendar day are immediately saved and become live on passenger searches.",
+                            text = "✨ Instant Materialization: When you click Publish, trips and seat maps for each calendar day are immediately saved to MySQL and become live on passenger searches.",
                             fontSize = 11.sp,
                             color = Color(0xFF991B1B),
                             lineHeight = 15.sp
@@ -5421,7 +6044,7 @@ private fun PublishScheduleModal(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val price = basePrice.toDoubleOrNull() ?: 1150.0
+                            val price = basePrice.toDoubleOrNull() ?: 850.0
                             val operatingDaysCode = when (frequency) {
                                 "Weekdays only" -> "MON,TUE,WED,THU,FRI"
                                 "Weekends only" -> "SAT,SUN"
@@ -5434,11 +6057,29 @@ private fun PublishScheduleModal(
                     ) {
                         Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Publish Live Schedule", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(if (isEditing) "Save Schedule Changes" else "Publish Live Schedule", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
         }
+    }
+
+    // Calendar Dialog for Valid From
+    if (showFromDatePicker) {
+        ScheduleDatePickerDialog(
+            initialDate = validFrom,
+            onDateSelected = { validFrom = it },
+            onDismiss = { showFromDatePicker = false }
+        )
+    }
+
+    // Calendar Dialog for Valid To
+    if (showToDatePicker) {
+        ScheduleDatePickerDialog(
+            initialDate = validTo,
+            onDateSelected = { validTo = it },
+            onDismiss = { showToDatePicker = false }
+        )
     }
 }
 

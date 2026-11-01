@@ -193,6 +193,12 @@ interface RedbusApiService {
     @POST("operator/schedules")
     suspend fun createSchedule(@Body request: ScheduleCreateRequest): ScheduleResponseDto
 
+    @PUT("operator/schedules/{id}")
+    suspend fun updateSchedule(@Path("id") id: Long, @Body request: ScheduleCreateRequest): ScheduleResponseDto
+
+    @DELETE("operator/schedules/{id}")
+    suspend fun deleteSchedule(@Path("id") id: Long): Map<String, Any>
+
     @GET("operator/manifest")
     suspend fun getPassengerManifest(
         @Query("date") date: String? = null,

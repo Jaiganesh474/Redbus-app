@@ -429,6 +429,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             onUpdateBus = viewModel::updateBus,
                             onDeleteBus = viewModel::deleteBus,
                             onCreateSchedule = viewModel::createSchedule,
+                            onUpdateSchedule = viewModel::updateSchedule,
+                            onDeleteSchedule = viewModel::deleteSchedule,
                             onApproveRefund = viewModel::approveRefund,
                             onCreateCoupon = viewModel::createOperatorCoupon,
                             onCreateQuick2PercentCoupon = viewModel::createQuick2PercentCoupon,
