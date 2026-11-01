@@ -140,7 +140,10 @@ data class RedbusUiState(
     val operatorCoupons: List<Coupon> = emptyList(),
     val isOperatorLoading: Boolean = false,
     val operatorActionMessage: String? = null,
-    val operatorErrorMessage: String? = null
+    val operatorErrorMessage: String? = null,
+    // Cross-Tab Persistent Notifications State
+    val readNotificationIds: Set<String> = SessionManager.getReadNotificationIds(),
+    val dismissedNotificationIds: Set<String> = SessionManager.getDismissedNotificationIds()
 )
 
 class RedbusViewModel(
@@ -257,6 +260,31 @@ class RedbusViewModel(
         }
 
         fetchMyBookings()
+    }
+
+    // --- Persistent Global Notifications ---
+    fun markNotificationAsRead(id: String) {
+        val updated = _uiState.value.readNotificationIds + id
+        SessionManager.saveReadNotificationIds(updated)
+        _uiState.update { it.copy(readNotificationIds = updated) }
+    }
+
+    fun markAllNotificationsAsRead(ids: Collection<String>) {
+        val updated = _uiState.value.readNotificationIds + ids
+        SessionManager.saveReadNotificationIds(updated)
+        _uiState.update { it.copy(readNotificationIds = updated) }
+    }
+
+    fun dismissNotification(id: String) {
+        val updated = _uiState.value.dismissedNotificationIds + id
+        SessionManager.saveDismissedNotificationIds(updated)
+        _uiState.update { it.copy(dismissedNotificationIds = updated) }
+    }
+
+    fun clearAllNotifications(ids: Collection<String>) {
+        val updated = _uiState.value.dismissedNotificationIds + ids
+        SessionManager.saveDismissedNotificationIds(updated)
+        _uiState.update { it.copy(dismissedNotificationIds = updated) }
     }
 
     // --- Authentication ---

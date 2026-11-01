@@ -13,3 +13,4 @@ public class ChangeTripPointsRequest {
     private String boardingPoint;
     private String droppingPoint;
 }
+

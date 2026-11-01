@@ -11,6 +11,8 @@ object SessionManager {
     private const val KEY_USER = "redbus_user"
     private const val KEY_DARK_MODE = "redbus_dark_mode"
     private const val KEY_LANGUAGE = "redbus_selected_language"
+    private const val KEY_READ_NOTIFS = "redbus_read_notifications"
+    private const val KEY_DISMISSED_NOTIFS = "redbus_dismissed_notifications"
 
     private var prefs: SharedPreferences? = null
     private val gson = Gson()
@@ -79,6 +81,22 @@ object SessionManager {
 
     fun setLanguage(lang: String) {
         prefs?.edit()?.putString(KEY_LANGUAGE, lang)?.apply()
+    }
+
+    fun getReadNotificationIds(): Set<String> {
+        return prefs?.getStringSet(KEY_READ_NOTIFS, emptySet()) ?: emptySet()
+    }
+
+    fun saveReadNotificationIds(ids: Set<String>) {
+        prefs?.edit()?.putStringSet(KEY_READ_NOTIFS, ids)?.apply()
+    }
+
+    fun getDismissedNotificationIds(): Set<String> {
+        return prefs?.getStringSet(KEY_DISMISSED_NOTIFS, emptySet()) ?: emptySet()
+    }
+
+    fun saveDismissedNotificationIds(ids: Set<String>) {
+        prefs?.edit()?.putStringSet(KEY_DISMISSED_NOTIFS, ids)?.apply()
     }
 }
 

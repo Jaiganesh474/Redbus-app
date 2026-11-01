@@ -924,11 +924,13 @@ fun NotificationsDropdownModal(
     onDismiss: () -> Unit,
     onNavigateToBookings: () -> Unit = {},
     onNavigateToWallet: () -> Unit = {},
-    onOpenTicket: (BookingDetails) -> Unit = {}
+    onOpenTicket: (BookingDetails) -> Unit = {},
+    onMarkAsRead: (String) -> Unit = {},
+    onMarkAllAsRead: (Collection<String>) -> Unit = {},
+    onDismissNotification: (String) -> Unit = {},
+    onClearAllNotifications: (Collection<String>) -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf("ALL") }
-    var dismissedIds by remember { mutableStateOf(setOf<String>()) }
-    var readIds by remember { mutableStateOf(setOf<String>()) }
 
     val todayStr = remember {
         java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
@@ -1045,7 +1047,7 @@ fun NotificationsDropdownModal(
         list
     }
 
-    val visibleNotifs = allNotifications.filter { it.id !in dismissedIds }
+    val visibleNotifs = allNotifications.filter { it.id !in uiState.dismissedNotificationIds }
     val filteredNotifs = visibleNotifs.filter {
         when (activeTab) {
             "BOOKING" -> it.type == "BOOKING"
@@ -1054,7 +1056,7 @@ fun NotificationsDropdownModal(
             else -> true
         }
     }
-    val unreadCount = visibleNotifs.count { it.id !in readIds }
+    val unreadCount = visibleNotifs.count { it.id !in uiState.readNotificationIds }
     val userName = uiState.user?.name?.split(" ")?.firstOrNull() ?: "Jaiganesh"
 
     Dialog(
@@ -1148,7 +1150,7 @@ fun NotificationsDropdownModal(
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier
                                         .clickable {
-                                            readIds = readIds + visibleNotifs.map { it.id }
+                                            onMarkAllAsRead(visibleNotifs.map { it.id })
                                         }
                                         .padding(horizontal = 6.dp, vertical = 4.dp)
                                 )
@@ -1242,7 +1244,7 @@ fun NotificationsDropdownModal(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredNotifs, key = { it.id }) { notif ->
-                                val isRead = notif.id in readIds
+                                val isRead = notif.id in uiState.readNotificationIds
                                 Surface(
                                     shape = RoundedCornerShape(14.dp),
                                     color = if (!isRead) Color(0xFFFFF5F5) else Color.White,
@@ -1339,7 +1341,7 @@ fun NotificationsDropdownModal(
                                                             fontWeight = FontWeight.Bold,
                                                             color = RedbusCrimson,
                                                             modifier = Modifier.clickable {
-                                                                readIds = readIds + notif.id
+                                                                onMarkAsRead(notif.id)
                                                                 notif.onClickAction()
                                                             }
                                                         )
@@ -1351,7 +1353,7 @@ fun NotificationsDropdownModal(
                                                         modifier = Modifier
                                                             .size(14.dp)
                                                             .clickable {
-                                                                dismissedIds = dismissedIds + notif.id
+                                                                onDismissNotification(notif.id)
                                                             }
                                                     )
                                                 }
@@ -1377,7 +1379,7 @@ fun NotificationsDropdownModal(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.clickable {
-                                    dismissedIds = dismissedIds + visibleNotifs.map { it.id }
+                                    onClearAllNotifications(visibleNotifs.map { it.id })
                                 }
                             ) {
                                 Icon(
@@ -1424,7 +1426,11 @@ fun MyBookingsScreen(
     onEmailTicket: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
     onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> },
-    onNavigateToAiHelp: () -> Unit = {}
+    onNavigateToAiHelp: () -> Unit = {},
+    onMarkNotificationAsRead: (String) -> Unit = {},
+    onMarkAllNotificationsAsRead: (Collection<String>) -> Unit = {},
+    onDismissNotification: (String) -> Unit = {},
+    onClearAllNotifications: (Collection<String>) -> Unit = {}
 ) {
     var pnrQuery by remember { mutableStateOf("") }
     var activeTabFilter by remember { mutableStateOf(BookingTabFilter.ALL) }
@@ -1494,6 +1500,22 @@ fun MyBookingsScreen(
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        val todayIso = remember { java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
+                        val hasUnreadNotifs = remember(uiState.myBookings, uiState.availableCoupons, uiState.readNotificationIds, uiState.dismissedNotificationIds, todayIso) {
+                            val list = mutableListOf<String>()
+                            uiState.myBookings.forEach { b ->
+                                when (b.status.uppercase(java.util.Locale.US)) {
+                                    "CONFIRMED" -> {
+                                        if (b.travelDate == todayIso) list.add("booking-live-${b.pnr}") else list.add("booking-conf-${b.pnr}")
+                                    }
+                                    "CANCELLED", "REFUNDED" -> list.add("booking-cancel-${b.pnr}")
+                                }
+                            }
+                            uiState.availableCoupons.forEach { c -> list.add("coupon-${c.code}") }
+                            if (list.none { it.startsWith("coupon-") }) list.add("offer-luxury20")
+                            list.add("safety-standard-alert")
+                            list.filter { it !in uiState.dismissedNotificationIds }.any { it !in uiState.readNotificationIds }
+                        }
                         IconButton(onClick = { showNotificationsModal = true }) {
                             Box {
                                 Icon(
@@ -1501,12 +1523,14 @@ fun MyBookingsScreen(
                                     contentDescription = "Notifications",
                                     tint = Color.White
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(Color(0xFFFDE047), CircleShape)
-                                        .align(Alignment.TopEnd)
-                                )
+                                if (hasUnreadNotifs) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(Color(0xFFFDE047), CircleShape)
+                                            .align(Alignment.TopEnd)
+                                    )
+                                }
                             }
                         }
                         IconButton(onClick = onRefreshBookings) {
@@ -1801,7 +1825,11 @@ fun MyBookingsScreen(
             onNavigateToWallet = { showNotificationsModal = false },
             onOpenTicket = { ticket ->
                 selectedTicketToView = ticket
-            }
+            },
+            onMarkAsRead = onMarkNotificationAsRead,
+            onMarkAllAsRead = onMarkAllNotificationsAsRead,
+            onDismissNotification = onDismissNotification,
+            onClearAllNotifications = onClearAllNotifications
         )
     }
 
@@ -4133,7 +4161,11 @@ fun ProfileAndWalletScreen(
     onNavigateToBookings: () -> Unit = {},
     onSelectLanguage: (String) -> Unit = {},
     onToggleBookingForWomen: (Boolean) -> Unit = {},
-    onNavigateToOperatorLogin: () -> Unit = {}
+    onNavigateToOperatorLogin: () -> Unit = {},
+    onMarkNotificationAsRead: (String) -> Unit = {},
+    onMarkAllNotificationsAsRead: (Collection<String>) -> Unit = {},
+    onDismissNotification: (String) -> Unit = {},
+    onClearAllNotifications: (Collection<String>) -> Unit = {}
 ) {
     if (!uiState.isAuthenticated || uiState.user == null) {
         LiveAuthScreen(
@@ -5590,7 +5622,11 @@ fun ProfileAndWalletScreen(
             onOpenTicket = {
                 showNotificationsModal = false
                 onNavigateToBookings()
-            }
+            },
+            onMarkAsRead = onMarkNotificationAsRead,
+            onMarkAllAsRead = onMarkAllNotificationsAsRead,
+            onDismissNotification = onDismissNotification,
+            onClearAllNotifications = onClearAllNotifications
         )
     }
 

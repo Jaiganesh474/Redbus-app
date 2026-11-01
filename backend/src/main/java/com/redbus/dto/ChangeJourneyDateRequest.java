@@ -14,3 +14,4 @@ public class ChangeJourneyDateRequest {
     private LocalDate newTravelDate;
     private Long newRouteId;
 }
+

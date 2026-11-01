@@ -361,7 +361,11 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onSubmitReview = { busId, rating, comment ->
                             viewModel.submitReview(busId, rating, comment)
                         },
-                        onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) }
+                        onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) },
+                        onMarkNotificationAsRead = viewModel::markNotificationAsRead,
+                        onMarkAllNotificationsAsRead = viewModel::markAllNotificationsAsRead,
+                        onDismissNotification = viewModel::dismissNotification,
+                        onClearAllNotifications = viewModel::clearAllNotifications
                     )
                 }
 
@@ -397,7 +401,11 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             navController.navigate(ScreenRoute.OperatorLogin.route)
                         },
                         onDeactivateAccount = { viewModel.deactivateAccount { navController.navigate(ScreenRoute.Home.route) } },
-                        onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } }
+                        onDeleteAccount = { pass -> viewModel.deleteAccount(pass) { navController.navigate(ScreenRoute.Home.route) } },
+                        onMarkNotificationAsRead = viewModel::markNotificationAsRead,
+                        onMarkAllNotificationsAsRead = viewModel::markAllNotificationsAsRead,
+                        onDismissNotification = viewModel::dismissNotification,
+                        onClearAllNotifications = viewModel::clearAllNotifications
                     )
                 }
 
