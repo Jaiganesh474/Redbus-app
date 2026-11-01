@@ -3,6 +3,7 @@ package com.redbus.ai.ui.screens
 import com.redbus.ai.BuildConfig
 import com.redbus.ai.data.model.*
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -128,6 +129,1290 @@ fun calculateTripStatus(booking: BookingDetails): RealtimeTripStatus {
     }
 }
 
+data class CancellationSlab(
+    val timeRange: String,
+    val refundPct: Int,
+    val feePct: Int,
+    val isActive: Boolean
+)
+
+data class DynamicRefundInfo(
+    val percentage: Int,
+    val refundAmount: Double,
+    val deductionAmount: Double,
+    val isFreeCancellation: Boolean,
+    val slabs: List<CancellationSlab>
+)
+
+fun calculateDynamicRefundInfo(booking: BookingDetails): DynamicRefundInfo {
+    val isFree = booking.hasFreeCancellation == true
+    if (isFree) {
+        val freeFee = booking.freeCancellationFee ?: 0.0
+        val refund = maxOf(0.0, booking.totalAmount - freeFee)
+        return DynamicRefundInfo(
+            percentage = 100,
+            refundAmount = refund,
+            deductionAmount = freeFee,
+            isFreeCancellation = true,
+            slabs = listOf(
+                CancellationSlab("Anytime before departure", 100, 0, true)
+            )
+        )
+    }
+
+    var diffHours = 24.0
+    try {
+        if (booking.travelDate.isNotBlank()) {
+            var cleanTime = booking.departureTime.trim().ifEmpty { "00:00:00" }
+            if (cleanTime.matches(Regex("^\\d{1,2}:\\d{2}$"))) {
+                cleanTime = cleanTime.padStart(5, '0') + ":00"
+            }
+            val depDateTime = java.time.LocalDateTime.parse("${booking.travelDate}T$cleanTime")
+            val now = java.time.LocalDateTime.now()
+            diffHours = java.time.Duration.between(now, depDateTime).toMinutes() / 60.0
+        }
+    } catch (_: Exception) {
+        diffHours = 24.0
+    }
+
+    val activeSlabIndex = when {
+        diffHours >= 24.0 -> 0
+        diffHours >= 12.0 -> 1
+        diffHours >= 2.0 -> 2
+        else -> 3
+    }
+
+    val slabs = listOf(
+        CancellationSlab("More than 24 hrs before departure", 90, 10, activeSlabIndex == 0),
+        CancellationSlab("Between 12 to 24 hrs before departure", 75, 25, activeSlabIndex == 1),
+        CancellationSlab("Between 2 to 12 hrs before departure", 50, 50, activeSlabIndex == 2),
+        CancellationSlab("Within 2 hrs of departure", 25, 75, activeSlabIndex == 3)
+    )
+
+    val activeSlab = slabs[activeSlabIndex]
+    val feePct = activeSlab.feePct
+    val refundPct = activeSlab.refundPct
+    val deductionAmount = booking.totalAmount * (feePct / 100.0)
+    val refundAmount = maxOf(0.0, booking.totalAmount - deductionAmount)
+
+    return DynamicRefundInfo(
+        percentage = refundPct,
+        refundAmount = refundAmount,
+        deductionAmount = deductionAmount,
+        isFreeCancellation = false,
+        slabs = slabs
+    )
+}
+
+@Composable
+fun CancelTicketWebsiteModal(
+    booking: BookingDetails,
+    onDismiss: () -> Unit,
+    onConfirmCancel: (pnr: String, reason: String, refundDestination: String) -> Unit
+) {
+    var cancelReason by remember { mutableStateOf("Change of plans") }
+    var refundDestination by remember { mutableStateOf("WALLET") }
+    var reasonDropdownExpanded by remember { mutableStateOf(false) }
+    var showTermsWarning by remember { mutableStateOf(false) }
+    var agreeToTerms by remember { mutableStateOf(false) }
+
+    val refundInfo = remember(booking) { calculateDynamicRefundInfo(booking) }
+    val reasonsList = listOf(
+        "Change of plans",
+        "Booked by mistake",
+        "Found alternative transport",
+        "Medical emergency",
+        "Trip postponed"
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 1. Header (RotateCcw, Title, Route & Date badge)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = RedbusCrimson.copy(alpha = 0.1f),
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = RedbusCrimson,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Cancel Ticket (${booking.pnr})",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF111827)
+                                )
+                                Text(
+                                    text = "${booking.sourceCity} ➔ ${booking.destinationCity} (${booking.operatorName})",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFF3F4F6)
+                        ) {
+                            Text(
+                                text = booking.travelDate.ifBlank { "2026-11-01" },
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF374151),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF3F4F6))
+
+                    // 2. Official Cancellation Policy Section
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "OFFICIAL CANCELLATION POLICY",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF374151),
+                                letterSpacing = 0.5.sp
+                            )
+                            if (refundInfo.isFreeCancellation) {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = Color(0xFFECFDF5),
+                                    border = BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                ) {
+                                    Text(
+                                        text = "🛡️ Free Cancellation Applied",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF047857),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Policy Table
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                            color = Color.White
+                        ) {
+                            Column {
+                                // Header
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFF9FAFB))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Time of Cancellation",
+                                        modifier = Modifier.weight(2f),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                    Text(
+                                        text = "Refund %",
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.Center,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                    Text(
+                                        text = "Fee %",
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.End,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                }
+
+                                // Slab rows
+                                refundInfo.slabs.forEach { slab ->
+                                    HorizontalDivider(color = Color(0xFFF3F4F6))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(if (slab.isActive) Color(0xFFECFDF5) else Color.White)
+                                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(2f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (slab.isActive) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .background(Color(0xFF10B981), CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+                                            Text(
+                                                text = slab.timeRange,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (slab.isActive) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (slab.isActive) Color(0xFF065F46) else Color(0xFF4B5563)
+                                            )
+                                            if (slab.isActive) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    color = Color(0xFF059669),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "CURRENT",
+                                                        color = Color.White,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = "${slab.refundPct}%",
+                                            modifier = Modifier.weight(1f),
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF047857)
+                                        )
+                                        Text(
+                                            text = "${slab.feePct}%",
+                                            modifier = Modifier.weight(1f),
+                                            textAlign = TextAlign.End,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFDC2626)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Dynamic Financial Breakdown Card
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFF9FAFB),
+                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Total Paid Fare:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF374151)
+                                )
+                                Text(
+                                    text = "₹${String.format(Locale.US, "%.2f", booking.totalAmount)}",
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF111827)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Cancellation Charges (${100 - refundInfo.percentage}%):",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFDC2626)
+                                )
+                                Text(
+                                    text = "-₹${String.format(Locale.US, "%.2f", refundInfo.deductionAmount)}",
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFDC2626)
+                                )
+                            }
+                            HorizontalDivider(color = Color(0xFFE5E7EB))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccountBalanceWallet,
+                                        contentDescription = null,
+                                        tint = Color(0xFF059669),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Estimated Refund Amount:",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF047857)
+                                    )
+                                }
+                                Text(
+                                    text = "₹${String.format(Locale.US, "%.2f", refundInfo.refundAmount)}",
+                                    fontSize = 16.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF047857)
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Where would you like to receive your refund?
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Where would you like to receive your refund? *",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1F2937)
+                        )
+
+                        // Option 1: redBus Wallet
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(
+                                if (refundDestination == "WALLET") 2.dp else 1.dp,
+                                if (refundDestination == "WALLET") Color(0xFF10B981) else Color(0xFFE5E7EB)
+                            ),
+                            color = if (refundDestination == "WALLET") Color(0xFFECFDF5) else Color.White,
+                            onClick = { refundDestination = "WALLET" },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.AccountBalanceWallet,
+                                            contentDescription = null,
+                                            tint = Color(0xFF059669),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "redBus Wallet",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF065F46)
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFD1FAE5),
+                                        border = BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                    ) {
+                                        Text(
+                                            text = "RECOMMENDED (INSTANT)",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF065F46),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Instant balance upon operator audit approval. 100% usable on any bus ticket.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF4B5563),
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+
+                        // Option 2: Original Method
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(
+                                if (refundDestination == "ORIGINAL_PAYMENT") 2.dp else 1.dp,
+                                if (refundDestination == "ORIGINAL_PAYMENT") Color(0xFF3B82F6) else Color(0xFFE5E7EB)
+                            ),
+                            color = if (refundDestination == "ORIGINAL_PAYMENT") Color(0xFFEFF6FF) else Color.White,
+                            onClick = { refundDestination = "ORIGINAL_PAYMENT" },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.CreditCard,
+                                            contentDescription = null,
+                                            tint = Color(0xFF2563EB),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Original Method",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF1E40AF)
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = Color(0xFFDBEAFE),
+                                        border = BorderStroke(1.dp, Color(0xFFBFDBFE))
+                                    ) {
+                                        Text(
+                                            text = "3-5 DAYS",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF1E40AF),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Settlement returned to original bank/card/UPI account within 3-5 business days.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF4B5563),
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. Reason for cancellation selector
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Reason for cancellation *",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF374151)
+                        )
+                        Box {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                color = Color(0xFFF9FAFB),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { reasonDropdownExpanded = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = cancelReason,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF1F2937)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFF6B7280)
+                                    )
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = reasonDropdownExpanded,
+                                onDismissRequest = { reasonDropdownExpanded = false }
+                            ) {
+                                reasonsList.forEach { r ->
+                                    DropdownMenuItem(
+                                        text = { Text(r, fontSize = 12.sp, fontWeight = if (cancelReason == r) FontWeight.Bold else FontWeight.Normal) },
+                                        onClick = {
+                                            cancelReason = r
+                                            reasonDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 6. Action buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFF3F4F6),
+                                contentColor = Color(0xFF374151)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                        ) {
+                            Text("Keep Booking", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                        Button(
+                            onClick = { showTermsWarning = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedbusCrimson,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .height(46.dp)
+                        ) {
+                            Text(
+                                text = "Review Terms & Cancel (₹${String.format(Locale.US, "%.2f", refundInfo.refundAmount)})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // High-Attention Terms Review Dialog Modal
+    if (showTermsWarning) {
+        Dialog(
+            onDismissRequest = { showTermsWarning = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(2.dp, Color(0xFFFCA5A5)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = RedbusCrimson.copy(alpha = 0.15f),
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = RedbusCrimson,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Confirm Cancellation",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF111827)
+                                )
+                                Text(
+                                    text = "PNR: ${booking.pnr} · ${booking.sourceCity} ➔ ${booking.destinationCity}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFFFEF2F2),
+                            border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Fare Paid:", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                    Text("₹${String.format(Locale.US, "%.2f", booking.totalAmount)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Cancellation Fee:", fontSize = 12.sp, color = Color(0xFFDC2626))
+                                    Text("-₹${String.format(Locale.US, "%.2f", refundInfo.deductionAmount)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = Color(0xFFDC2626))
+                                }
+                                HorizontalDivider(color = Color(0xFFFECACA))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Refund Due:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF047857))
+                                    Text("₹${String.format(Locale.US, "%.2f", refundInfo.refundAmount)}", fontSize = 15.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, color = Color(0xFF047857))
+                                }
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("1. Non-Reversible Action: All booked seats will immediately be released to other passengers.", fontSize = 11.sp, color = Color(0xFF4B5563), lineHeight = 15.sp)
+                            Text("2. Settlement: Refund will be processed to ${if (refundDestination == "WALLET") "redBus Wallet (Instant)" else "Original Payment Account (3-5 business days)"}.", fontSize = 11.sp, color = Color(0xFF4B5563), lineHeight = 15.sp)
+                            Text("3. Cancellation Receipt: Dispatched to ${booking.contactEmail.ifBlank { "registered email" }}.", fontSize = 11.sp, color = Color(0xFF4B5563), lineHeight = 15.sp)
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { agreeToTerms = !agreeToTerms }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = agreeToTerms,
+                                onCheckedChange = { agreeToTerms = it },
+                                colors = CheckboxDefaults.colors(checkedColor = RedbusCrimson)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "I have reviewed and agree to the Cancellation Policy & Refund Terms",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1F2937)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { showTermsWarning = false },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFF3F4F6),
+                                    contentColor = Color(0xFF374151)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp)
+                            ) {
+                                Text("Go Back", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    showTermsWarning = false
+                                    onConfirmCancel(booking.pnr, cancelReason, refundDestination)
+                                },
+                                enabled = agreeToTerms,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RedbusCrimson,
+                                    contentColor = Color.White,
+                                    disabledContainerColor = RedbusCrimson.copy(alpha = 0.4f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1.3f)
+                                    .height(46.dp)
+                            ) {
+                                Text("Yes, Confirm Cancellation", fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class AppNotificationData(
+    val id: String,
+    val type: String, // "BOOKING", "OFFER", "ALERT"
+    val title: String,
+    val message: String,
+    val timestamp: String,
+    val actionLabel: String? = null,
+    val onClickAction: () -> Unit = {}
+)
+
+@Composable
+fun NotificationsDropdownModal(
+    uiState: RedbusUiState,
+    onDismiss: () -> Unit,
+    onNavigateToBookings: () -> Unit = {},
+    onNavigateToWallet: () -> Unit = {},
+    onOpenTicket: (BookingDetails) -> Unit = {}
+) {
+    var activeTab by remember { mutableStateOf("ALL") }
+    var dismissedIds by remember { mutableStateOf(setOf<String>()) }
+    var readIds by remember { mutableStateOf(setOf<String>()) }
+
+    val todayStr = remember {
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+    }
+
+    val allNotifications = remember(uiState.myBookings, uiState.availableCoupons, uiState.user?.walletBalance, todayStr) {
+        val list = mutableListOf<AppNotificationData>()
+
+        // 1. From real bookings
+        uiState.myBookings.forEach { b ->
+            when (b.status.uppercase(Locale.US)) {
+                "CONFIRMED" -> {
+                    val isToday = b.travelDate == todayStr
+                    val seatsStr = b.passengers?.mapNotNull { it.seatNumber }?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Confirmed"
+                    if (isToday) {
+                        list.add(
+                            AppNotificationData(
+                                id = "booking-live-${b.pnr}",
+                                type = "BOOKING",
+                                title = "Live Boarding Today! 📍",
+                                message = "Your bus ${b.operatorName} (${b.sourceCity} ➔ ${b.destinationCity}) departs today at ${b.departureTime}. Boarding at ${b.boardingPoint.ifBlank { "Main Terminal" }}. PNR: ${b.pnr}",
+                                timestamp = "Today at ${b.departureTime}",
+                                actionLabel = "View Ticket >",
+                                onClickAction = {
+                                    onDismiss()
+                                    onOpenTicket(b)
+                                }
+                            )
+                        )
+                    } else {
+                        list.add(
+                            AppNotificationData(
+                                id = "booking-conf-${b.pnr}",
+                                type = "BOOKING",
+                                title = "Trip Confirmed! 🚌",
+                                message = "Booking confirmed for ${b.sourceCity} ➔ ${b.destinationCity} on ${b.travelDate} (${b.departureTime}) with ${b.operatorName}. Seat(s): $seatsStr. PNR: ${b.pnr}",
+                                timestamp = b.travelDate,
+                                actionLabel = "View Ticket >",
+                                onClickAction = {
+                                    onDismiss()
+                                    onOpenTicket(b)
+                                }
+                            )
+                        )
+                    }
+                }
+                "CANCELLED", "REFUNDED" -> {
+                    val refund = if ((b.refundAmount ?: 0.0) > 0.0) b.refundAmount!! else b.totalAmount
+                    list.add(
+                        AppNotificationData(
+                            id = "booking-cancel-${b.pnr}",
+                            type = "ALERT",
+                            title = "Refund Credited to Wallet 💰",
+                            message = "Booking ${b.pnr} (${b.sourceCity} ➔ ${b.destinationCity}) was cancelled. Refund of ₹${String.format(Locale.US, "%.2f", refund)} credited to your redBus Wallet.",
+                            timestamp = b.travelDate.ifBlank { "2026-11-01" },
+                            actionLabel = "Check Wallet >",
+                            onClickAction = {
+                                onDismiss()
+                                onNavigateToWallet()
+                            }
+                        )
+                    )
+                }
+            }
+        }
+
+        // 2. From Available Coupons
+        uiState.availableCoupons.forEach { c ->
+            list.add(
+                AppNotificationData(
+                    id = "coupon-${c.code}",
+                    type = "OFFER",
+                    title = "Festive Promo ${c.code} Active 🎉",
+                    message = "Save up to ₹${c.maxDiscountAmount?.toInt() ?: 200} on all routes with promo code ${c.code}.",
+                    timestamp = "Valid till ${c.expiryDate ?: "2026-12-31"}",
+                    actionLabel = "Apply Promo >",
+                    onClickAction = {
+                        onDismiss()
+                        onNavigateToBookings()
+                    }
+                )
+            )
+        }
+
+        // 3. Fallbacks if list has few items
+        if (list.none { it.type == "OFFER" }) {
+            list.add(
+                AppNotificationData(
+                    id = "offer-luxury20",
+                    type = "OFFER",
+                    title = "Festive Promo LUXURY20 Active 🎉",
+                    message = "Save up to ₹200 on all Primo AC Sleeper routes with promo code LUXURY20.",
+                    timestamp = "Valid till 2026-12-31",
+                    actionLabel = "Apply Promo >",
+                    onClickAction = {
+                        onDismiss()
+                        onNavigateToBookings()
+                    }
+                )
+            )
+        }
+        list.add(
+            AppNotificationData(
+                id = "safety-standard-alert",
+                type = "ALERT",
+                title = "Primo Safety Standard Verified 🛡️",
+                message = "All partner fleets sanitized and equipped with verified emergency contact tools.",
+                timestamp = "Verified Today",
+                actionLabel = null,
+                onClickAction = {}
+            )
+        )
+
+        list
+    }
+
+    val visibleNotifs = allNotifications.filter { it.id !in dismissedIds }
+    val filteredNotifs = visibleNotifs.filter {
+        when (activeTab) {
+            "BOOKING" -> it.type == "BOOKING"
+            "OFFER" -> it.type == "OFFER"
+            "ALERT" -> it.type == "ALERT"
+            else -> true
+        }
+    }
+    val unreadCount = visibleNotifs.count { it.id !in readIds }
+    val userName = uiState.user?.name?.split(" ")?.firstOrNull() ?: "Jaiganesh"
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFF9FAFB))
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = RedbusCrimson.copy(alpha = 0.12f),
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = RedbusCrimson,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Notifications",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF111827)
+                                    )
+                                    if (unreadCount > 0) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = RedbusCrimson
+                                        ) {
+                                            Text(
+                                                text = "$unreadCount new",
+                                                color = Color.White,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = "Live trip updates for $userName",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (unreadCount > 0) {
+                                Text(
+                                    text = "✓ Mark all read",
+                                    fontSize = 11.sp,
+                                    color = RedbusCrimson,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .clickable {
+                                            readIds = readIds + visibleNotifs.map { it.id }
+                                        }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = Color(0xFF6B7280),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF3F4F6))
+
+                    // Category Tabs (All, Bookings, Offers, Alerts)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "ALL" to "All",
+                            "BOOKING" to "Bookings",
+                            "OFFER" to "Offers",
+                            "ALERT" to "Alerts"
+                        ).forEach { (tabKey, label) ->
+                            val isSelected = activeTab == tabKey
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color(0xFFFEF2F2) else Color.Transparent,
+                                border = if (isSelected) BorderStroke(1.dp, Color(0xFFFECACA)) else null,
+                                onClick = { activeTab = tabKey }
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) RedbusCrimson else Color(0xFF6B7280),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF3F4F6))
+
+                    // List of Notifications
+                    if (filteredNotifs.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = null,
+                                    tint = Color(0xFFD1D5DB),
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Text(
+                                    text = "No notifications right now",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF6B7280)
+                                )
+                                Text(
+                                    text = "We will alert you about your real-time trips and offers here.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF9CA3AF),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredNotifs, key = { it.id }) { notif ->
+                                val isRead = notif.id in readIds
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (!isRead) Color(0xFFFFF5F5) else Color.White,
+                                    border = BorderStroke(1.dp, Color(0xFFF3F4F6)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        val iconBg = when (notif.type) {
+                                            "BOOKING" -> if (notif.title.contains("Live", ignoreCase = true)) Color(0xFFFEE2E2) else Color(0xFFDBEAFE)
+                                            "OFFER" -> Color(0xFFFEF3C7)
+                                            else -> Color(0xFFD1FAE5)
+                                        }
+                                        val iconTint = when (notif.type) {
+                                            "BOOKING" -> if (notif.title.contains("Live", ignoreCase = true)) RedbusCrimson else Color(0xFF2563EB)
+                                            "OFFER" -> RatingAmber
+                                            else -> Color(0xFF059669)
+                                        }
+                                        val iconVec = when (notif.type) {
+                                            "BOOKING" -> if (notif.title.contains("Live", ignoreCase = true)) Icons.Default.LocationOn else Icons.Default.ConfirmationNumber
+                                            "OFFER" -> Icons.Default.LocalOffer
+                                            else -> Icons.Default.AccountBalanceWallet
+                                        }
+
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = iconBg,
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = iconVec,
+                                                    contentDescription = null,
+                                                    tint = iconTint,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = notif.title,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF111827)
+                                                )
+                                                if (!isRead) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(6.dp)
+                                                            .background(RedbusCrimson, CircleShape)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Text(
+                                                text = notif.message,
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF4B5563),
+                                                lineHeight = 15.sp,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = notif.timestamp,
+                                                    fontSize = 10.sp,
+                                                    color = Color(0xFF9CA3AF),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    if (notif.actionLabel != null) {
+                                                        Text(
+                                                            text = notif.actionLabel,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = RedbusCrimson,
+                                                            modifier = Modifier.clickable {
+                                                                readIds = readIds + notif.id
+                                                                notif.onClickAction()
+                                                            }
+                                                        )
+                                                    }
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Dismiss",
+                                                        tint = Color(0xFF9CA3AF),
+                                                        modifier = Modifier
+                                                            .size(14.dp)
+                                                            .clickable {
+                                                                dismissedIds = dismissedIds + notif.id
+                                                            }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Footer
+                    if (visibleNotifs.isNotEmpty()) {
+                        HorizontalDivider(color = Color(0xFFF3F4F6))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF9FAFB))
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable {
+                                    dismissedIds = dismissedIds + visibleNotifs.map { it.id }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFF6B7280),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Clear all",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF6B7280),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            Text(
+                                text = "View My Bookings →",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = RedbusCrimson,
+                                modifier = Modifier.clickable {
+                                    onDismiss()
+                                    onNavigateToBookings()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun MyBookingsScreen(
     uiState: RedbusUiState,
@@ -144,6 +1429,7 @@ fun MyBookingsScreen(
     var bookingToCancel by remember { mutableStateOf<BookingDetails?>(null) }
     var selectedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
     var bookingToRate by remember { mutableStateOf<BookingDetails?>(null) }
+    var showNotificationsModal by remember { mutableStateOf(false) }
     var cancelReason by remember { mutableStateOf("Change of plans") }
     var refundDestination by remember { mutableStateOf("WALLET") }
 
@@ -204,12 +1490,29 @@ fun MyBookingsScreen(
                             fontSize = 12.sp
                         )
                     }
-                    IconButton(onClick = onRefreshBookings) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Bookings",
-                            tint = Color.White
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showNotificationsModal = true }) {
+                            Box {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Notifications",
+                                    tint = Color.White
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(Color(0xFFFDE047), CircleShape)
+                                        .align(Alignment.TopEnd)
+                                )
+                            }
+                        }
+                        IconButton(onClick = onRefreshBookings) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh Bookings",
+                                tint = Color.White
+                            )
+                        }
                     }
                 }
 
@@ -457,56 +1760,26 @@ fun MyBookingsScreen(
         )
     }
 
+    if (showNotificationsModal) {
+        NotificationsDropdownModal(
+            uiState = uiState,
+            onDismiss = { showNotificationsModal = false },
+            onNavigateToBookings = { showNotificationsModal = false },
+            onNavigateToWallet = { showNotificationsModal = false },
+            onOpenTicket = { ticket ->
+                selectedTicketToView = ticket
+            }
+        )
+    }
+
     if (bookingToCancel != null) {
         val b = bookingToCancel!!
-        AlertDialog(
-            onDismissRequest = { bookingToCancel = null },
-            title = {
-                Text("Cancel Ticket (PNR: ${b.pnr})", fontWeight = FontWeight.Black)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "${b.sourceCity} ➔ ${b.destinationCity} (${b.operatorName})",
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedTextField(
-                        value = cancelReason,
-                        onValueChange = { cancelReason = it },
-                        label = { Text("Cancellation Reason") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text("Refund Destination:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilterChip(
-                            selected = refundDestination == "WALLET",
-                            onClick = { refundDestination = "WALLET" },
-                            label = { Text("Instant redBus Wallet") }
-                        )
-                        FilterChip(
-                            selected = refundDestination == "ORIGINAL_PAYMENT",
-                            onClick = { refundDestination = "ORIGINAL_PAYMENT" },
-                            label = { Text("Original Source") }
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onCancelBooking(b.pnr, cancelReason, refundDestination)
-                        bookingToCancel = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
-                ) {
-                    Text("Confirm Cancellation", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { bookingToCancel = null }) {
-                    Text("Keep Ticket")
-                }
+        CancelTicketWebsiteModal(
+            booking = b,
+            onDismiss = { bookingToCancel = null },
+            onConfirmCancel = { pnr, reason, refundDest ->
+                onCancelBooking(pnr, reason, refundDest)
+                bookingToCancel = null
             }
         )
     }
@@ -3026,166 +4299,22 @@ fun ProfileAndWalletScreen(
 
     // 5. Modal: Notifications (Matching website navbar NotificationDropdown.tsx)
     if (showNotificationsModal) {
-        var notifTab by remember { mutableStateOf("ALL") }
-
-        Dialog(
-            onDismissRequest = { showNotificationsModal = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.85f)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = RedbusCrimson.copy(alpha = 0.12f),
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Default.Notifications,
-                                            contentDescription = null,
-                                            tint = RedbusCrimson,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Notifications",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                    Text(
-                                        text = "Live updates & alerts",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { showNotificationsModal = false }) {
-                                Icon(Icons.Default.Close, contentDescription = "Close")
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Category tabs: ALL, BOOKING, OFFER, ALERT
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("ALL", "BOOKING", "OFFER", "ALERT").forEach { tabKey ->
-                                val isTabSelected = notifTab == tabKey
-                                FilterChip(
-                                    selected = isTabSelected,
-                                    onClick = { notifTab = tabKey },
-                                    label = {
-                                        Text(
-                                            when (tabKey) {
-                                                "BOOKING" -> "Bookings"
-                                                "OFFER" -> "Offers"
-                                                "ALERT" -> "Alerts"
-                                                else -> "All"
-                                            },
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
-
-                        val mockNotifications = listOf(
-                            Triple("BOOKING", "Live Boarding Today! 📍", "Your bus Intrcity SmartBus departs today. Track bus live GPS on your ticket."),
-                            Triple("OFFER", "Festive Promo LUXURY20 Active 🎉", "Save up to ₹200 on all Primo AC Sleeper routes with promo code LUXURY20."),
-                            Triple("ALERT", "redBus Wallet Credit Synced 💳", "Instant refund & checkout credit of ₹${String.format(Locale.US, "%.2f", user.walletBalance ?: 0.0)} is ready to use."),
-                            Triple("OFFER", "Welcome Coupon FIRSTBUS", "Get flat 15% discount on your next bus journey booking."),
-                            Triple("ALERT", "Primo Safety Standard Verified 🛡️", "All partner fleets sanitized and equipped with verified emergency contact tools.")
-                        )
-
-                        val filteredNotifs = mockNotifications.filter {
-                            if (notifTab == "ALL") true else it.first == notifTab
-                        }
-
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            items(filteredNotifs) { (cat, title, body) ->
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalAlignment = Alignment.Top
-                                    ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = when (cat) {
-                                                "BOOKING" -> RedbusBlue.copy(alpha = 0.15f)
-                                                "OFFER" -> RatingAmber.copy(alpha = 0.15f)
-                                                else -> RatingEmerald.copy(alpha = 0.15f)
-                                            },
-                                            modifier = Modifier.size(36.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = when (cat) {
-                                                        "BOOKING" -> Icons.Default.ConfirmationNumber
-                                                        "OFFER" -> Icons.Default.LocalOffer
-                                                        else -> Icons.Default.NotificationsActive
-                                                    },
-                                                    contentDescription = null,
-                                                    tint = when (cat) {
-                                                        "BOOKING" -> RedbusBlue
-                                                        "OFFER" -> RatingAmber
-                                                        else -> RatingEmerald
-                                                    },
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column {
-                                            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        NotificationsDropdownModal(
+            uiState = uiState,
+            onDismiss = { showNotificationsModal = false },
+            onNavigateToBookings = {
+                showNotificationsModal = false
+                onNavigateToBookings()
+            },
+            onNavigateToWallet = {
+                showNotificationsModal = false
+                onOpenWallet()
+            },
+            onOpenTicket = {
+                showNotificationsModal = false
+                onNavigateToBookings()
             }
-        }
+        )
     }
 
     // 6. Dialog: Select Language (Image 5 & 2)
