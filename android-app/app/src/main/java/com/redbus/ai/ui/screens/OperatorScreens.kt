@@ -956,7 +956,7 @@ fun OperatorHubScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF0F172A)),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Add, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Add Bus to Fleet", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
@@ -2846,7 +2846,7 @@ private fun ActiveSchedulesTabContent(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("+ Publish Schedule", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Publish Schedule", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
 
