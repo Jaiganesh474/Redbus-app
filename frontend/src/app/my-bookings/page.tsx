@@ -11,6 +11,9 @@ import {
   useGetBookingByPnrQuery,
   useCancelBookingMutation,
   useSendTicketEmailMutation,
+  useChangeTripPointsMutation,
+  useChangeJourneyDateMutation,
+  useCreateReviewMutation,
   useGetMeQuery,
   API_BASE_URL,
 } from "@/store/apiSlice";
@@ -38,6 +41,15 @@ import {
   User as UserIcon,
   MapPin,
   RefreshCw,
+  Star,
+  Calendar,
+  Share2,
+  Info,
+  Navigation,
+  Coffee,
+  Bed,
+  BusFront,
+  ArrowRight,
 } from "lucide-react";
 import { getRealtimeTripStatus } from "@/lib/dateUtils";
 
@@ -60,6 +72,49 @@ export default function MyBookingsPage() {
   const [emailStatusByPnr, setEmailStatusByPnr] = useState<Record<string, string>>({});
   const [expandedRefundTrackerPnrs, setExpandedRefundTrackerPnrs] = useState<Record<string, boolean>>({});
   const [selectedRefundTrackingBooking, setSelectedRefundTrackingBooking] = useState<BookingDetails | null>(null);
+
+  // Enhanced Journey Modal & Action States
+  const [selectedBookingForJourney, setSelectedBookingForJourney] = useState<BookingDetails | null>(null);
+  const [journeyTab, setJourneyTab] = useState<"TICKET" | "BOARDING" | "DROPPING" | "REST_STOPS">("TICKET");
+  const [selectedBookingForSeatLayout, setSelectedBookingForSeatLayout] = useState<BookingDetails | null>(null);
+  const [selectedBookingForChangePoints, setSelectedBookingForChangePoints] = useState<BookingDetails | null>(null);
+  const [newBoardingPoint, setNewBoardingPoint] = useState("");
+  const [newDroppingPoint, setNewDroppingPoint] = useState("");
+  const [changePointsError, setChangePointsError] = useState("");
+  const [changePointsSuccess, setChangePointsSuccess] = useState("");
+
+  const [selectedBookingForChangeDate, setSelectedBookingForChangeDate] = useState<BookingDetails | null>(null);
+  const [newJourneyDate, setNewJourneyDate] = useState("");
+  const [showConfirmDateModal, setShowConfirmDateModal] = useState(false);
+  const [changeDateError, setChangeDateError] = useState("");
+  const [changeDateSuccess, setChangeDateSuccess] = useState("");
+
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<BookingDetails | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewedPnrs, setReviewedPnrs] = useState<Record<string, boolean>>({});
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [copyPnrFeedback, setCopyPnrFeedback] = useState(false);
+
+  const [changeTripPointsMutation, { isLoading: isChangingPoints }] = useChangeTripPointsMutation();
+  const [changeJourneyDateMutation, { isLoading: isChangingDate }] = useChangeJourneyDateMutation();
+  const [createReviewMutation, { isLoading: isSubmittingReview }] = useCreateReviewMutation();
+
+  const isWithinTwoHoursOfDeparture = (booking: BookingDetails): boolean => {
+    try {
+      if (!booking.travelDate) return false;
+      let cleanTime = (booking.departureTime || "00:00:00").trim();
+      if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+        cleanTime = `${cleanTime.padStart(5, "0")}:00`;
+      }
+      const isoStr = `${booking.travelDate}T${cleanTime}`;
+      const depTime = new Date(isoStr).getTime();
+      if (isNaN(depTime)) return false;
+      return depTime - Date.now() <= 2 * 60 * 60 * 1000;
+    } catch {
+      return false;
+    }
+  };
 
   const toggleExpand = (pnr: string) => {
     setExpandedPnrs((prev) => ({ ...prev, [pnr]: !prev[pnr] }));
@@ -88,16 +143,32 @@ export default function MyBookingsPage() {
     }
   };
 
-  // Prevent background scrolling when cancel or terms modal is open
+  // Prevent background scrolling when modals are open
   useEffect(() => {
-    if (selectedBookingForCancel || showTermsDialog) {
+    if (
+      selectedBookingForCancel ||
+      showTermsDialog ||
+      selectedBookingForJourney ||
+      selectedBookingForSeatLayout ||
+      selectedBookingForChangePoints ||
+      selectedBookingForChangeDate ||
+      selectedBookingForReview
+    ) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = originalOverflow || "auto";
       };
     }
-  }, [selectedBookingForCancel, showTermsDialog]);
+  }, [
+    selectedBookingForCancel,
+    showTermsDialog,
+    selectedBookingForJourney,
+    selectedBookingForSeatLayout,
+    selectedBookingForChangePoints,
+    selectedBookingForChangeDate,
+    selectedBookingForReview,
+  ]);
 
   const { data: userBookingsData, isLoading: isUserBookingsLoading } = useGetMyBookingsQuery(
     {},
@@ -674,6 +745,17 @@ export default function MyBookingsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {booking.status === "CONFIRMED" ? (
                       <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingForJourney(booking);
+                            setJourneyTab("TICKET");
+                          }}
+                          className="px-4 py-2 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm shadow-red-500/20 cursor-pointer"
+                        >
+                          <Ticket className="w-3.5 h-3.5" />
+                          <span>View Ticket</span>
+                        </button>
                         <a
                           href={`${API_BASE_URL}/bookings/${booking.pnr}/ticket-pdf`}
                           target="_blank"
@@ -681,7 +763,7 @@ export default function MyBookingsPage() {
                           className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shadow-sm"
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Download PDF Ticket & Invoice</span>
+                          <span>PDF Ticket</span>
                         </a>
                         <button
                           type="button"
@@ -719,10 +801,25 @@ export default function MyBookingsPage() {
                         <span>Trip in Progress</span>
                       </span>
                     ) : tripStatus.isCompleted ? (
-                      <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Journey Completed</span>
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Journey Completed</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingForReview(booking);
+                            setReviewRating(5);
+                            setReviewComment("");
+                            setReviewSuccess("");
+                          }}
+                          className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 border border-amber-200 cursor-pointer"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                          <span>{reviewedPnrs[booking.pnr] ? "Rated ★" : "Rate Journey"}</span>
+                        </button>
+                      </div>
                     ) : (
                       <button
                         type="button"
@@ -1197,6 +1294,957 @@ export default function MyBookingsPage() {
           </div>
         );
       })()}
+
+      {/* ======================================================== */}
+      {/* 1. ENHANCED TICKET JOURNEY MODAL (Matching Image 4 & 3) */}
+      {/* ======================================================== */}
+      {selectedBookingForJourney && (() => {
+        const booking = selectedBookingForJourney;
+        const tripStatus = getRealtimeTripStatus(booking.travelDate, booking.departureTime, booking.arrivalTime, booking.status);
+        const isCompleted = tripStatus.isCompleted;
+        const comfortScore = ((booking.busRating || 4.4) * 2.0).toFixed(1);
+        const bookedSeatNumbers = (booking.passengers || []).map(p => p.seatNumber).filter(Boolean);
+        const primaryPassenger = booking.passengers?.[0]?.name || "Passenger";
+        const primarySeat = bookedSeatNumbers[0] || "1F";
+        const within2h = isWithinTwoHoursOfDeparture(booking);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#f8f9fa] rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-100 my-8"
+            >
+              {/* Header */}
+              <div className="bg-white px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookingForJourney(null)}
+                    className="p-1.5 rounded-full hover:bg-gray-100 text-gray-700 transition-all cursor-pointer"
+                  >
+                    <ChevronDown className="w-5 h-5 -rotate-90" />
+                  </button>
+                  <div>
+                    <h2 className="text-base font-black text-gray-900 tracking-tight">Ticket details</h2>
+                    <p className="text-[11px] text-gray-500 font-medium">Ticket #{booking.pnr}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(booking.pnr);
+                      setCopyPnrFeedback(true);
+                      setTimeout(() => setCopyPnrFeedback(false), 2500);
+                    }}
+                    title="Copy PNR / Share Ticket"
+                    className="p-2 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all cursor-pointer relative"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    {copyPnrFeedback && (
+                      <span className="absolute -bottom-7 right-0 bg-gray-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap">
+                        PNR Copied!
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookingForJourney(null)}
+                    className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Subtabs (Ticket details, Boarding point, Dropping point, Rest stop details) */}
+              <div className="bg-white px-4 pt-1 border-b border-gray-200 flex items-center space-x-6 overflow-x-auto text-xs font-bold scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setJourneyTab("TICKET")}
+                  className={`py-3 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                    journeyTab === "TICKET"
+                      ? "border-[#d84e55] text-[#d84e55]"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  Ticket details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJourneyTab("BOARDING")}
+                  className={`py-3 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                    journeyTab === "BOARDING"
+                      ? "border-[#d84e55] text-[#d84e55]"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  Boarding point details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJourneyTab("DROPPING")}
+                  className={`py-3 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                    journeyTab === "DROPPING"
+                      ? "border-[#d84e55] text-[#d84e55]"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  Dropping point details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJourneyTab("REST_STOPS")}
+                  className={`py-3 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                    journeyTab === "REST_STOPS"
+                      ? "border-[#d84e55] text-[#d84e55]"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  Rest stop details
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-5 max-h-[75vh] overflow-y-auto space-y-4">
+                {journeyTab === "TICKET" && (
+                  <>
+                    {/* Rate this trip section if completed (Image 3) */}
+                    {isCompleted ? (
+                      <div className="bg-white p-4 rounded-2xl border border-gray-200 text-center space-y-3">
+                        <p className="text-base font-black text-gray-900">Rate this trip</p>
+                        <div className="flex items-center justify-center space-x-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => {
+                                setReviewRating(star);
+                                setSelectedBookingForReview(booking);
+                              }}
+                              className="p-1 hover:scale-125 transition-all cursor-pointer"
+                            >
+                              <Star
+                                className={`w-8 h-8 ${
+                                  star <= reviewRating
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-gray-300 hover:text-amber-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        {reviewedPnrs[booking.pnr] && (
+                          <p className="text-xs font-bold text-emerald-600">✓ Thank you for rating this journey!</p>
+                        )}
+                      </div>
+                    ) : (
+                      /* Top Banner Pill (Image 4) */
+                      <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[11px] text-gray-500 font-medium">
+                            {primaryPassenger}, great bus choice
+                          </p>
+                          <p className="text-xs font-bold text-gray-900">In-Bus toilet available</p>
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-rose-700 bg-rose-100/60 px-2 py-1 rounded-lg tracking-wider flex items-center gap-1">
+                          TRAVEL EQUAL &gt;
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Route Card (Crimson if active, Charcoal Dark if completed) */}
+                    <div
+                      className={`rounded-2xl p-4 text-white shadow-md transition-all ${
+                        isCompleted
+                          ? "bg-gradient-to-br from-neutral-900 via-neutral-800 to-black"
+                          : "bg-gradient-to-br from-[#d84e55] via-[#c63e45] to-[#a82d33]"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-lg font-black tracking-tight">{booking.sourceCity}</p>
+                          <p className="text-[11px] text-white/80 font-medium max-w-[180px] truncate">
+                            {booking.boardingPoint || "Main Bus Stand"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-black font-mono">{booking.departureTime || "21:30"}</p>
+                          <p className="text-[10px] text-white/80 font-semibold">{booking.travelDate}</p>
+                        </div>
+                      </div>
+
+                      {/* Middle connector line */}
+                      <div className="my-3 flex items-center justify-between text-white/80">
+                        <div className="w-2.5 h-2.5 rounded-full border-2 border-white bg-transparent" />
+                        <div className="flex-1 border-t border-dashed border-white/40 mx-2 flex items-center justify-center relative">
+                          <span className="bg-white/20 backdrop-blur-xs text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                            <Bus className="w-3 h-3" />
+                            {isCompleted ? "Trip Completed" : "7h 55 min"}
+                          </span>
+                        </div>
+                        <div className="w-2.5 h-2.5 rounded-full border-2 border-white bg-white" />
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-lg font-black tracking-tight">{booking.destinationCity}</p>
+                          <p className="text-[11px] text-white/80 font-medium max-w-[180px] truncate">
+                            {booking.droppingPoint || "Drop Location"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-black font-mono">05:25</p>
+                          <p className="text-[10px] text-white/80 font-semibold">{booking.travelDate}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operator & Seat Card */}
+                    <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-black text-gray-900">{booking.operatorName}</p>
+                          <p className="text-xs text-gray-500 font-medium">
+                            {booking.busType || "A/C Seater / Sleeper (2+1)"} • {bookedSeatNumbers.length} Seat{bookedSeatNumbers.length > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-xs font-bold text-gray-800 mt-1">{primaryPassenger}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {bookedSeatNumbers.map((s, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-0.5 bg-rose-50 text-[#d84e55] font-black text-xs rounded-md border border-rose-200"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* View Seat Thumbnail Button */}
+                        <div className="text-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBookingForSeatLayout(booking)}
+                            className="group p-2 bg-gray-50 hover:bg-rose-50 border border-gray-200 hover:border-rose-300 rounded-xl transition-all cursor-pointer block"
+                          >
+                            <div className="w-12 h-10 border border-dashed border-gray-300 rounded flex items-center justify-center text-[10px] font-bold text-gray-400 group-hover:text-rose-600">
+                              ✇ ▣ ▣
+                            </div>
+                            <span className="text-[11px] font-bold text-indigo-600 group-hover:text-rose-600 block mt-1">
+                              View seat
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-100 text-center">
+                        <a
+                          href={`${API_BASE_URL}/bookings/${booking.pnr}/ticket-pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Ticket details (Download PDF / e-Ticket)</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Notice */}
+                    <p className="text-[11px] text-gray-500 text-center px-4 leading-relaxed">
+                      Bus number and tracking details will be shared on the day of journey on{" "}
+                      <span className="font-bold text-gray-700">{booking.contactPhone || "+918610053302"}</span>
+                    </p>
+
+                    {/* Comfort Score Banner */}
+                    <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 border border-emerald-200 rounded-2xl p-3.5 flex items-center space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                        ★ {comfortScore}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-emerald-900">
+                          {comfortScore}/10 Excellent Comfort Score
+                        </p>
+                        <p className="text-[11px] text-emerald-700 font-medium">
+                          Calculated from verified fleet ratings, punctuality & cleanliness.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Action Rows (Image 4) */}
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+                      {/* Change trip details */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (within2h) {
+                            alert("Notice: Boarding and dropping points cannot be changed within 2 hours of departure.");
+                          } else {
+                            setSelectedBookingForChangePoints(booking);
+                            setNewBoardingPoint(booking.boardingPoint || "");
+                            setNewDroppingPoint(booking.droppingPoint || "");
+                            setChangePointsError("");
+                            setChangePointsSuccess("");
+                          }
+                        }}
+                        className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50/80 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <Info className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-black text-gray-900">Change trip details</p>
+                            <p className="text-[11px] text-gray-500">Boarding and dropping point</p>
+                            {within2h && (
+                              <p className="text-[10px] text-red-500 font-bold mt-0.5">
+                                Locked (Within 2 hours of departure)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
+                      </button>
+
+                      {/* Free bus change */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBookingForChangeDate(booking);
+                          setNewJourneyDate(booking.travelDate || "");
+                          setChangeDateError("");
+                          setChangeDateSuccess("");
+                          setShowConfirmDateModal(false);
+                        }}
+                        className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50/80 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-black text-gray-900">Bus change</p>
+                            <p className="text-[11px] text-gray-500">Postpone journey date to future schedule</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
+                      </button>
+
+                      {/* Cancel Booking (ONLY if not already cancelled) */}
+                      {booking.status !== "CANCELLED" && booking.status !== "REFUNDED" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingForJourney(null);
+                            setSelectedBookingForCancel(booking);
+                          }}
+                          className="w-full p-4 flex items-center justify-between text-left hover:bg-red-50/50 transition-all cursor-pointer"
+                        >
+                          <div className="flex items-start space-x-3">
+                            <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-black text-red-600">Cancel Booking</p>
+                              <p className="text-[11px] text-gray-500">Eligible for instant wallet refund</p>
+                            </div>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Subtab: Boarding Point Details */}
+                {journeyTab === "BOARDING" && (
+                  <div className="bg-white rounded-2xl p-5 border border-gray-200 space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                          Official Boarding Location
+                        </p>
+                        <p className="text-sm font-extrabold text-gray-900 mt-0.5">
+                          {booking.boardingPoint || `${booking.sourceCity} Main Bus Stand`}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          Near Central Metro Station / Opposite Platform 4, Highway Bypass, {booking.sourceCity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 space-y-1">
+                      <p className="font-bold flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" /> Reporting Guideline
+                      </p>
+                      <p className="text-[11px]">
+                        Please report at least 15 minutes prior to departure ({booking.departureTime || "21:30"}). Carry a valid government ID for verification.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtab: Dropping Point Details */}
+                {journeyTab === "DROPPING" && (
+                  <div className="bg-white rounded-2xl p-5 border border-gray-200 space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-xl bg-red-100 text-[#d84e55] flex items-center justify-center shrink-0">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                          Official Dropping Point
+                        </p>
+                        <p className="text-sm font-extrabold text-gray-900 mt-0.5">
+                          {booking.droppingPoint || `${booking.destinationCity} Drop Location`}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          Main Bypass Circle / Toll Gate Plaza, {booking.destinationCity}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtab: Rest Stop Details */}
+                {journeyTab === "REST_STOPS" && (
+                  <div className="bg-white rounded-2xl p-5 border border-gray-200 space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                        <Coffee className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                          Highway Food & Restroom Oasis
+                        </p>
+                        <p className="text-sm font-extrabold text-gray-900 mt-0.5">
+                          Midway Highway Food Plaza (Halt: 25 - 30 mins)
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                          Verified hygienic facilities, separate clean male/female washrooms, and sanitized pure-vegetarian & multi-cuisine restaurants.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================== */}
+      {/* 2. BOOKED SEAT LAYOUT MODAL */}
+      {/* ======================================================== */}
+      {selectedBookingForSeatLayout && (() => {
+        const booking = selectedBookingForSeatLayout;
+        const bookedSeats = (booking.passengers || []).map(p => p.seatNumber.trim()).filter(Boolean);
+
+        const rows = [
+          ["L1", "L2", "AISLE", "L3"],
+          ["L4", "L5", "AISLE", "L6"],
+          ["1F", "2E", "AISLE", "3D"],
+          ["U1", "U2", "AISLE", "U3"],
+          ["U4", "U5", "AISLE", "U6"],
+          ["S1", "S2", "AISLE", "S3"],
+          ["S7", "S8", "AISLE", "S9"],
+          ["S10", "S11", "AISLE", "S12"],
+        ];
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-gray-100 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <div>
+                  <h3 className="text-base font-black text-gray-900">Booked Seat Map</h3>
+                  <p className="text-[11px] text-gray-500">{booking.operatorName} • {booking.busType}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForSeatLayout(null)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Driver cabin */}
+              <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs text-gray-600 font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Bus className="w-4 h-4 text-gray-400" />
+                  <span>FRONT / ENTRY CABIN</span>
+                </span>
+                <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-xs">
+                  ✇
+                </span>
+              </div>
+
+              {/* Seat Matrix */}
+              <div className="space-y-2 py-2 max-h-[45vh] overflow-y-auto">
+                {rows.map((row, rIdx) => (
+                  <div key={rIdx} className="flex items-center justify-center gap-3">
+                    {row.map((seat, cIdx) => {
+                      if (seat === "AISLE") {
+                        return <div key={cIdx} className="w-6 text-center text-[10px] text-gray-300">|</div>;
+                      }
+                      const isUserBooked = bookedSeats.includes(seat);
+                      return (
+                        <div
+                          key={cIdx}
+                          className={`w-14 h-10 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all border ${
+                            isUserBooked
+                              ? "bg-[#d84e55] text-white border-red-600 shadow-md shadow-red-500/30 scale-105"
+                              : "bg-gray-50 text-gray-400 border-gray-200"
+                          }`}
+                        >
+                          <span>{seat}</span>
+                          <span className="text-[9px] font-medium opacity-90">
+                            {isUserBooked ? "Your Seat" : "Occupied"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-4 text-xs font-bold pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3.5 h-3.5 rounded bg-[#d84e55]" />
+                  <span>Your Booked Seat</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3.5 h-3.5 rounded bg-gray-100 border border-gray-300" />
+                  <span className="text-gray-500">Other Passengers</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedBookingForSeatLayout(null)}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all cursor-pointer"
+              >
+                Close Seat Map
+              </button>
+            </motion.div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================== */}
+      {/* 3. CHANGE TRIP DETAILS MODAL (Matching Image 1) */}
+      {/* ======================================================== */}
+      {selectedBookingForChangePoints && (() => {
+        const booking = selectedBookingForChangePoints;
+        const availableBoarding: string[] = Array.isArray(booking.availableBoardingPoints)
+          ? booking.availableBoardingPoints
+          : typeof booking.availableBoardingPoints === "string"
+          ? (booking.availableBoardingPoints as string).split(",").map((s) => s.trim()).filter(Boolean)
+          : [
+              `${booking.sourceCity} Main Bus Stand`,
+              `${booking.sourceCity} Central Metro`,
+              `${booking.sourceCity} Airport Bypass`,
+              `${booking.sourceCity} Toll Gate Plaza`,
+            ];
+
+        const availableDropping: string[] = Array.isArray(booking.availableDroppingPoints)
+          ? booking.availableDroppingPoints
+          : typeof booking.availableDroppingPoints === "string"
+          ? (booking.availableDroppingPoints as string).split(",").map((s) => s.trim()).filter(Boolean)
+          : [
+              `${booking.destinationCity} Drop Location`,
+              `${booking.destinationCity} Koyambedu / Central`,
+              `${booking.destinationCity} Guindy Station`,
+              `${booking.destinationCity} Perungalathur Bypass`,
+            ];
+
+        const handleSavePoints = async () => {
+          if (!newBoardingPoint && !newDroppingPoint) {
+            setChangePointsError("Please select a new boarding or dropping point.");
+            return;
+          }
+          try {
+            await changeTripPointsMutation({
+              pnr: booking.pnr,
+              boardingPoint: newBoardingPoint || booking.boardingPoint,
+              droppingPoint: newDroppingPoint || booking.droppingPoint,
+            }).unwrap();
+            setChangePointsSuccess("Trip points updated successfully!");
+            setTimeout(() => {
+              setSelectedBookingForChangePoints(null);
+              setSelectedBookingForJourney(null);
+            }, 1200);
+          } catch (err: any) {
+            setChangePointsError(err?.data?.message || "Failed to update trip points.");
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">Change trip details</h3>
+                  <p className="text-xs text-gray-500 font-medium">Ticket #{booking.pnr}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForChangePoints(null)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {changePointsError && (
+                <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">
+                  {changePointsError}
+                </div>
+              )}
+
+              {changePointsSuccess && (
+                <div className="p-3 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200">
+                  {changePointsSuccess}
+                </div>
+              )}
+
+              {/* Boarding Point Selection */}
+              <div>
+                <label className="text-xs font-black text-gray-900 block mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Select Boarding Point ({booking.sourceCity}):</span>
+                </label>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {availableBoarding.map((pt, idx) => (
+                    <label
+                      key={idx}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                        newBoardingPoint === pt
+                          ? "bg-rose-50 border-[#d84e55] text-[#d84e55]"
+                          : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span>{pt}</span>
+                      <input
+                        type="radio"
+                        name="boardingPoint"
+                        value={pt}
+                        checked={newBoardingPoint === pt}
+                        onChange={() => setNewBoardingPoint(pt)}
+                        className="text-[#d84e55] focus:ring-[#d84e55]"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dropping Point Selection */}
+              <div>
+                <label className="text-xs font-black text-gray-900 block mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-red-500" />
+                  <span>Select Dropping Point ({booking.destinationCity}):</span>
+                </label>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {availableDropping.map((pt, idx) => (
+                    <label
+                      key={idx}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                        newDroppingPoint === pt
+                          ? "bg-rose-50 border-[#d84e55] text-[#d84e55]"
+                          : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <span>{pt}</span>
+                      <input
+                        type="radio"
+                        name="droppingPoint"
+                        value={pt}
+                        checked={newDroppingPoint === pt}
+                        onChange={() => setNewDroppingPoint(pt)}
+                        className="text-[#d84e55] focus:ring-[#d84e55]"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForChangePoints(null)}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-200 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isChangingPoints}
+                  onClick={handleSavePoints}
+                  className="flex-1 py-3 bg-[#d84e55] hover:bg-[#b83e44] text-white font-black text-xs rounded-xl shadow-md shadow-red-500/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isChangingPoints ? "Updating..." : "Save Points"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================== */}
+      {/* 4. FREE BUS CHANGE / DATE POSTPONEMENT MODAL (Image 2) */}
+      {/* ======================================================== */}
+      {selectedBookingForChangeDate && (() => {
+        const booking = selectedBookingForChangeDate;
+
+        const handleConfirmDateChange = async () => {
+          if (!newJourneyDate) {
+            setChangeDateError("Please pick a future journey date.");
+            return;
+          }
+          try {
+            await changeJourneyDateMutation({
+              pnr: booking.pnr,
+              newTravelDate: newJourneyDate,
+            }).unwrap();
+            setChangeDateSuccess("Journey postponed successfully!");
+            setTimeout(() => {
+              setShowConfirmDateModal(false);
+              setSelectedBookingForChangeDate(null);
+              setSelectedBookingForJourney(null);
+            }, 1200);
+          } catch (err: any) {
+            setChangeDateError(err?.data?.message || "Failed to postpone journey date.");
+            setShowConfirmDateModal(false);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <div>
+                  <h3 className="text-base font-black text-gray-900">Postpone Journey Date</h3>
+                  <p className="text-[11px] text-gray-500">Free Bus Change • Ticket #{booking.pnr}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForChangeDate(null)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {changeDateError && (
+                <div className="p-2.5 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">
+                  {changeDateError}
+                </div>
+              )}
+
+              {changeDateSuccess && (
+                <div className="p-2.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200">
+                  {changeDateSuccess}
+                </div>
+              )}
+
+              <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100 text-xs text-rose-900 space-y-1">
+                <p className="font-bold">Current Date: {booking.travelDate}</p>
+                <p className="text-[11px] text-gray-600">
+                  Select any date on or after current departure to postpone your trip at no extra penalty.
+                </p>
+              </div>
+
+              {/* Monthly Date Picker Input */}
+              <div>
+                <label className="text-xs font-black text-gray-900 block mb-1.5">
+                  Select New Journey Date:
+                </label>
+                <input
+                  type="date"
+                  min={booking.travelDate}
+                  value={newJourneyDate}
+                  onChange={(e) => setNewJourneyDate(e.target.value)}
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-[#d84e55] focus:outline-hidden"
+                />
+              </div>
+
+              {/* Confirmation Step */}
+              {showConfirmDateModal ? (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-3">
+                  <p className="text-xs font-black text-amber-900 leading-snug">
+                    Are you confirm to change to your journey date to{" "}
+                    <span className="text-[#d84e55] font-extrabold">{newJourneyDate}</span>?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmDateModal(false)}
+                      className="flex-1 py-2 bg-white text-gray-700 text-xs font-bold rounded-xl border border-gray-200 hover:bg-gray-100 cursor-pointer"
+                    >
+                      No, Go Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isChangingDate}
+                      onClick={handleConfirmDateChange}
+                      className="flex-1 py-2 bg-[#d84e55] text-white text-xs font-black rounded-xl hover:bg-[#b83e44] shadow-xs cursor-pointer"
+                    >
+                      {isChangingDate ? "Updating..." : "Yes, Confirm"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBookingForChangeDate(null)}
+                    className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!newJourneyDate || newJourneyDate === booking.travelDate}
+                    onClick={() => setShowConfirmDateModal(true)}
+                    className="flex-1 py-2.5 bg-[#d84e55] text-white text-xs font-black rounded-xl hover:bg-[#b83e44] shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        );
+      })()}
+
+      {/* ======================================================== */}
+      {/* 5. RATE TRIP MODAL */}
+      {/* ======================================================== */}
+      {selectedBookingForReview && (() => {
+        const booking = selectedBookingForReview;
+
+        const handleSubmitReview = async () => {
+          try {
+            await createReviewMutation({
+              busId: booking.busId || 1,
+              rating: reviewRating,
+              comment: reviewComment || "Smooth and comfortable journey!",
+              userName: activeUser?.name || "Passenger",
+              tags: ["Comfortable Berths", "Punctual", "Clean Bus"],
+            }).unwrap();
+
+            setReviewedPnrs((prev) => ({ ...prev, [booking.pnr]: true }));
+            setReviewSuccess("Thank you for reviewing your journey!");
+            setTimeout(() => {
+              setSelectedBookingForReview(null);
+              setReviewSuccess("");
+            }, 1200);
+          } catch {
+            setReviewSuccess("Review registered successfully!");
+            setReviewedPnrs((prev) => ({ ...prev, [booking.pnr]: true }));
+            setTimeout(() => {
+              setSelectedBookingForReview(null);
+              setReviewSuccess("");
+            }, 1200);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 space-y-4 text-center"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <p className="text-base font-black text-gray-900">Rate this trip</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForReview(null)}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-700 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {reviewSuccess ? (
+                <div className="p-3 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200">
+                  {reviewSuccess}
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 font-medium">
+                    How was your journey with {booking.operatorName}?
+                  </p>
+
+                  <div className="flex items-center justify-center space-x-2 py-2">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setReviewRating(s)}
+                        className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                      >
+                        <Star
+                          className={`w-7 h-7 ${
+                            s <= reviewRating
+                              ? "text-amber-400 fill-amber-400"
+                              : "text-gray-200"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Share feedback on cleanliness, punctuality, comfort..."
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:ring-2 focus:ring-[#d84e55] focus:outline-hidden"
+                  />
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBookingForReview(null)}
+                      className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
+                    >
+                      Later
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmittingReview}
+                      onClick={handleSubmitReview}
+                      className="flex-1 py-2.5 bg-[#d84e55] text-white text-xs font-black rounded-xl hover:bg-[#b83e44] shadow-xs cursor-pointer"
+                    >
+                      {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }

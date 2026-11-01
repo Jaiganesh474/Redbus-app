@@ -1419,6 +1419,8 @@ fun MyBookingsScreen(
     onSearchPnr: (String) -> Unit,
     onRefreshBookings: () -> Unit,
     onCancelBooking: (String, String, String) -> Unit,
+    onChangeTripPoints: (String, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _ -> },
+    onChangeJourneyDate: (String, String?, Long?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _ -> },
     onEmailTicket: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
     onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> },
@@ -1428,6 +1430,7 @@ fun MyBookingsScreen(
     var activeTabFilter by remember { mutableStateOf(BookingTabFilter.ALL) }
     var bookingToCancel by remember { mutableStateOf<BookingDetails?>(null) }
     var selectedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
+    var perforatedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
     var bookingToRate by remember { mutableStateOf<BookingDetails?>(null) }
     var showNotificationsModal by remember { mutableStateOf(false) }
     var cancelReason by remember { mutableStateOf("Change of plans") }
@@ -1737,13 +1740,43 @@ fun MyBookingsScreen(
         )
     }
 
-    // View Ticket Modal matching Image 5 (media_1793296527384_86dfb532.jpg)
+    // Enhanced Ticket Journey Modal (Matching Image 4, Image 2, Image 3)
     selectedTicketToView?.let { ticketBooking ->
-        ViewTicketDetailsModal(
+        EnhancedTicketJourneyModal(
             booking = ticketBooking,
             onDismiss = { selectedTicketToView = null },
+            onOpenPerforatedTicket = {
+                perforatedTicketToView = ticketBooking
+            },
+            onChangeTripPoints = { pnr, bp, dp, onSuccess, onError ->
+                onChangeTripPoints(pnr, bp, dp, {
+                    onSuccess()
+                    onRefreshBookings()
+                }, onError)
+            },
+            onChangeJourneyDate = { pnr, newDate, newRouteId, onSuccess, onError ->
+                onChangeJourneyDate(pnr, newDate, newRouteId, {
+                    onSuccess()
+                    onRefreshBookings()
+                }, onError)
+            },
             onCancelBooking = {
-                selectedTicketToView = null
+                bookingToCancel = ticketBooking
+            },
+            onSubmitReview = { busId, rating, comment ->
+                onSubmitReview(busId, rating, comment)
+            },
+            onHelpClick = onNavigateToAiHelp
+        )
+    }
+
+    // Perforated View Ticket Modal (Matching Image 5)
+    perforatedTicketToView?.let { ticketBooking ->
+        ViewTicketDetailsModal(
+            booking = ticketBooking,
+            onDismiss = { perforatedTicketToView = null },
+            onCancelBooking = {
+                perforatedTicketToView = null
                 bookingToCancel = ticketBooking
             }
         )
@@ -2001,6 +2034,1250 @@ private fun BookingTicketCard(
         }
     }
 }
+
+/**
+ * Interactive Booked Seat Layout Modal
+ */
+@Composable
+private fun BookedSeatLayoutModal(
+    booking: BookingDetails,
+    onDismiss: () -> Unit
+) {
+    val bookedSeatNumbers = remember(booking.passengers) {
+        booking.passengers.orEmpty().mapNotNull { it.seatNumber.trim().ifEmpty { null } }.toSet()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Booked Seat Map",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF111827)
+                        )
+                        Text(
+                            text = "${booking.operatorName} • ${booking.busType}",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 10.dp))
+
+                // Front / Driver Cabin Header
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFF8FAFC),
+                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("FRONT / ENTRY", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFE2E8F0),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("✇", fontSize = 14.sp, color = Color(0xFF475569))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Seat Map Grid
+                val seatRows = listOf(
+                    listOf("L1", "L2", "AISLE", "L3"),
+                    listOf("L4", "L5", "AISLE", "L6"),
+                    listOf("1F", "2E", "AISLE", "3D"),
+                    listOf("U1", "U2", "AISLE", "U3"),
+                    listOf("U4", "U5", "AISLE", "U6"),
+                    listOf("S7", "S8", "AISLE", "S9"),
+                    listOf("S10", "S11", "AISLE", "S12"),
+                    listOf("B1", "B2", "B3", "B4")
+                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    seatRows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            row.forEach { seatNum ->
+                                if (seatNum == "AISLE") {
+                                    Spacer(modifier = Modifier.width(28.dp))
+                                } else {
+                                    val isUserSeat = bookedSeatNumbers.any { it.equals(seatNum, ignoreCase = true) }
+                                    val isOtherBooked = !isUserSeat && (seatNum in listOf("L1", "U1", "S8", "B2"))
+
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = when {
+                                            isUserSeat -> RedbusCrimson
+                                            isOtherBooked -> Color(0xFFE2E8F0)
+                                            else -> Color.White
+                                        },
+                                        border = BorderStroke(
+                                            1.5.dp,
+                                            when {
+                                                isUserSeat -> Color(0xFFF59E0B)
+                                                isOtherBooked -> Color(0xFFCBD5E1)
+                                                else -> Color(0xFF10B981)
+                                            }
+                                        ),
+                                        modifier = Modifier
+                                            .width(54.dp)
+                                            .height(42.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = seatNum,
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = when {
+                                                        isUserSeat -> Color.White
+                                                        isOtherBooked -> Color(0xFF64748B)
+                                                        else -> Color(0xFF0F172A)
+                                                    }
+                                                )
+                                                if (isUserSeat) {
+                                                    Text(
+                                                        text = "YOURS",
+                                                        fontSize = 7.5.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color(0xFFFEF08A)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                // Legend
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = RedbusCrimson, modifier = Modifier.size(14.dp)) {}
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("Your Booked Seat", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFE2E8F0), modifier = Modifier.size(14.dp)) {}
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("Occupied", fontSize = 11.sp, color = Color(0xFF64748B))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = Color.White, border = BorderStroke(1.dp, Color(0xFF10B981)), modifier = Modifier.size(14.dp)) {}
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("Available", fontSize = 11.sp, color = Color(0xFF047857))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Bottom Sheet / Modal to change Boarding & Dropping Points (Matching Image 1)
+ */
+@Composable
+private fun ChangeTripPointsBottomSheet(
+    booking: BookingDetails,
+    onDismiss: () -> Unit,
+    onConfirm: (newBoarding: String, newDropping: String) -> Unit
+) {
+    var selectedBoarding by remember { mutableStateOf(booking.boardingPoint) }
+    var selectedDropping by remember { mutableStateOf(booking.droppingPoint) }
+    var editingMode by remember { mutableStateOf<String?>("MENU") } // "MENU", "BOARDING", "DROPPING"
+
+    val boardingOptions = remember(booking.sourceCity, booking.availableBoardingPoints) {
+        val parsed = booking.availableBoardingPoints?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }
+        if (!parsed.isNullOrEmpty()) parsed else listOf(
+            "${booking.sourceCity} Central Omni Bus Stand (21:30)",
+            "${booking.sourceCity} Marathahalli Multiplex (21:30)",
+            "${booking.sourceCity} Madiwala Petrol Bunk (22:00)",
+            "${booking.sourceCity} Electronic City Toll Plaza (22:30)",
+            "${booking.sourceCity} Bypass Junction (23:00)"
+        )
+    }
+
+    val droppingOptions = remember(booking.destinationCity, booking.availableDroppingPoints) {
+        val parsed = booking.availableDroppingPoints?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }
+        if (!parsed.isNullOrEmpty()) parsed else listOf(
+            "${booking.destinationCity} Poonamallee (05:25)",
+            "${booking.destinationCity} Koyambedu Omni Bus Stand (05:30)",
+            "${booking.destinationCity} Guindy Kathipara (05:45)",
+            "${booking.destinationCity} Perungalathur (06:00)",
+            "${booking.destinationCity} Central Station / Egmore (06:30)"
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Surface(
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header (Image 1)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (editingMode == "BOARDING") "Select Boarding Point"
+                                   else if (editingMode == "DROPPING") "Select Dropping Point"
+                                   else "Change trip details",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF111827)
+                        )
+                        IconButton(onClick = {
+                            if (editingMode != "MENU") editingMode = "MENU" else onDismiss()
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                    when (editingMode) {
+                        "BOARDING" -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                boardingOptions.forEach { opt ->
+                                    val isSel = opt.equals(selectedBoarding, ignoreCase = true)
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSel) Color(0xFFFEF2F2) else Color(0xFFF8FAFC),
+                                        border = BorderStroke(1.dp, if (isSel) RedbusCrimson else Color(0xFFE2E8F0)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedBoarding = opt
+                                                editingMode = "MENU"
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(opt, fontSize = 12.5.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium, color = if (isSel) RedbusCrimson else Color(0xFF1E293B))
+                                            if (isSel) Icon(Icons.Default.Check, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        "DROPPING" -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                droppingOptions.forEach { opt ->
+                                    val isSel = opt.equals(selectedDropping, ignoreCase = true)
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSel) Color(0xFFEFF6FF) else Color(0xFFF8FAFC),
+                                        border = BorderStroke(1.dp, if (isSel) Color(0xFF2563EB) else Color(0xFFE2E8F0)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedDropping = opt
+                                                editingMode = "MENU"
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(opt, fontSize = 12.5.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium, color = if (isSel) Color(0xFF2563EB) else Color(0xFF1E293B))
+                                            if (isSel) Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        else -> {
+                            // Main Options matching Image 1
+                            // Option 1: Change boarding point
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { editingMode = "BOARDING" }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(22.dp))
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Change boarding point", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                        Text(selectedBoarding.ifBlank { "Select boarding point" }, fontSize = 11.5.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                }
+                            }
+
+                            // Option 2: Change dropping point
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { editingMode = "DROPPING" }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(22.dp))
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Change dropping point", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                        Text(selectedDropping.ifBlank { "Select dropping point" }, fontSize = 11.5.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                }
+                            }
+
+                            // Confirm Button
+                            Button(
+                                onClick = {
+                                    onConfirm(selectedBoarding, selectedDropping)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Text("Update Trip Details", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Free Bus Change Monthly Calendar Modal & Date Change Confirmation
+ */
+@Composable
+private fun FreeBusChangeModal(
+    booking: BookingDetails,
+    onDismiss: () -> Unit,
+    onConfirmDateChange: (newDate: String) -> Unit
+) {
+    val currentTripDate = remember(booking.travelDate) {
+        try { LocalDate.parse(booking.travelDate.trim()) } catch (_: Exception) { LocalDate.now() }
+    }
+
+    var displayedMonth by remember {
+        mutableStateOf(java.time.YearMonth.from(currentTripDate))
+    }
+    var candidateDate by remember { mutableStateOf<LocalDate?>(null) }
+    var showConfirmPrompt by remember { mutableStateOf(false) }
+
+    val daysInMonth = displayedMonth.lengthOfMonth()
+    val firstDayOfWeek = displayedMonth.atDay(1).dayOfWeek.value % 7
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+            modifier = Modifier.width(330.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Free bus change", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color(0xFF1E293B))
+                        Text("Postpone journey date anytime", fontSize = 11.sp, color = Color.Gray)
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Month Nav
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${displayedMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }}, ${displayedMonth.year}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = { displayedMonth = displayedMonth.minusMonths(1) }, modifier = Modifier.size(26.dp)) {
+                            Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = Color.Gray)
+                        }
+                        IconButton(onClick = { displayedMonth = displayedMonth.plusMonths(1) }, modifier = Modifier.size(26.dp)) {
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Weekday Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa").forEach { d ->
+                        Text(d, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B), textAlign = TextAlign.Center, modifier = Modifier.width(36.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Calendar Grid
+                val totalCells = firstDayOfWeek + daysInMonth
+                val totalRows = (totalCells + 6) / 7
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (row in 0 until totalRows) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                            for (col in 0..6) {
+                                val dayNum = row * 7 + col - firstDayOfWeek + 1
+                                if (dayNum in 1..daysInMonth) {
+                                    val thisDate = displayedMonth.atDay(dayNum)
+                                    val isAllowed = !thisDate.isBefore(currentTripDate)
+                                    val isSelected = thisDate == candidateDate
+
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(
+                                                when {
+                                                    isSelected -> Color(0xFF2563EB)
+                                                    thisDate == currentTripDate -> Color(0xFFFEE2E2)
+                                                    else -> Color.Transparent
+                                                }
+                                            )
+                                            .clickable(enabled = isAllowed) {
+                                                candidateDate = thisDate
+                                                showConfirmPrompt = true
+                                            }
+                                    ) {
+                                        Text(
+                                            text = dayNum.toString(),
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected || thisDate == currentTripDate) FontWeight.Bold else FontWeight.Normal,
+                                            color = when {
+                                                isSelected -> Color.White
+                                                !isAllowed -> Color(0xFFCBD5E1)
+                                                thisDate == currentTripDate -> RedbusCrimson
+                                                else -> Color(0xFF1E293B)
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.size(36.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Current trip date: ${booking.travelDate} (Highlighted in red)",
+                    fontSize = 10.5.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+
+    // Confirmation Modal: Are you confirm to change your journey date?
+    if (showConfirmPrompt && candidateDate != null) {
+        AlertDialog(
+            onDismissRequest = { showConfirmPrompt = false },
+            icon = { Icon(Icons.Default.CalendarToday, contentDescription = null, tint = RedbusCrimson) },
+            title = {
+                Text(
+                    text = "Confirm Date Change",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 16.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you confirm to change your journey date to ${candidateDate}?\n\nYour reservation for ${booking.sourceCity} → ${booking.destinationCity} will be postponed to this date.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF334155),
+                    lineHeight = 17.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmPrompt = false
+                        onConfirmDateChange(candidateDate.toString())
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm Date Change", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmPrompt = false }) {
+                    Text("Cancel", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Enhanced View Ticket & Journey Details Modal (Matching Image 4, Image 2, Image 3)
+ */
+@Composable
+fun EnhancedTicketJourneyModal(
+    booking: BookingDetails,
+    onDismiss: () -> Unit,
+    onOpenPerforatedTicket: () -> Unit,
+    onChangeTripPoints: (pnr: String, bp: String?, dp: String?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
+    onChangeJourneyDate: (pnr: String, newDate: String?, newRouteId: Long?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
+    onCancelBooking: () -> Unit,
+    onSubmitReview: (Long, Int, String) -> Unit,
+    onHelpClick: () -> Unit
+) {
+    val context = LocalContext.current
+    var activeSubTab by remember { mutableIntStateOf(0) }
+    var showSeatModal by remember { mutableStateOf(false) }
+    var showChangeTripPointsSheet by remember { mutableStateOf(false) }
+    var showFreeBusChangeModal by remember { mutableStateOf(false) }
+    var showRateModal by remember { mutableStateOf(false) }
+
+    val tripStatus = remember(booking) { calculateTripStatus(booking) }
+    val isCompleted = tripStatus == RealtimeTripStatus.TRIP_COMPLETED
+    val isCancelled = booking.status.equals("CANCELLED", ignoreCase = true) || booking.status.equals("REFUNDED", ignoreCase = true)
+
+    val passengerName = remember(booking.passengers) {
+        booking.passengers?.firstOrNull()?.name?.ifBlank { "Passenger" } ?: "Passenger"
+    }
+    val seatNumber = remember(booking.passengers) {
+        booking.passengers?.mapNotNull { it.seatNumber.trim().ifEmpty { null } }?.joinToString(", ") ?: "1F"
+    }
+    val passengerCount = remember(booking.passengers) {
+        booking.passengers?.size?.coerceAtLeast(1) ?: 1
+    }
+
+    val comfortScore = remember(booking.busRating) {
+        String.format(Locale.US, "%.1f", (booking.busRating ?: 4.4) * 2.0)
+    }
+
+    // 2-Hour Deadline Calculation
+    val isWithin2Hours = remember(booking.travelDate, booking.departureTime) {
+        try {
+            val travelDate = LocalDate.parse(booking.travelDate.trim())
+            val depTime = parseFlexibleTime(booking.departureTime) ?: LocalTime.of(12, 0)
+            val depDateTime = travelDate.atTime(depTime)
+            LocalDateTime.now().isAfter(depDateTime.minusHours(2))
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    val ticketNumber = remember(booking.id, booking.pnr) {
+        if (booking.id > 0) "TVBT${47600000 + booking.id}" else "TVBT${booking.pnr.takeLast(8).uppercase()}"
+    }
+
+    val durationLabel = remember(booking.departureTime, booking.arrivalTime) {
+        calculateDurationLabel(booking.departureTime, booking.arrivalTime)
+    }
+    val depDateFormatted = remember(booking.travelDate) {
+        formatTicketDate(booking.travelDate, plusDays = 0)
+    }
+    val arrDateFormatted = remember(booking.travelDate) {
+        formatTicketDate(booking.travelDate, plusDays = 1)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+            ) {
+                // Top App Bar matching Image 4
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Back", modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("Ticket details", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF111827))
+                            Text("Ticket #$ticketNumber", fontSize = 11.5.sp, color = Color.Gray)
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onHelpClick, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                        }
+                        IconButton(
+                            onClick = {
+                                val shareText = "🚌 redBus Ticket #$ticketNumber | PNR: ${booking.pnr}\nRoute: ${booking.sourceCity} ➔ ${booking.destinationCity}\nDeparture: ${booking.departureTime}, $depDateFormatted\nPassenger: $passengerName (Seat: $seatNumber)"
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Share Ticket Details"))
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.Gray, modifier = Modifier.size(19.dp))
+                        }
+                    }
+                }
+
+                // Sub-Tabs Bar: Ticket details, Boarding point, Dropping point, Rest stop details
+                val subTabs = listOf("Ticket details", "Boarding point", "Dropping point", "Rest stop details")
+                ScrollableTabRow(
+                    selectedTabIndex = activeSubTab,
+                    edgePadding = 16.dp,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = RedbusCrimson,
+                    divider = { HorizontalDivider(color = Color(0xFFF1F5F9)) }
+                ) {
+                    subTabs.forEachIndexed { idx, tabTitle ->
+                        Tab(
+                            selected = activeSubTab == idx,
+                            onClick = { activeSubTab = idx },
+                            text = {
+                                Text(
+                                    text = tabTitle,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (activeSubTab == idx) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        )
+                    }
+                }
+
+                // Sub-Tab Content
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    when (activeSubTab) {
+                        1 -> {
+                            // Boarding Point Tab
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("BOARDING LOCATION", fontWeight = FontWeight.Black, fontSize = 13.sp, color = RedbusCrimson)
+                                        }
+                                        Text(booking.boardingPoint.ifBlank { "${booking.sourceCity} Main Bus Station" }, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        Text("Reporting Time: 15 minutes before departure (${booking.departureTime})", fontSize = 12.sp, color = Color(0xFF475569))
+                                        Text("Helpline contact: ${booking.contactPhone}", fontSize = 12.sp, color = Color.Gray)
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Dropping Point Tab
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("DROPPING LOCATION", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFF0284C7))
+                                        }
+                                        Text(booking.droppingPoint.ifBlank { "${booking.destinationCity} Main Terminal" }, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        Text("Estimated Arrival: ${booking.arrivalTime}, $arrDateFormatted", fontSize = 12.sp, color = Color(0xFF475569))
+                                    }
+                                }
+                            }
+                        }
+
+                        3 -> {
+                            // Rest Stop Details Tab
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color.White,
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Restaurant, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("MIDWAY REST STOP & HYGIENE", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFFD97706))
+                                        }
+                                        Text("Shri Balaji Highway Express Plaza", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        Text("Halt Duration: 20-30 minutes • Clean sanitized washrooms, hot vegetarian meals, coffee & refreshments.", fontSize = 12.sp, color = Color(0xFF475569), lineHeight = 16.sp)
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFFEF3C7)
+                                        ) {
+                                            Text("⭐ Hygiene Rating 4.6/5 Verified by redBus", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF92400E), modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        else -> {
+                            // Main "Ticket details" Tab Content
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                if (isCompleted) {
+                                    // Rate this trip section matching Image 3
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color.White,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Text(
+                                                text = "Rate this trip",
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 18.sp,
+                                                color = Color(0xFF111827)
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                (1..5).forEach { starIdx ->
+                                                    Icon(
+                                                        imageVector = Icons.Default.StarOutline,
+                                                        contentDescription = "Rate $starIdx Stars",
+                                                        tint = RatingAmber,
+                                                        modifier = Modifier
+                                                            .size(34.dp)
+                                                            .clickable {
+                                                                showRateModal = true
+                                                            }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Excellent Comfort Score Banner (Matching Image 4)
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color(0xFFFEF2F2),
+                                        border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = "$passengerName, great bus choice",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF6B7280)
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Excellent comfort score $comfortScore/10",
+                                                    fontSize = 13.5.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = Color(0xFF1E293B)
+                                                )
+                                            }
+                                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+
+                                // Journey Card (Matching Image 4 / Image 3)
+                                Card(
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        // Card Top Header Banner (Red for Active, Dark Slate for Completed)
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(
+                                                    if (isCompleted) Color(0xFF1E293B)
+                                                    else RedbusCrimson
+                                                )
+                                                .padding(16.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // Source
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.ArrowOutward, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(booking.sourceCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                    }
+                                                    Text(booking.boardingPoint.ifBlank { "Pickup Point" }, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                }
+
+                                                // Middle Duration / Trip Status
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = Color.White.copy(alpha = 0.25f),
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                                        }
+                                                    }
+                                                    Text(
+                                                        text = if (isCompleted) "Trip Completed" else durationLabel,
+                                                        color = Color.White,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+
+                                                // Destination
+                                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                                    Text(booking.departureTime, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                    Text(depDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                                }
+                                            }
+
+                                            // Arrival row underneath in top banner
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 16.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.SouthEast, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(booking.destinationCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                    }
+                                                    Text(booking.droppingPoint.ifBlank { "Dropoff Point" }, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                }
+
+                                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                                                    Text(booking.arrivalTime, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                                    Text(arrDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                                }
+                                            }
+                                        }
+
+                                        // Card Bottom White Section
+                                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(booking.operatorName, fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF111827))
+                                                    Text("${booking.busType} · $passengerCount Seat", fontSize = 11.5.sp, color = Color.Gray)
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(passengerName, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, color = Color(0xFF1F2937))
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = Color(0xFFFCE7F3)
+                                                    ) {
+                                                        Text(
+                                                            text = seatNumber,
+                                                            color = Color(0xFFDB2777),
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Black,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+
+                                                // View Seat Button with graphic
+                                                Surface(
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    color = Color(0xFFF8FAFC),
+                                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                                    modifier = Modifier.clickable { showSeatModal = true }
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally
+                                                    ) {
+                                                        Text("::::", fontSize = 12.sp, color = Color(0xFF94A3B8), letterSpacing = 2.sp)
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text("View seat", color = Color(0xFF2563EB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+
+                                            HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                                            // Underlined "Ticket details" link matching Image 4
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { onOpenPerforatedTicket() }
+                                                    .padding(vertical = 4.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "Ticket details",
+                                                    color = Color(0xFF2563EB),
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Tracking details info text (Image 4)
+                                Text(
+                                    text = "Bus number and tracking details will be shared on the day of journey on ${booking.contactPhone}",
+                                    fontSize = 11.5.sp,
+                                    color = Color(0xFF6B7280),
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                // Action Card 1: Change trip details (Image 4 & Image 1)
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    color = if (isWithin2Hours || isCancelled) Color(0xFFF8FAFC) else Color.White,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = !isWithin2Hours && !isCancelled) {
+                                            showChangeTripPointsSheet = true
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Info, contentDescription = null, tint = if (isWithin2Hours) Color.Gray else Color(0xFF1E293B), modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Change trip details",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                                color = if (isWithin2Hours) Color.Gray else Color(0xFF111827)
+                                            )
+                                            Text(
+                                                text = if (isWithin2Hours) "Locked within 2 hours of departure" else "Boarding and dropping point",
+                                                fontSize = 11.sp,
+                                                color = if (isWithin2Hours) RedbusCrimson else Color(0xFF6B7280)
+                                            )
+                                        }
+                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                    }
+                                }
+
+                                // Action Card 2: Free bus change (Image 4 & Image 2)
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    color = if (isCancelled) Color(0xFFF8FAFC) else Color.White,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = !isCancelled) {
+                                            showFreeBusChangeModal = true
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(19.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Free bus change",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                                color = Color(0xFF111827)
+                                            )
+                                            Text("Postpone journey date to another date", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                        }
+                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                    }
+                                }
+
+                                // Action Card 3: Cancel Booking (Image 4 & Image 5) - only if active
+                                if (!isCancelled) {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onCancelBooking()
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Cancel, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Cancel Booking",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.5.sp,
+                                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                                    color = Color(0xFF111827)
+                                                )
+                                                Text("Eligible for partial refund", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                            }
+                                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                        }
+                                    }
+                                }
+
+                                // Congratulations card at bottom
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFFFEF3C7),
+                                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text("Congratulations", fontSize = 11.sp, color = Color(0xFF92400E))
+                                            Text("You won scratch cards", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF78350F))
+                                        }
+                                        Text("🎁", fontSize = 20.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal: Booked Seat Layout Map
+    if (showSeatModal) {
+        BookedSeatLayoutModal(
+            booking = booking,
+            onDismiss = { showSeatModal = false }
+        )
+    }
+
+    // Modal: Change Trip Points (Image 1)
+    if (showChangeTripPointsSheet) {
+        ChangeTripPointsBottomSheet(
+            booking = booking,
+            onDismiss = { showChangeTripPointsSheet = false },
+            onConfirm = { newBp, newDp ->
+                onChangeTripPoints(booking.pnr, newBp, newDp, {
+                    showChangeTripPointsSheet = false
+                    Toast.makeText(context, "Trip points updated successfully!", Toast.LENGTH_SHORT).show()
+                }, { errMsg ->
+                    Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
+                })
+            }
+        )
+    }
+
+    // Modal: Free Bus Change (Image 2)
+    if (showFreeBusChangeModal) {
+        FreeBusChangeModal(
+            booking = booking,
+            onDismiss = { showFreeBusChangeModal = false },
+            onConfirmDateChange = { newDate ->
+                onChangeJourneyDate(booking.pnr, newDate, null, {
+                    showFreeBusChangeModal = false
+                    Toast.makeText(context, "Journey date postponed to $newDate!", Toast.LENGTH_SHORT).show()
+                }, { errMsg ->
+                    Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
+                })
+            }
+        )
+    }
+
+    // Modal: Rate Journey Experience
+    if (showRateModal) {
+        RateJourneyModal(
+            booking = booking,
+            onDismiss = { showRateModal = false },
+            onSubmitReview = { busId, rating, comment ->
+                onSubmitReview(busId, rating, comment)
+                showRateModal = false
+                Toast.makeText(context, "Review submitted! Thank you.", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+}
+
 
 /**
  * Perforated View Ticket Popup Modal matching Image 5 (`media_1793296527384_86dfb532.jpg`).

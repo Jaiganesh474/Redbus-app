@@ -541,13 +541,15 @@ public class BookingService {
                 .id(booking.getId())
                 .pnr(booking.getPnr())
                 .routeId(route.getId())
+                .busId(route.getBus() != null ? route.getBus().getId() : null)
+                .busRating(route.getBus() != null ? route.getBus().getRating() : new BigDecimal("4.5"))
                 .sourceCity(route.getSourceCity())
                 .destinationCity(route.getDestinationCity())
                 .travelDate(route.getTravelDate())
                 .departureTime(route.getDepartureTime())
                 .arrivalTime(route.getArrivalTime())
-                .operatorName(route.getBus().getOperatorName())
-                .busType(route.getBus().getBusType())
+                .operatorName(route.getBus() != null ? route.getBus().getOperatorName() : "Intercity Smartbus")
+                .busType(route.getBus() != null ? route.getBus().getBusType() : "AC Sleeper (2+1)")
                 .totalAmount(booking.getTotalAmount())
                 .walletAmountUsed(booking.getWalletAmountUsed())
                 .couponCode(booking.getCouponCode())
@@ -565,6 +567,8 @@ public class BookingService {
                 .refundApprovedAt(booking.getRefundApprovedAt())
                 .boardingPoint(booking.getBoardingPoint())
                 .droppingPoint(booking.getDroppingPoint())
+                .availableBoardingPoints(route.getBoardingPoints())
+                .availableDroppingPoints(route.getDroppingPoints())
                 .contactEmail(booking.getContactEmail())
                 .contactPhone(booking.getContactPhone())
                 .cancellationReason(booking.getCancellationReason())
@@ -572,5 +576,95 @@ public class BookingService {
                 .createdAt(booking.getCreatedAt())
                 .passengers(passengerDtos)
                 .build();
+    }
+
+    @Transactional
+    public BookingResponseDto updateTripPoints(String pnr, String boardingPoint, String droppingPoint, Long currentUserId) {
+        Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
+
+        if (currentUserId != null && !booking.getUser().getId().equals(currentUserId)) {
+            User user = userRepository.findById(currentUserId).orElse(null);
+            if (user == null || (!"ROLE_ADMIN".equals(user.getRole()) && !"ROLE_OPERATOR".equals(user.getRole()))) {
+                throw new BadRequestException("You are not authorized to modify this booking");
+            }
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "REFUNDED".equalsIgnoreCase(booking.getStatus())) {
+            throw new BadRequestException("Cannot change trip details for cancelled or refunded bookings.");
+        }
+
+        Route route = booking.getRoute();
+        LocalDateTime departureDateTime = LocalDateTime.of(route.getTravelDate(), route.getDepartureTime());
+        if (departureDateTime.isBefore(LocalDateTime.now().plusHours(2))) {
+            throw new BadRequestException("Trip boarding and dropping points cannot be changed within 2 hours of departure.");
+        }
+
+        if (boardingPoint != null && !boardingPoint.isBlank()) {
+            booking.setBoardingPoint(boardingPoint.trim());
+        }
+        if (droppingPoint != null && !droppingPoint.isBlank()) {
+            booking.setDroppingPoint(droppingPoint.trim());
+        }
+
+        Booking saved = bookingRepository.save(booking);
+        log.info("Updated trip points for PNR {}: Boarding={}, Dropping={}", pnr, saved.getBoardingPoint(), saved.getDroppingPoint());
+        return mapToDto(saved);
+    }
+
+    @Transactional
+    public BookingResponseDto changeJourneyDate(String pnr, java.time.LocalDate newTravelDate, Long newRouteId, Long currentUserId) {
+        Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
+
+        if (currentUserId != null && !booking.getUser().getId().equals(currentUserId)) {
+            User user = userRepository.findById(currentUserId).orElse(null);
+            if (user == null || (!"ROLE_ADMIN".equals(user.getRole()) && !"ROLE_OPERATOR".equals(user.getRole()))) {
+                throw new BadRequestException("You are not authorized to modify this booking");
+            }
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "REFUNDED".equalsIgnoreCase(booking.getStatus())) {
+            throw new BadRequestException("Cannot change journey date for cancelled or refunded bookings.");
+        }
+
+        if (newTravelDate == null && newRouteId == null) {
+            throw new BadRequestException("New travel date or new route ID must be specified.");
+        }
+
+        Route currentRoute = booking.getRoute();
+        Route targetRoute = null;
+
+        if (newRouteId != null) {
+            targetRoute = routeRepository.findById(newRouteId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Target route not found: " + newRouteId));
+        } else {
+            List<Route> available = routeRepository.findBySourceAndDestinationAndDate(
+                    currentRoute.getSourceCity(), currentRoute.getDestinationCity(), newTravelDate);
+            if (!available.isEmpty()) {
+                targetRoute = available.get(0);
+            } else {
+                targetRoute = Route.builder()
+                        .bus(currentRoute.getBus())
+                        .operatorId(currentRoute.getOperatorId())
+                        .sourceCity(currentRoute.getSourceCity())
+                        .destinationCity(currentRoute.getDestinationCity())
+                        .travelDate(newTravelDate)
+                        .departureTime(currentRoute.getDepartureTime())
+                        .arrivalTime(currentRoute.getArrivalTime())
+                        .basePrice(currentRoute.getBasePrice())
+                        .durationHours(currentRoute.getDurationHours())
+                        .distanceKm(currentRoute.getDistanceKm())
+                        .boardingPoints(currentRoute.getBoardingPoints())
+                        .droppingPoints(currentRoute.getDroppingPoints())
+                        .build();
+                targetRoute = routeRepository.save(targetRoute);
+            }
+        }
+
+        booking.setRoute(targetRoute);
+        Booking saved = bookingRepository.save(booking);
+        log.info("Successfully postponed/changed journey date for PNR {} to {}", pnr, targetRoute.getTravelDate());
+        return mapToDto(saved);
     }
 }

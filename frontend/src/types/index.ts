@@ -125,6 +125,8 @@ export interface BookingDetails {
   id: number;
   pnr: string;
   routeId: number;
+  busId?: number;
+  busRating?: number;
   sourceCity: string;
   destinationCity: string;
   travelDate: string;
@@ -141,6 +143,8 @@ export interface BookingDetails {
   refundApprovedAt?: string;
   boardingPoint: string;
   droppingPoint: string;
+  availableBoardingPoints?: string;
+  availableDroppingPoints?: string;
   contactEmail: string;
   contactPhone: string;
   couponCode?: string;

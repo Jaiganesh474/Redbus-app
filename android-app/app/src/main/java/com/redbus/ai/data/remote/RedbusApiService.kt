@@ -123,6 +123,18 @@ interface RedbusApiService {
         @Body request: CancelBookingRequest
     ): CancelBookingResponse
 
+    @PUT("bookings/{pnr}/change-points")
+    suspend fun changeTripPoints(
+        @Path("pnr") pnr: String,
+        @Body request: ChangeTripPointsRequest
+    ): BookingDetails
+
+    @PUT("bookings/{pnr}/change-date")
+    suspend fun changeJourneyDate(
+        @Path("pnr") pnr: String,
+        @Body request: ChangeJourneyDateRequest
+    ): BookingDetails
+
     @POST("bookings/{pnr}/send-ticket")
     suspend fun sendTicketEmail(
         @Path("pnr") pnr: String,

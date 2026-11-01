@@ -223,6 +223,10 @@ data class BookingDetails(
     val id: Int = 0,
     val pnr: String = "",
     val routeId: Int = 0,
+    val busId: Long? = null,
+    val busRating: Double? = null,
+    val availableBoardingPoints: String? = null,
+    val availableDroppingPoints: String? = null,
     val sourceCity: String = "",
     val destinationCity: String = "",
     val travelDate: String = "",
@@ -250,6 +254,16 @@ data class BookingDetails(
     val refundAmount: Double? = null,
     val createdAt: String = "",
     val passengers: List<PassengerInput>? = emptyList()
+)
+
+data class ChangeTripPointsRequest(
+    val boardingPoint: String? = null,
+    val droppingPoint: String? = null
+)
+
+data class ChangeJourneyDateRequest(
+    val newTravelDate: String? = null,
+    val newRouteId: Long? = null
 )
 
 data class PaginatedBookingsResponse(

@@ -352,6 +352,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onSearchPnr = viewModel::searchBookingByPnr,
                         onRefreshBookings = viewModel::fetchMyBookings,
                         onCancelBooking = viewModel::cancelLiveBooking,
+                        onChangeTripPoints = viewModel::changeTripPoints,
+                        onChangeJourneyDate = viewModel::changeJourneyDate,
                         onEmailTicket = viewModel::emailTicket,
                         onNavigateToLogin = {
                             navigateToTab(navController, ScreenRoute.Profile.route)

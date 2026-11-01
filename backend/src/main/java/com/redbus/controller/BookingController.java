@@ -109,6 +109,32 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{pnr}/change-points")
+    public ResponseEntity<BookingResponseDto> changeTripPoints(
+            @PathVariable String pnr,
+            @RequestBody com.redbus.dto.ChangeTripPointsRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long userId = extractUserIdFromHeader(authHeader);
+        String bp = request != null ? request.getBoardingPoint() : null;
+        String dp = request != null ? request.getDroppingPoint() : null;
+        BookingResponseDto updated = bookingService.updateTripPoints(pnr, bp, dp, userId);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{pnr}/change-date")
+    public ResponseEntity<BookingResponseDto> changeJourneyDate(
+            @PathVariable String pnr,
+            @RequestBody com.redbus.dto.ChangeJourneyDateRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long userId = extractUserIdFromHeader(authHeader);
+        java.time.LocalDate newDate = request != null ? request.getNewTravelDate() : null;
+        Long newRouteId = request != null ? request.getNewRouteId() : null;
+        BookingResponseDto updated = bookingService.changeJourneyDate(pnr, newDate, newRouteId, userId);
+        return ResponseEntity.ok(updated);
+    }
+
     @RequestMapping(value = {"/{pnr}/send-reminder", "/{pnr}/send-reminder-sms"}, method = {RequestMethod.POST, RequestMethod.GET})
     public ResponseEntity<java.util.Map<String, Object>> sendReminderNotification(@PathVariable String pnr) {
         return ResponseEntity.ok(journeyReminderAutomationService.sendImmediateReminderForPnr(pnr));

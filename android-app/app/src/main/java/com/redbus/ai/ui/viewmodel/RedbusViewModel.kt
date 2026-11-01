@@ -1278,6 +1278,66 @@ class RedbusViewModel(
         }
     }
 
+    fun changeTripPoints(
+        pnr: String,
+        boardingPoint: String?,
+        droppingPoint: String?,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBookingsLoading = true, bookingActionMessage = null) }
+            repository.changeTripPoints(pnr, boardingPoint, droppingPoint)
+                .onSuccess { updated ->
+                    _uiState.update { state ->
+                        val updatedList = state.myBookings.map { if (it.pnr == pnr) updated else it }
+                        state.copy(
+                            isBookingsLoading = false,
+                            myBookings = updatedList,
+                            pnrSearchResult = if (state.pnrSearchResult?.pnr == pnr) updated else state.pnrSearchResult,
+                            bookingActionMessage = "Trip points updated for $pnr"
+                        )
+                    }
+                    onSuccess()
+                }
+                .onFailure { err ->
+                    val msg = extractErrorMessage(err, "Could not update trip points.")
+                    _uiState.update { it.copy(isBookingsLoading = false, bookingActionMessage = msg) }
+                    onError(msg)
+                }
+        }
+    }
+
+    fun changeJourneyDate(
+        pnr: String,
+        newTravelDate: String?,
+        newRouteId: Long?,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBookingsLoading = true, bookingActionMessage = null) }
+            repository.changeJourneyDate(pnr, newTravelDate, newRouteId)
+                .onSuccess { updated ->
+                    _uiState.update { state ->
+                        val updatedList = state.myBookings.map { if (it.pnr == pnr) updated else it }
+                        state.copy(
+                            isBookingsLoading = false,
+                            myBookings = updatedList,
+                            pnrSearchResult = if (state.pnrSearchResult?.pnr == pnr) updated else state.pnrSearchResult,
+                            bookingActionMessage = "Journey date successfully postponed for $pnr"
+                        )
+                    }
+                    onSuccess()
+                }
+                .onFailure { err ->
+                    val msg = extractErrorMessage(err, "Could not change journey date.")
+                    _uiState.update { it.copy(isBookingsLoading = false, bookingActionMessage = msg) }
+                    onError(msg)
+                }
+        }
+    }
+
     fun emailTicket(pnr: String) {
         viewModelScope.launch {
             repository.sendTicketEmail(pnr, _uiState.value.user?.email)

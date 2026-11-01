@@ -146,6 +146,16 @@ class RedbusRepository(
             runCatching { api.cancelBooking(pnr, CancelBookingRequest(reason, refundDestination)) }
         }
 
+    suspend fun changeTripPoints(pnr: String, boardingPoint: String?, droppingPoint: String?): Result<BookingDetails> =
+        withContext(Dispatchers.IO) {
+            runCatching { api.changeTripPoints(pnr, ChangeTripPointsRequest(boardingPoint, droppingPoint)) }
+        }
+
+    suspend fun changeJourneyDate(pnr: String, newTravelDate: String?, newRouteId: Long?): Result<BookingDetails> =
+        withContext(Dispatchers.IO) {
+            runCatching { api.changeJourneyDate(pnr, ChangeJourneyDateRequest(newTravelDate, newRouteId)) }
+        }
+
     suspend fun sendTicketEmail(pnr: String, email: String?): Result<Map<String, Any>> =
         withContext(Dispatchers.IO) {
             runCatching { api.sendTicketEmail(pnr, email) }

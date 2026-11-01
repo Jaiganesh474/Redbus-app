@@ -454,6 +454,28 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["Booking", "Seat", "OperatorAnalytics", "Auth", "Refunds", "OperatorWallet"],
     }),
+    changeTripPoints: builder.mutation<
+      BookingDetails,
+      { pnr: string; boardingPoint?: string; droppingPoint?: string }
+    >({
+      query: ({ pnr, boardingPoint, droppingPoint }) => ({
+        url: `/bookings/${pnr}/change-points`,
+        method: "PUT",
+        body: { boardingPoint, droppingPoint },
+      }),
+      invalidatesTags: ["Booking"],
+    }),
+    changeJourneyDate: builder.mutation<
+      BookingDetails,
+      { pnr: string; newTravelDate?: string; newRouteId?: number }
+    >({
+      query: ({ pnr, newTravelDate, newRouteId }) => ({
+        url: `/bookings/${pnr}/change-date`,
+        method: "PUT",
+        body: { newTravelDate, newRouteId },
+      }),
+      invalidatesTags: ["Booking", "Route", "Seat"],
+    }),
 
     // Payments
     createPaymentOrder: builder.mutation<PaymentOrder, { pnr: string }>({
@@ -803,6 +825,8 @@ export const {
   useSendTicketEmailMutation,
   useGetMyBookingsQuery,
   useCancelBookingMutation,
+  useChangeTripPointsMutation,
+  useChangeJourneyDateMutation,
   useCreatePaymentOrderMutation,
   useVerifyPaymentMutation,
   useParseNlpQueryMutation,

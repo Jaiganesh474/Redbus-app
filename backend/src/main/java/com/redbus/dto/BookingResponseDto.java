@@ -18,6 +18,8 @@ public class BookingResponseDto {
     private Long id;
     private String pnr;
     private Long routeId;
+    private Long busId;
+    private BigDecimal busRating;
     private String sourceCity;
     private String destinationCity;
     private LocalDate travelDate;
@@ -29,6 +31,8 @@ public class BookingResponseDto {
     private String status;
     private String boardingPoint;
     private String droppingPoint;
+    private String availableBoardingPoints;
+    private String availableDroppingPoints;
     private String contactEmail;
     private String contactPhone;
     private String cancellationReason;
