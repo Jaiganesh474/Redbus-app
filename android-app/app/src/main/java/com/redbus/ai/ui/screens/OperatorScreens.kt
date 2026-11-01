@@ -45,6 +45,21 @@ import com.redbus.ai.data.model.*
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import java.time.LocalDate
+import android.content.Context
+import android.content.Intent
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.graphics.Color as AndroidColor
+import android.graphics.Typeface
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 
 // Dark Theme Colors for Partner Portal Screens (Matching Image 3 & 4)
 private val PartnerBg = Color(0xFF0F172A)
@@ -943,7 +958,7 @@ fun OperatorHubScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("+ Add Bus to Fleet", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Add Bus to Fleet", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
                             Button(
@@ -1109,25 +1124,13 @@ fun OperatorHubScreen(
             }
         }
 
-        // Floating Ask RAY Button (Matching Image 1 bottom right)
-        FloatingActionButton(
+        // Floating Ask RAY Pill Button (Matching Buses tab 3D animation & gradient)
+        AskRayFloatingPillButton(
             onClick = onNavigateToAiHelp,
-            containerColor = Color(0xFF8B5CF6),
-            contentColor = Color.White,
-            shape = RoundedCornerShape(50),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Ask RAY", fontWeight = FontWeight.Black, fontSize = 14.sp)
-            }
-        }
+                .padding(end = 16.dp, bottom = 16.dp)
+        )
     }
 
     // Modal: Add Bus to Fleet
@@ -1768,34 +1771,39 @@ private fun RefundsTabContent(
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = RedbusCrimson.copy(alpha = 0.15f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.4f))
+                        border = androidx.compose.foundation.BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.4f)),
+                        modifier = Modifier.weight(1f, fill = false)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(12.dp))
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "OPERATOR PASSENGER CANCELLATION AUDIT & DISBURSEMENT",
+                                text = "CANCELLATION AUDIT & DISBURSEMENT",
                                 color = Color(0xFFFCA5A5),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
+                                letterSpacing = 0.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color.White.copy(alpha = 0.1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                        color = Color.White.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
                         modifier = Modifier.clickable { onRefreshQueue() }
                     ) {
-                        Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Refresh Queue", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Refresh", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1865,17 +1873,41 @@ private fun RefundsTabContent(
         }
 
         // Passenger Cancellation & Refund Queue List
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Refresh, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Passenger Cancellation & Refund Queue", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f, fill = false)) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Passenger Cancellation & Refund Queue",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFF1F5F9)
+                ) {
+                    Text(
+                        text = "${refunds.size} requests",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF475569),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
-            Text("Showing ${refunds.size} total cancellations", fontSize = 11.sp, color = Color.Gray)
+            Text("Review passenger cancellation claims and authorize instant refund disbursements", fontSize = 11.sp, color = Color.Gray)
         }
 
         refunds.forEach { item ->
@@ -2264,6 +2296,10 @@ private fun MyFleetTabContent(
         )
     }
 
+    var busToDelete by remember { mutableStateOf<BusResponseDto?>(null) }
+    var isDeletingBus by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2276,10 +2312,11 @@ private fun MyFleetTabContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text("Registered Fleet", fontWeight = FontWeight.Black, fontSize = 18.sp)
                 Text("Buses and custom seat layouts managed by your transport company", fontSize = 11.5.sp, color = Color.Gray)
             }
+            Spacer(modifier = Modifier.width(10.dp))
             Button(
                 onClick = onAddBusClick,
                 shape = RoundedCornerShape(12.dp),
@@ -2288,7 +2325,7 @@ private fun MyFleetTabContent(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("+ Add Bus", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Add Bus", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -2415,7 +2452,7 @@ private fun MyFleetTabContent(
 
                             // Delete Button
                             Button(
-                                onClick = { onDeleteBus(bus.id, {}, {}) },
+                                onClick = { busToDelete = bus },
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEF2F2), contentColor = Color(0xFFDC2626))
@@ -2441,6 +2478,83 @@ private fun MyFleetTabContent(
                 }
             }
         }
+    }
+
+    // Bus Delete Confirmation Dialog (Connected to live backend DELETE operator/buses/{id})
+    if (busToDelete != null) {
+        val target = busToDelete!!
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingBus) busToDelete = null },
+            icon = {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(32.dp))
+            },
+            title = {
+                Text("Delete Bus from Fleet?", fontWeight = FontWeight.Black, fontSize = 17.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Are you sure you want to delete ${target.operatorName} (${target.registrationNumber ?: "KA-01-REG"})?",
+                        fontSize = 13.5.sp,
+                        color = Color(0xFF334155)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFEF2F2),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA))
+                    ) {
+                        Text(
+                            text = "⚠️ Warning: This will permanently remove this coach from the redBus operator directory and cancel all upcoming schedule assignments.",
+                            fontSize = 11.5.sp,
+                            color = Color(0xFFB91C1C),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isDeletingBus = true
+                        onDeleteBus(
+                            target.id,
+                            {
+                                isDeletingBus = false
+                                val reg = target.registrationNumber ?: target.operatorName
+                                busToDelete = null
+                                Toast.makeText(context, "Bus $reg deleted successfully", Toast.LENGTH_SHORT).show()
+                            },
+                            { errMsg ->
+                                isDeletingBus = false
+                                Toast.makeText(context, "Delete failed: $errMsg", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626), contentColor = Color.White),
+                    shape = RoundedCornerShape(10.dp),
+                    enabled = !isDeletingBus
+                ) {
+                    if (isDeletingBus) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Deleting...", fontSize = 12.sp)
+                    } else {
+                        Text("Delete Bus", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { busToDelete = null },
+                    enabled = !isDeletingBus
+                ) {
+                    Text("Cancel", color = Color.Gray, fontSize = 12.sp)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 }
 
@@ -2863,6 +2977,220 @@ private fun ActiveSchedulesTabContent(
 }
 
 /**
+ * Helper to generate and download Passenger Manifest PDF table
+ */
+private fun downloadManifestPdf(
+    context: Context,
+    manifest: List<OperatorPassengerManifestDto>,
+    manifestDate: String
+) {
+    try {
+        val pdfDoc = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+        val page = pdfDoc.startPage(pageInfo)
+        val canvas = page.canvas
+
+        val titlePaint = Paint().apply {
+            color = AndroidColor.parseColor("#D84E55")
+            textSize = 15f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        val subPaint = Paint().apply {
+            color = AndroidColor.parseColor("#475569")
+            textSize = 9f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+
+        val headerBgPaint = Paint().apply {
+            color = AndroidColor.parseColor("#F1F5F9")
+            style = Paint.Style.FILL
+        }
+
+        val headerTextPaint = Paint().apply {
+            color = AndroidColor.parseColor("#0F172A")
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        val cellTextPaint = Paint().apply {
+            color = AndroidColor.parseColor("#1E293B")
+            textSize = 8f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
+        }
+
+        val boldCellPaint = Paint().apply {
+            color = AndroidColor.parseColor("#0F172A")
+            textSize = 8f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        val linePaint = Paint().apply {
+            color = AndroidColor.parseColor("#CBD5E1")
+            strokeWidth = 0.8f
+        }
+
+        // Draw Title & Metadata Header
+        canvas.drawText("redBus AI OPERATOR HUB — PASSENGER BOARDING MANIFEST", 30f, 40f, titlePaint)
+        canvas.drawText("Journey Date: $manifestDate  |  Total Bookings: ${manifest.size}  |  Generated: ${LocalDate.now()}", 30f, 56f, subPaint)
+
+        // Draw Table Header
+        val startY = 75f
+        val rowHeight = 22f
+        canvas.drawRect(30f, startY, 565f, startY + rowHeight, headerBgPaint)
+        canvas.drawLine(30f, startY + rowHeight, 565f, startY + rowHeight, linePaint)
+
+        canvas.drawText("SEAT", 35f, startY + 14f, headerTextPaint)
+        canvas.drawText("PASSENGER", 75f, startY + 14f, headerTextPaint)
+        canvas.drawText("AGE/SEX", 165f, startY + 14f, headerTextPaint)
+        canvas.drawText("BOARDING POINT", 215f, startY + 14f, headerTextPaint)
+        canvas.drawText("DROPPING POINT", 340f, startY + 14f, headerTextPaint)
+        canvas.drawText("PHONE / PNR", 445f, startY + 14f, headerTextPaint)
+        canvas.drawText("STATUS", 520f, startY + 14f, headerTextPaint)
+
+        // Draw Rows
+        var currentY = startY + rowHeight
+        manifest.take(30).forEach { item ->
+            canvas.drawText(item.seatDisplay ?: item.seatNumber, 35f, currentY + 14f, boldCellPaint)
+            canvas.drawText(item.passengerName.take(16), 75f, currentY + 14f, cellTextPaint)
+            val genderShort = if (item.gender?.uppercase()?.startsWith("M") == true) "M" else "F"
+            canvas.drawText("${item.age ?: 25}/$genderShort", 165f, currentY + 14f, cellTextPaint)
+            canvas.drawText((item.boardingPoint ?: "Main Stand").take(22), 215f, currentY + 14f, cellTextPaint)
+            canvas.drawText((item.droppingPoint ?: "City Terminal").take(18), 340f, currentY + 14f, cellTextPaint)
+            canvas.drawText(item.pnr.take(12), 445f, currentY + 14f, boldCellPaint)
+            canvas.drawText(item.status ?: "CONFIRMED", 520f, currentY + 14f, cellTextPaint)
+
+            canvas.drawLine(30f, currentY + rowHeight, 565f, currentY + rowHeight, linePaint)
+            currentY += rowHeight
+        }
+
+        // Footer note
+        canvas.drawText("Conductor Verification Signature: _______________________", 30f, 800f, subPaint)
+        canvas.drawText("Official redBus AI Conductor Portal • Verification Required Before Boarding", 240f, 800f, subPaint)
+
+        pdfDoc.finishPage(page)
+
+        val file = File(context.cacheDir, "passenger_manifest_${manifestDate.replace('-', '_')}.pdf")
+        FileOutputStream(file).use { out ->
+            pdfDoc.writeTo(out)
+        }
+        pdfDoc.close()
+
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(viewIntent, "Open Passenger Manifest PDF")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+        Toast.makeText(context, "Passenger Manifest PDF downloaded successfully", Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error downloading PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * Helper to print Passenger Manifest Sheet via Android PrintManager
+ */
+private fun printManifestSheet(
+    context: Context,
+    manifest: List<OperatorPassengerManifestDto>,
+    manifestDate: String
+) {
+    try {
+        val rowsHtml = manifest.joinToString("") { item ->
+            """
+            <tr>
+                <td style="font-weight:bold; color:#D84E55;">${item.seatDisplay ?: item.seatNumber}</td>
+                <td><b>${item.passengerName}</b></td>
+                <td>${item.age ?: 25} / ${item.gender ?: "M"}</td>
+                <td>${item.boardingPoint ?: "Main Stand"}</td>
+                <td>${item.droppingPoint ?: "City Terminal"}</td>
+                <td>${item.contactPhone ?: "+91 9876543210"}</td>
+                <td style="font-family:monospace;">${item.pnr}</td>
+                <td style="color:#059669; font-weight:bold;">${item.status ?: "CONFIRMED"}</td>
+            </tr>
+            """.trimIndent()
+        }
+
+        val html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Passenger Boarding Manifest - $manifestDate</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 24px; color: #0F172A; }
+                .header { border-bottom: 2px solid #D84E55; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+                h1 { color: #D84E55; font-size: 20px; margin: 0 0 4px 0; }
+                .meta { font-size: 12px; color: #64748B; }
+                table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
+                th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-align: left; padding: 8px 10px; border-bottom: 2px solid #CBD5E1; }
+                td { padding: 8px 10px; border-bottom: 1px solid #E2E8F0; }
+                tr:nth-child(even) { background-color: #F8FAFC; }
+                .footer { margin-top: 30px; display: flex; justify-content: space-between; font-size: 11px; color: #64748B; border-top: 1px dashed #CBD5E1; padding-top: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div>
+                    <h1>redBus AI — Conductor Boarding Chart</h1>
+                    <div class="meta">Journey Date: <b>$manifestDate</b> | Total Passengers: <b>${manifest.size}</b></div>
+                </div>
+                <div class="meta" style="text-align: right;">
+                    redBus Verified Manifest<br />Generated on ${LocalDate.now()}
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Seat</th>
+                        <th>Passenger Name</th>
+                        <th>Age/Gender</th>
+                        <th>Boarding Point</th>
+                        <th>Dropping Point</th>
+                        <th>Contact</th>
+                        <th>PNR</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    $rowsHtml
+                </tbody>
+            </table>
+            <div class="footer">
+                <div>Conductor Signature / Stamp: ______________________</div>
+                <div>redBus Transport Network • Official Manifest</div>
+            </div>
+        </body>
+        </html>
+        """.trimIndent()
+
+        val webView = WebView(context)
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                val printAdapter = webView.createPrintDocumentAdapter("Passenger_Manifest_$manifestDate")
+                printManager?.print(
+                    "Passenger Manifest - $manifestDate",
+                    printAdapter,
+                    PrintAttributes.Builder().build()
+                )
+            }
+        }
+        webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error printing sheet: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
  * 6. Passenger Manifest Tab Content (Matching Image 1 from Web Portal)
  */
 @Composable
@@ -2991,13 +3319,14 @@ private fun PassengerManifestTabContent(
         }
 
         // Action Buttons Row (Download PDF Chart, Print Sheet, Refresh)
+        val context = LocalContext.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
-                onClick = { },
+                onClick = { downloadManifestPdf(context, filteredPassengers, manifestDate) },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
@@ -3008,7 +3337,7 @@ private fun PassengerManifestTabContent(
             }
 
             OutlinedButton(
-                onClick = { },
+                onClick = { printManifestSheet(context, filteredPassengers, manifestDate) },
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
@@ -4518,7 +4847,11 @@ private fun AddBusModal(
                 }
 
                 // Bus Layout Type & Total Capacity Row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column(modifier = Modifier.weight(1.3f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Bus Layout Type", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Box {
@@ -4527,10 +4860,13 @@ private fun AddBusModal(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .height(56.dp)
                                     .clickable { isTypeMenuExpanded = true }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -4562,8 +4898,12 @@ private fun AddBusModal(
                             value = totalSeats,
                             onValueChange = { totalSeats = it },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Bold, fontSize = 14.sp),
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
                         )
                     }
                 }
@@ -4665,19 +5005,46 @@ private fun AddBusModal(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
+                                    Row(
+                                        modifier = Modifier.weight(1f, fill = false),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(15.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Active: $selectedPreset", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            text = "Active: $selectedPreset",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text("4-Angle Suite Ready", color = Color(0xFF059669), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFECFDF5),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(12.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "4-Angle Suite Ready",
+                                                color = Color(0xFF065F46),
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                softWrap = false
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -4864,6 +5231,7 @@ private fun PublishScheduleModal(
                                 boardingPoints = "$it Anand Rao Circle (21:00), $it Electronic City (22:30)"
                             },
                             leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -4878,36 +5246,46 @@ private fun PublishScheduleModal(
                                 droppingPoints = "$it Omni Bus Stand (04:30), $it Bypass (05:30)"
                             },
                             leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF0284C7), modifier = Modifier.size(16.dp)) },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
-                // Timings & Base Fare Row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Timings Row (Departure & Arrival)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Departure", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Departure Time", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = departureTime,
                             onValueChange = { departureTime = it },
-                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Arrival", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Arrival Time", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = arrivalTime,
                             onValueChange = { arrivalTime = it },
                             leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+                }
 
+                // Base Fare & Frequency Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Base Fare (₹)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
@@ -4915,28 +5293,33 @@ private fun PublishScheduleModal(
                             onValueChange = { basePrice = it },
                             textStyle = androidx.compose.ui.text.TextStyle(fontWeight = FontWeight.Black, color = RedbusCrimson, fontSize = 14.sp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
                         )
                     }
-                }
 
-                // Frequency & Validity Window Row
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(modifier = Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Frequency", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Box {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                modifier = Modifier.fillMaxWidth().clickable { isFreqMenuExpanded = true }
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .clickable { isFreqMenuExpanded = true }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(frequency, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                    Text(frequency, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.Gray)
                                 }
                             }
@@ -4947,12 +5330,16 @@ private fun PublishScheduleModal(
                             }
                         }
                     }
+                }
 
+                // Validity Window Row (Valid From & Valid To)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Valid From", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = validFrom,
                             onValueChange = { validFrom = it },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -4963,6 +5350,7 @@ private fun PublishScheduleModal(
                         OutlinedTextField(
                             value = validTo,
                             onValueChange = { validTo = it },
+                            singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
