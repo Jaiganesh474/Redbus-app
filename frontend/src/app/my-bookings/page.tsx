@@ -729,7 +729,7 @@ export default function MyBookingsPage() {
                         onClick={() => setSelectedBookingForCancel(booking)}
                         className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
                       >
-                        Cancel Booking & Refund
+                        Cancel Booking
                       </button>
                     )
                   )}
@@ -1014,7 +1014,7 @@ export default function MyBookingsPage() {
                   }}
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  <span>Review Terms & Cancel (₹{refundInfo.refundAmount.toFixed(2)})</span>
+                  <span>Cancel Ticket (₹{refundInfo.refundAmount.toFixed(2)})</span>
                 </button>
               </div>
             </motion.div>

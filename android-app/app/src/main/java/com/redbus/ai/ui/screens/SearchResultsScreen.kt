@@ -25,6 +25,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -2075,6 +2080,9 @@ fun AskRayFloatingPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
+
     val infiniteTransition = rememberInfiniteTransition(label = "askRayPulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.98f,
@@ -2087,12 +2095,39 @@ fun AskRayFloatingPillButton(
     )
 
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(50),
         shadowElevation = 12.dp,
         border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.45f)),
         color = Color.Transparent,
         modifier = modifier
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            .pointerInput(onClick) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var moved = false
+                    var totalMovement = 0f
+                    val pointerId = down.id
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                        if (!change.pressed) {
+                            if (!moved) {
+                                onClick()
+                            }
+                            break
+                        }
+                        val dx = change.position.x - change.previousPosition.x
+                        val dy = change.position.y - change.previousPosition.y
+                        totalMovement += kotlin.math.abs(dx) + kotlin.math.abs(dy)
+                        if (totalMovement > 8f) {
+                            moved = true
+                            offsetX += dx
+                            offsetY += dy
+                            change.consume()
+                        }
+                    }
+                }
+            }
             .navigationBarsPadding()
             .graphicsLayer {
                 scaleX = pulseScale

@@ -845,10 +845,13 @@ fun OperatorHubScreen(
 
     // Sub-Tabs list matching Image 1:
     // 0: Real-Time Sales, 1: AI Price Intelligence, 2: Refunds & Audit, 3: redBus Wallet, 4: My Fleet, 5: Active Schedules, 6: Passenger Manifest, 7: Coupons, 8: Agency Profile
+    val validRefundsCount = uiState.operatorRefunds.count {
+        it.refundStatus != "NONE" && it.refundStage != "NONE" && !it.refundStatus.equals("CONFIRMED", ignoreCase = true)
+    }
     val subTabs = listOf(
         "Real-Time Sales",
         "AI Price Intelligence",
-        "Refunds & Audit (${uiState.operatorRefunds.size})",
+        "Refunds & Audit ($validRefundsCount)",
         "redBus Wallet (₹${String.format("%.1f", uiState.operatorWalletLedger?.currentWalletBalance ?: 12956.8)})",
         "My Fleet (${uiState.operatorBuses.size.coerceAtLeast(2)})",
         "Active Schedules (${uiState.operatorSchedules.size.coerceAtLeast(7)})",
@@ -1707,41 +1710,8 @@ private fun RefundsTabContent(
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
     onRefreshQueue: () -> Unit = {}
 ) {
-    val refunds = uiState.operatorRefunds.ifEmpty {
-        listOf(
-            OperatorRefundDto(
-                pnr = "RB-2026-8KE7T2",
-                passengerName = "leo",
-                contactPhone = "8939129572",
-                sourceCity = "Bangalore",
-                destinationCity = "Chennai",
-                busName = "ZingBus",
-                seatNumbers = listOf("S7"),
-                totalPaid = 1155.0,
-                refundAmount = 0.0,
-                refundDestination = "redBus Wallet",
-                refundStatus = "DISBURSED",
-                refundStage = "COMPLETED",
-                cancellationReason = "Customer requested trip date change",
-                travelDate = "2026-10-31"
-            ),
-            OperatorRefundDto(
-                pnr = "RB-2026-9AA120",
-                passengerName = "Suresh K",
-                contactPhone = "9876543210",
-                sourceCity = "Bangalore",
-                destinationCity = "Chennai",
-                busName = "Intercity SmartBus",
-                seatNumbers = listOf("U1"),
-                totalPaid = 1200.0,
-                refundAmount = 1080.0,
-                refundDestination = "redBus Wallet",
-                refundStatus = "REQUESTED",
-                refundStage = "OPERATOR_AUDIT",
-                cancellationReason = "Passenger personal emergency",
-                travelDate = "2026-11-02"
-            )
-        )
+    val refunds = uiState.operatorRefunds.filter {
+        it.refundStatus != "NONE" && it.refundStage != "NONE" && !it.refundStatus.equals("CONFIRMED", ignoreCase = true)
     }
 
     val pendingCount = refunds.count { it.refundStatus == "REQUESTED" || it.refundStage == "OPERATOR_AUDIT" }
@@ -1908,6 +1878,38 @@ private fun RefundsTabContent(
                 }
             }
             Text("Review passenger cancellation claims and authorize instant refund disbursements", fontSize = 11.sp, color = Color.Gray)
+        }
+
+        if (refunds.isEmpty()) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(44.dp)
+                    )
+                    Text("No Cancellation Requests in Queue", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = "All passenger cancellations have been audited and refunded, or there are no pending cancellation requests.",
+                        fontSize = 11.5.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
         }
 
         refunds.forEach { item ->

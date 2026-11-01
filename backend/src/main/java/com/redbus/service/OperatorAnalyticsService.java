@@ -198,7 +198,15 @@ public class OperatorAnalyticsService {
     public List<OperatorRefundDto> getOperatorRefunds(Operator operator) {
         List<Booking> allBookings = getBookingsForOperator(operator);
         return allBookings.stream()
-                .filter(b -> "CANCELLED".equalsIgnoreCase(b.getStatus()) || "REFUNDED".equalsIgnoreCase(b.getStatus()) || b.getRefundStatus() != null)
+                .filter(b -> {
+                    // Exclude active confirmed bookings that have not been cancelled
+                    if ("CONFIRMED".equalsIgnoreCase(b.getStatus())) {
+                        return false;
+                    }
+                    boolean isCancelledOrRefunded = "CANCELLED".equalsIgnoreCase(b.getStatus()) || "REFUNDED".equalsIgnoreCase(b.getStatus());
+                    boolean hasActiveRefund = b.getRefundStatus() != null && !"NONE".equalsIgnoreCase(b.getRefundStatus());
+                    return isCancelledOrRefunded || hasActiveRefund;
+                })
                 .map(b -> {
                     String pName = b.getPassengers() != null && !b.getPassengers().isEmpty()
                             ? b.getPassengers().get(0).getName()
@@ -210,7 +218,18 @@ public class OperatorAnalyticsService {
                     String busName = (r != null && r.getBus() != null) ? r.getBus().getOperatorName() : "Express Coach";
 
                     BigDecimal totalPaid = b.getTotalAmount().add(b.getWalletAmountUsed() != null ? b.getWalletAmountUsed() : BigDecimal.ZERO);
-                    BigDecimal refundAmt = b.getRefundAmount() != null ? b.getRefundAmount() : totalPaid.multiply(new BigDecimal("0.90")).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal refundAmt = b.getRefundAmount() != null && b.getRefundAmount().compareTo(BigDecimal.ZERO) > 0
+                            ? b.getRefundAmount()
+                            : totalPaid.multiply(new BigDecimal("0.90")).setScale(2, RoundingMode.HALF_UP);
+
+                    String refStatus = b.getRefundStatus();
+                    if (refStatus == null || "NONE".equalsIgnoreCase(refStatus)) {
+                        refStatus = "REFUNDED".equalsIgnoreCase(b.getStatus()) ? "REFUNDED" : "REQUESTED";
+                    }
+                    String refStage = b.getRefundStage();
+                    if (refStage == null || "NONE".equalsIgnoreCase(refStage)) {
+                        refStage = "REFUNDED".equalsIgnoreCase(b.getStatus()) ? "COMPLETED" : "OPERATOR_AUDIT";
+                    }
 
                     return OperatorRefundDto.builder()
                             .bookingId(b.getId())
@@ -226,8 +245,8 @@ public class OperatorAnalyticsService {
                             .totalPaid(totalPaid)
                             .refundAmount(refundAmt)
                             .refundDestination(b.getRefundDestination() != null ? b.getRefundDestination() : "WALLET")
-                            .refundStatus(b.getRefundStatus() != null ? b.getRefundStatus() : ("REFUNDED".equalsIgnoreCase(b.getStatus()) ? "REFUNDED" : "REQUESTED"))
-                            .refundStage(b.getRefundStage() != null ? b.getRefundStage() : ("REFUNDED".equalsIgnoreCase(b.getStatus()) ? "COMPLETED" : "OPERATOR_AUDIT"))
+                            .refundStatus(refStatus)
+                            .refundStage(refStage)
                             .cancellationReason(b.getCancellationReason() != null ? b.getCancellationReason() : "Customer cancelled booking")
                             .requestedAt(b.getRefundRequestedAt() != null ? b.getRefundRequestedAt() : b.getCreatedAt())
                             .approvedAt(b.getRefundApprovedAt())
