@@ -2064,7 +2064,7 @@ private fun BookingTicketCard(
 }
 
 /**
- * Interactive Booked Seat Layout Modal
+ * Interactive Booked Seat Layout Modal (Matching Image 3 & Image 4)
  */
 @Composable
 private fun BookedSeatLayoutModal(
@@ -2075,6 +2075,39 @@ private fun BookedSeatLayoutModal(
         booking.passengers.orEmpty().mapNotNull { it.seatNumber.trim().ifEmpty { null } }.toSet()
     }
 
+    val isSleeper = remember(booking.busType, bookedSeatNumbers) {
+        booking.busType.contains("Sleeper", ignoreCase = true) ||
+        bookedSeatNumbers.any { it.startsWith("U", ignoreCase = true) || it.startsWith("L", ignoreCase = true) }
+    }
+
+    // Lower Deck 1+2 Sleeper Berths (Image 4: L1-L15)
+    val lowerDeckRows = listOf(
+        Triple("L1", "L2", "L3"),
+        Triple("L4", "L5", "L6"),
+        Triple("L7", "L8", "L9"),
+        Triple("L10", "L11", "L12"),
+        Triple("L13", "L14", "L15")
+    )
+
+    // Upper Deck 1+2 Sleeper Berths (Image 4: U1-U15)
+    val upperDeckRows = listOf(
+        Triple("U1", "U2", "U3"),
+        Triple("U4", "U5", "U6"),
+        Triple("U7", "U8", "U9"),
+        Triple("U10", "U11", "U12"),
+        Triple("U13", "U14", "U15")
+    )
+
+    // 2+2 Seater Fallback
+    val seaterRows = listOf(
+        listOf("S1", "S2", "AISLE", "S3", "S4"),
+        listOf("S5", "S6", "AISLE", "S7", "S8"),
+        listOf("S9", "S10", "AISLE", "S11", "S12"),
+        listOf("S13", "S14", "AISLE", "S15", "S16"),
+        listOf("S17", "S18", "AISLE", "S19", "S20"),
+        listOf("S21", "S22", "AISLE", "S23", "S24")
+    )
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -2083,13 +2116,13 @@ private fun BookedSeatLayoutModal(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.85f)
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.88f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(18.dp)
             ) {
                 // Header
                 Row(
@@ -2106,117 +2139,215 @@ private fun BookedSeatLayoutModal(
                         )
                         Text(
                             text = "${booking.operatorName} • ${booking.busType}",
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             color = Color.Gray
                         )
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray, modifier = Modifier.size(20.dp))
                     }
                 }
 
                 HorizontalDivider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 10.dp))
 
-                // Front / Driver Cabin Header
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFF8FAFC),
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("FRONT / ENTRY", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFFE2E8F0),
-                            modifier = Modifier.size(24.dp)
+                // Dual-Deck Body (Matching Image 3)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (isSleeper) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text("✇", fontSize = 14.sp, color = Color(0xFF475569))
+                            // Left Card: Lower Deck
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFFF8FAFC),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Lower Deck Header with Steering Wheel Icon (Image 3)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Lower deck",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF334155)
+                                        )
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color(0xFFE2E8F0),
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text("✇", fontSize = 14.sp, color = Color(0xFF64748B))
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color(0xFFE2E8F0))
+
+                                    // Lower Deck Berths
+                                    lowerDeckRows.forEach { row ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Single Berth Left (L1, L4, ...)
+                                            val isBookedLeft = bookedSeatNumbers.any { it.equals(row.first, ignoreCase = true) }
+                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft)
+
+                                            Spacer(modifier = Modifier.width(6.dp))
+
+                                            // Double Berths Right (L2-L3, L5-L6, ...)
+                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                val isBookedMid = bookedSeatNumbers.any { it.equals(row.second, ignoreCase = true) }
+                                                val isBookedRight = bookedSeatNumbers.any { it.equals(row.third, ignoreCase = true) }
+                                                BerthItem(seatNum = row.second, isBooked = isBookedMid)
+                                                BerthItem(seatNum = row.third, isBooked = isBookedRight)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "▼ Emergency Exit",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF94A3B8),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+
+                            // Right Card: Upper Deck
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color(0xFFF8FAFC),
+                                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Upper Deck Header with UP tag (Image 3)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Upper deck",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF334155)
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = Color(0xFFE2E8F0)
+                                        ) {
+                                            Text(
+                                                text = "UP",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFF64748B),
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = Color(0xFFE2E8F0))
+
+                                    // Upper Deck Berths
+                                    upperDeckRows.forEach { row ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Single Berth Left (U1, U4, ...)
+                                            val isBookedLeft = bookedSeatNumbers.any { it.equals(row.first, ignoreCase = true) }
+                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft)
+
+                                            Spacer(modifier = Modifier.width(6.dp))
+
+                                            // Double Berths Right (U2-U3, U5-U6, ...)
+                                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                val isBookedMid = bookedSeatNumbers.any { it.equals(row.second, ignoreCase = true) }
+                                                val isBookedRight = bookedSeatNumbers.any { it.equals(row.third, ignoreCase = true) }
+                                                BerthItem(seatNum = row.second, isBooked = isBookedMid)
+                                                BerthItem(seatNum = row.third, isBooked = isBookedRight)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "▼ Emergency Exit",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF94A3B8),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Seat Map Grid
-                val seatRows = listOf(
-                    listOf("L1", "L2", "AISLE", "L3"),
-                    listOf("L4", "L5", "AISLE", "L6"),
-                    listOf("1F", "2E", "AISLE", "3D"),
-                    listOf("U1", "U2", "AISLE", "U3"),
-                    listOf("U4", "U5", "AISLE", "U6"),
-                    listOf("S7", "S8", "AISLE", "S9"),
-                    listOf("S10", "S11", "AISLE", "S12"),
-                    listOf("B1", "B2", "B3", "B4")
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    seatRows.forEach { row ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceAround,
-                            verticalAlignment = Alignment.CenterVertically
+                    } else {
+                        // Seater 2+2 Layout
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            row.forEach { seatNum ->
-                                if (seatNum == "AISLE") {
-                                    Spacer(modifier = Modifier.width(28.dp))
-                                } else {
-                                    val isUserSeat = bookedSeatNumbers.any { it.equals(seatNum, ignoreCase = true) }
-                                    val isOtherBooked = !isUserSeat && (seatNum in listOf("L1", "U1", "S8", "B2"))
-
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = when {
-                                            isUserSeat -> RedbusCrimson
-                                            isOtherBooked -> Color(0xFFE2E8F0)
-                                            else -> Color.White
-                                        },
-                                        border = BorderStroke(
-                                            1.5.dp,
-                                            when {
-                                                isUserSeat -> Color(0xFFF59E0B)
-                                                isOtherBooked -> Color(0xFFCBD5E1)
-                                                else -> Color(0xFF10B981)
-                                            }
-                                        ),
-                                        modifier = Modifier
-                                            .width(54.dp)
-                                            .height(42.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = seatNum,
-                                                    fontSize = 11.5.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = when {
-                                                        isUserSeat -> Color.White
-                                                        isOtherBooked -> Color(0xFF64748B)
-                                                        else -> Color(0xFF0F172A)
+                            seaterRows.forEach { row ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceAround,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    row.forEach { seatNum ->
+                                        if (seatNum == "AISLE") {
+                                            Spacer(modifier = Modifier.width(20.dp))
+                                        } else {
+                                            val isBooked = bookedSeatNumbers.any { it.equals(seatNum, ignoreCase = true) }
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isBooked) Color(0xFFEC4899) else Color(0xFFE2E8F0),
+                                                border = BorderStroke(1.dp, if (isBooked) Color(0xFFBE185D) else Color(0xFFCBD5E1)),
+                                                modifier = Modifier
+                                                    .width(46.dp)
+                                                    .height(40.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                        Text(
+                                                            text = seatNum,
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (isBooked) Color.White else Color(0xFF64748B)
+                                                        )
+                                                        if (isBooked) {
+                                                            Text(
+                                                                text = "YOURS",
+                                                                fontSize = 7.sp,
+                                                                fontWeight = FontWeight.Black,
+                                                                color = Color(0xFFFEF08A)
+                                                            )
+                                                        }
                                                     }
-                                                )
-                                                if (isUserSeat) {
-                                                    Text(
-                                                        text = "YOURS",
-                                                        fontSize = 7.5.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = Color(0xFFFEF08A)
-                                                    )
                                                 }
                                             }
                                         }
@@ -2227,34 +2358,95 @@ private fun BookedSeatLayoutModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = Color(0xFFF1F5F9))
+                HorizontalDivider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 10.dp))
 
-                // Legend
+                // Clean Legend (Image 3)
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(4.dp), color = RedbusCrimson, modifier = Modifier.size(14.dp)) {}
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text("Your Booked Seat", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFEC4899),
+                            modifier = Modifier.size(14.dp)
+                        ) {}
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Your Booked Seat (${bookedSeatNumbers.joinToString(", ").ifEmpty { "Yours" }})",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E293B)
+                        )
                     }
+
+                    Spacer(modifier = Modifier.width(20.dp))
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFE2E8F0), modifier = Modifier.size(14.dp)) {}
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text("Occupied", fontSize = 11.sp, color = Color(0xFF64748B))
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(4.dp), color = Color.White, border = BorderStroke(1.dp, Color(0xFF10B981)), modifier = Modifier.size(14.dp)) {}
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text("Available", fontSize = 11.sp, color = Color(0xFF047857))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE2E8F0),
+                            border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                            modifier = Modifier.size(14.dp)
+                        ) {}
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Other Berths", fontSize = 11.5.sp, color = Color(0xFF64748B))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BerthItem(seatNum: String, isBooked: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (isBooked) Color(0xFFEC4899) else Color(0xFFE2E8F0),
+        border = BorderStroke(
+            if (isBooked) 1.5.dp else 1.dp,
+            if (isBooked) Color(0xFFBE185D) else Color(0xFFCBD5E1)
+        ),
+        shadowElevation = if (isBooked) 4.dp else 0.dp,
+        modifier = Modifier
+            .width(42.dp)
+            .height(64.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Pillow contour top
+            Surface(
+                shape = RoundedCornerShape(2.dp),
+                color = if (isBooked) Color.White.copy(alpha = 0.45f) else Color(0xFFCBD5E1).copy(alpha = 0.6f),
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(6.dp)
+            ) {}
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = seatNum,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (isBooked) Color.White else Color(0xFF94A3B8)
+                )
+                if (isBooked) {
+                    Text(
+                        text = "YOURS",
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFFFEF08A)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
         }
     }
 }
@@ -2976,76 +3168,110 @@ fun EnhancedTicketJourneyModal(
                                 ) {
                                     Column {
                                         // Card Top Header Banner (Red for Active, Dark Slate for Completed)
-                                        Box(
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .background(
                                                     if (isCompleted) Color(0xFF1E293B)
                                                     else RedbusCrimson
                                                 )
-                                                .padding(16.dp)
+                                                .padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
+                                            // 1. Source Row (Departure)
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
+                                                verticalAlignment = Alignment.Top
                                             ) {
-                                                // Source
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.ArrowOutward, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                                        Icon(Icons.Default.ArrowOutward, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                                                         Spacer(modifier = Modifier.width(4.dp))
-                                                        Text(booking.sourceCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                        Text(booking.sourceCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                                     }
-                                                    Text(booking.boardingPoint.ifBlank { "Pickup Point" }, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                }
-
-                                                // Middle Duration / Trip Status
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
-                                                    Surface(
-                                                        shape = CircleShape,
-                                                        color = Color.White.copy(alpha = 0.25f),
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Box(contentAlignment = Alignment.Center) {
-                                                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                                        }
-                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
                                                     Text(
-                                                        text = if (isCompleted) "Trip Completed" else durationLabel,
-                                                        color = Color.White,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold
+                                                        booking.boardingPoint.ifBlank { "${booking.sourceCity} Pickup Point" },
+                                                        color = Color.White.copy(alpha = 0.85f),
+                                                        fontSize = 11.5.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
                                                     )
                                                 }
 
-                                                // Destination
-                                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                                    Text(booking.departureTime, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                    Text(depDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                                Column(horizontalAlignment = Alignment.End) {
+                                                    Text(booking.departureTime, color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                                                    Text(depDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp)
                                                 }
                                             }
 
-                                            // Arrival row underneath in top banner
+                                            // 2. Middle Bus Duration Connector
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(top = 16.dp),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color.Transparent,
+                                                    border = BorderStroke(1.5.dp, Color.White),
+                                                    modifier = Modifier.size(8.dp)
+                                                ) {}
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(1.dp)
+                                                        .background(Color.White.copy(alpha = 0.35f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        color = Color.Black.copy(alpha = 0.25f)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                                            Text(
+                                                                text = if (isCompleted) "Trip Completed" else durationLabel,
+                                                                color = Color.White,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(6.dp)) {}
+                                            }
+
+                                            // 3. Destination Row (Arrival)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
+                                                verticalAlignment = Alignment.Top
                                             ) {
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(Icons.Default.SouthEast, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                                        Icon(Icons.Default.SouthEast, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                                                         Spacer(modifier = Modifier.width(4.dp))
-                                                        Text(booking.destinationCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                        Text(booking.destinationCity, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                                     }
-                                                    Text(booking.droppingPoint.ifBlank { "Dropoff Point" }, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        booking.droppingPoint.ifBlank { "${booking.destinationCity} Dropoff Point" },
+                                                        color = Color.White.copy(alpha = 0.85f),
+                                                        fontSize = 11.5.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
                                                 }
 
-                                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                                    Text(booking.arrivalTime, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                    Text(arrDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                                Column(horizontalAlignment = Alignment.End) {
+                                                    Text(booking.arrivalTime, color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                                                    Text(arrDateFormatted, color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp)
                                                 }
                                             }
                                         }
@@ -3126,14 +3352,15 @@ fun EnhancedTicketJourneyModal(
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
-                                // Action Card 1: Change trip details (Image 4 & Image 1)
+                                // Action Card 1: Change trip details (Image 4, Image 1 & Image 5)
+                                val canChangeTrip = !isWithin2Hours && !isCancelled && !isCompleted
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
                                     border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    color = if (isWithin2Hours || isCancelled) Color(0xFFF8FAFC) else Color.White,
+                                    color = if (!canChangeTrip) Color(0xFFF8FAFC) else Color.White,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable(enabled = !isWithin2Hours && !isCancelled) {
+                                        .clickable(enabled = canChangeTrip) {
                                             showChangeTripPointsSheet = true
                                         }
                                 ) {
@@ -3141,7 +3368,12 @@ fun EnhancedTicketJourneyModal(
                                         modifier = Modifier.padding(14.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.Info, contentDescription = null, tint = if (isWithin2Hours) Color.Gray else Color(0xFF1E293B), modifier = Modifier.size(20.dp))
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = if (!canChangeTrip) Color.Gray else Color(0xFF1E293B),
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
@@ -3149,26 +3381,35 @@ fun EnhancedTicketJourneyModal(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.5.sp,
                                                 textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                                color = if (isWithin2Hours) Color.Gray else Color(0xFF111827)
+                                                color = if (!canChangeTrip) Color.Gray else Color(0xFF111827)
                                             )
                                             Text(
-                                                text = if (isWithin2Hours) "Locked within 2 hours of departure" else "Boarding and dropping point",
+                                                text = when {
+                                                    isCompleted -> "Locked: Trip completed"
+                                                    isWithin2Hours -> "Locked within 2 hours of departure"
+                                                    else -> "Boarding and dropping point"
+                                                },
                                                 fontSize = 11.sp,
-                                                color = if (isWithin2Hours) RedbusCrimson else Color(0xFF6B7280)
+                                                color = when {
+                                                    isCompleted -> Color.Gray
+                                                    isWithin2Hours -> RedbusCrimson
+                                                    else -> Color(0xFF6B7280)
+                                                }
                                             )
                                         }
                                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                                     }
                                 }
 
-                                // Action Card 2: Free bus change (Image 4 & Image 2)
+                                // Action Card 2: Free bus change (Image 4, Image 2 & Image 5)
+                                val canBusChange = !isCancelled && !isCompleted
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
                                     border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                    color = if (isCancelled) Color(0xFFF8FAFC) else Color.White,
+                                    color = if (!canBusChange) Color(0xFFF8FAFC) else Color.White,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable(enabled = !isCancelled) {
+                                        .clickable(enabled = canBusChange) {
                                             showFreeBusChangeModal = true
                                         }
                                 ) {
@@ -3176,7 +3417,12 @@ fun EnhancedTicketJourneyModal(
                                         modifier = Modifier.padding(14.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(19.dp))
+                                        Icon(
+                                            Icons.Default.CalendarToday,
+                                            contentDescription = null,
+                                            tint = if (!canBusChange) Color.Gray else Color(0xFF1E293B),
+                                            modifier = Modifier.size(19.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
@@ -3184,23 +3430,28 @@ fun EnhancedTicketJourneyModal(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.5.sp,
                                                 textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                                color = Color(0xFF111827)
+                                                color = if (!canBusChange) Color.Gray else Color(0xFF111827)
                                             )
-                                            Text("Postpone journey date to another date", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                            Text(
+                                                text = if (isCompleted) "Locked: Trip completed" else "Postpone journey date to another date",
+                                                fontSize = 11.sp,
+                                                color = if (!canBusChange) Color.Gray else Color(0xFF6B7280)
+                                            )
                                         }
                                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                                     }
                                 }
 
-                                // Action Card 3: Cancel Booking (Image 4 & Image 5) - only if active
+                                // Action Card 3: Cancel Booking (Image 4 & Image 5)
                                 if (!isCancelled) {
+                                    val canCancelBooking = !isCompleted
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
                                         border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                                        color = Color.White,
+                                        color = if (!canCancelBooking) Color(0xFFF8FAFC) else Color.White,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable {
+                                            .clickable(enabled = canCancelBooking) {
                                                 onCancelBooking()
                                             }
                                     ) {
@@ -3208,7 +3459,12 @@ fun EnhancedTicketJourneyModal(
                                             modifier = Modifier.padding(14.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(Icons.Default.Cancel, contentDescription = null, tint = Color(0xFF1E293B), modifier = Modifier.size(20.dp))
+                                            Icon(
+                                                Icons.Default.Cancel,
+                                                contentDescription = null,
+                                                tint = if (!canCancelBooking) Color.Gray else Color(0xFF1E293B),
+                                                modifier = Modifier.size(20.dp)
+                                            )
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
@@ -3216,32 +3472,16 @@ fun EnhancedTicketJourneyModal(
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 13.5.sp,
                                                     textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                                    color = Color(0xFF111827)
+                                                    color = if (!canCancelBooking) Color.Gray else Color(0xFF111827)
                                                 )
-                                                Text("Eligible for partial refund", fontSize = 11.sp, color = Color(0xFF6B7280))
+                                                Text(
+                                                    text = if (isCompleted) "Locked: Trip completed" else "Eligible for partial refund",
+                                                    fontSize = 11.sp,
+                                                    color = if (!canCancelBooking) Color.Gray else Color(0xFF6B7280)
+                                                )
                                             }
                                             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                                         }
-                                    }
-                                }
-
-                                // Congratulations card at bottom
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0xFFFEF3C7),
-                                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text("Congratulations", fontSize = 11.sp, color = Color(0xFF92400E))
-                                            Text("You won scratch cards", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF78350F))
-                                        }
-                                        Text("🎁", fontSize = 20.sp)
                                     }
                                 }
                             }

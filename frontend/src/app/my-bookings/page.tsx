@@ -1579,10 +1579,9 @@ export default function MyBookingsPage() {
                       {/* Change trip details */}
                       <button
                         type="button"
+                        disabled={isCompleted || within2h}
                         onClick={() => {
-                          if (within2h) {
-                            alert("Notice: Boarding and dropping points cannot be changed within 2 hours of departure.");
-                          } else {
+                          if (!isCompleted && !within2h) {
                             setSelectedBookingForChangePoints(booking);
                             setNewBoardingPoint(booking.boardingPoint || "");
                             setNewDroppingPoint(booking.droppingPoint || "");
@@ -1590,18 +1589,21 @@ export default function MyBookingsPage() {
                             setChangePointsSuccess("");
                           }
                         }}
-                        className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50/80 transition-all cursor-pointer"
+                        className={`w-full p-4 flex items-center justify-between text-left transition-all ${
+                          isCompleted || within2h
+                            ? "bg-gray-50/60 cursor-not-allowed opacity-60"
+                            : "hover:bg-gray-50/80 cursor-pointer"
+                        }`}
                       >
                         <div className="flex items-start space-x-3">
-                          <Info className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
+                          <Info className={`w-5 h-5 shrink-0 mt-0.5 ${isCompleted || within2h ? "text-gray-400" : "text-gray-600"}`} />
                           <div>
-                            <p className="text-xs font-black text-gray-900">Change trip details</p>
-                            <p className="text-[11px] text-gray-500">Boarding and dropping point</p>
-                            {within2h && (
-                              <p className="text-[10px] text-red-500 font-bold mt-0.5">
-                                Locked (Within 2 hours of departure)
-                              </p>
-                            )}
+                            <p className={`text-xs font-black ${isCompleted || within2h ? "text-gray-400" : "text-gray-900"}`}>
+                              Change trip details
+                            </p>
+                            <p className="text-[11px] text-gray-500">
+                              {isCompleted ? "Locked: Trip completed" : within2h ? "Locked within 2 hours of departure" : "Boarding and dropping point"}
+                            </p>
                           </div>
                         </div>
                         <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
@@ -1610,20 +1612,31 @@ export default function MyBookingsPage() {
                       {/* Free bus change */}
                       <button
                         type="button"
+                        disabled={isCompleted || booking.status === "CANCELLED" || booking.status === "REFUNDED"}
                         onClick={() => {
-                          setSelectedBookingForChangeDate(booking);
-                          setNewJourneyDate(booking.travelDate || "");
-                          setChangeDateError("");
-                          setChangeDateSuccess("");
-                          setShowConfirmDateModal(false);
+                          if (!isCompleted && booking.status !== "CANCELLED" && booking.status !== "REFUNDED") {
+                            setSelectedBookingForChangeDate(booking);
+                            setNewJourneyDate(booking.travelDate || "");
+                            setChangeDateError("");
+                            setChangeDateSuccess("");
+                            setShowConfirmDateModal(false);
+                          }
                         }}
-                        className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50/80 transition-all cursor-pointer"
+                        className={`w-full p-4 flex items-center justify-between text-left transition-all ${
+                          isCompleted || booking.status === "CANCELLED" || booking.status === "REFUNDED"
+                            ? "bg-gray-50/60 cursor-not-allowed opacity-60"
+                            : "hover:bg-gray-50/80 cursor-pointer"
+                        }`}
                       >
                         <div className="flex items-start space-x-3">
-                          <Calendar className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
+                          <Calendar className={`w-5 h-5 shrink-0 mt-0.5 ${isCompleted ? "text-gray-400" : "text-gray-600"}`} />
                           <div>
-                            <p className="text-xs font-black text-gray-900">Bus change</p>
-                            <p className="text-[11px] text-gray-500">Postpone journey date to future schedule</p>
+                            <p className={`text-xs font-black ${isCompleted ? "text-gray-400" : "text-gray-900"}`}>
+                              Free bus change
+                            </p>
+                            <p className="text-[11px] text-gray-500">
+                              {isCompleted ? "Locked: Trip completed" : "Postpone journey date to future schedule"}
+                            </p>
                           </div>
                         </div>
                         <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
@@ -1633,17 +1646,28 @@ export default function MyBookingsPage() {
                       {booking.status !== "CANCELLED" && booking.status !== "REFUNDED" && (
                         <button
                           type="button"
+                          disabled={isCompleted}
                           onClick={() => {
-                            setSelectedBookingForJourney(null);
-                            setSelectedBookingForCancel(booking);
+                            if (!isCompleted) {
+                              setSelectedBookingForJourney(null);
+                              setSelectedBookingForCancel(booking);
+                            }
                           }}
-                          className="w-full p-4 flex items-center justify-between text-left hover:bg-red-50/50 transition-all cursor-pointer"
+                          className={`w-full p-4 flex items-center justify-between text-left transition-all ${
+                            isCompleted
+                              ? "bg-gray-50/60 cursor-not-allowed opacity-60"
+                              : "hover:bg-red-50/50 cursor-pointer"
+                          }`}
                         >
                           <div className="flex items-start space-x-3">
-                            <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                            <XCircle className={`w-5 h-5 shrink-0 mt-0.5 ${isCompleted ? "text-gray-400" : "text-red-500"}`} />
                             <div>
-                              <p className="text-xs font-black text-red-600">Cancel Booking</p>
-                              <p className="text-[11px] text-gray-500">Eligible for instant wallet refund</p>
+                              <p className={`text-xs font-black ${isCompleted ? "text-gray-400" : "text-red-600"}`}>
+                                Cancel Booking
+                              </p>
+                              <p className="text-[11px] text-gray-500">
+                                {isCompleted ? "Locked: Trip completed" : "Eligible for instant wallet refund"}
+                              </p>
                             </div>
                           </div>
                           <ChevronDown className="w-4 h-4 text-gray-400 -rotate-90 shrink-0" />
@@ -1734,21 +1758,41 @@ export default function MyBookingsPage() {
       })()}
 
       {/* ======================================================== */}
-      {/* 2. BOOKED SEAT LAYOUT MODAL */}
+      {/* 2. BOOKED SEAT LAYOUT MODAL (Matching Image 3 & 4) */}
       {/* ======================================================== */}
       {selectedBookingForSeatLayout && (() => {
         const booking = selectedBookingForSeatLayout;
-        const bookedSeats = (booking.passengers || []).map(p => p.seatNumber.trim()).filter(Boolean);
+        const bookedSeats = (booking.passengers || []).map((p) => p.seatNumber.trim()).filter(Boolean);
+        const isSleeper =
+          booking.busType.toLowerCase().includes("sleeper") ||
+          bookedSeats.some((s) => s.toUpperCase().startsWith("U") || s.toUpperCase().startsWith("L"));
 
-        const rows = [
-          ["L1", "L2", "AISLE", "L3"],
-          ["L4", "L5", "AISLE", "L6"],
-          ["1F", "2E", "AISLE", "3D"],
-          ["U1", "U2", "AISLE", "U3"],
-          ["U4", "U5", "AISLE", "U6"],
-          ["S1", "S2", "AISLE", "S3"],
-          ["S7", "S8", "AISLE", "S9"],
-          ["S10", "S11", "AISLE", "S12"],
+        // Lower Deck 1+2 Sleeper Layout (Image 4: L1-L15)
+        const lowerDeckRows = [
+          { left: "L1", right1: "L2", right2: "L3" },
+          { left: "L4", right1: "L5", right2: "L6" },
+          { left: "L7", right1: "L8", right2: "L9" },
+          { left: "L10", right1: "L11", right2: "L12" },
+          { left: "L13", right1: "L14", right2: "L15" },
+        ];
+
+        // Upper Deck 1+2 Sleeper Layout (Image 4: U1-U15)
+        const upperDeckRows = [
+          { left: "U1", right1: "U2", right2: "U3" },
+          { left: "U4", right1: "U5", right2: "U6" },
+          { left: "U7", right1: "U8", right2: "U9" },
+          { left: "U10", right1: "U11", right2: "U12" },
+          { left: "U13", right1: "U14", right2: "U15" },
+        ];
+
+        // 2+2 Seater Rows
+        const seaterRows = [
+          ["S1", "S2", "AISLE", "S3", "S4"],
+          ["S5", "S6", "AISLE", "S7", "S8"],
+          ["S9", "S10", "AISLE", "S11", "S12"],
+          ["S13", "S14", "AISLE", "S15", "S16"],
+          ["S17", "S18", "AISLE", "S19", "S20"],
+          ["S21", "S22", "AISLE", "S23", "S24"],
         ];
 
         return (
@@ -1757,7 +1801,7 @@ export default function MyBookingsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-gray-100 space-y-4"
+              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4"
             >
               <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                 <div>
@@ -1773,55 +1817,190 @@ export default function MyBookingsPage() {
                 </button>
               </div>
 
-              {/* Driver cabin */}
-              <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs text-gray-600 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <Bus className="w-4 h-4 text-gray-400" />
-                  <span>FRONT / ENTRY CABIN</span>
-                </span>
-                <span className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-xs">
-                  ✇
-                </span>
-              </div>
+              {/* Dual-Deck Layout matching Image 3 */}
+              <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
+                {isSleeper ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Lower Deck */}
+                    <div className="bg-slate-50/80 rounded-2xl border border-slate-200 p-3 space-y-2.5">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 text-xs font-bold text-slate-700">
+                        <span>Lower deck</span>
+                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px]">
+                          ✇
+                        </span>
+                      </div>
 
-              {/* Seat Matrix */}
-              <div className="space-y-2 py-2 max-h-[45vh] overflow-y-auto">
-                {rows.map((row, rIdx) => (
-                  <div key={rIdx} className="flex items-center justify-center gap-3">
-                    {row.map((seat, cIdx) => {
-                      if (seat === "AISLE") {
-                        return <div key={cIdx} className="w-6 text-center text-[10px] text-gray-300">|</div>;
-                      }
-                      const isUserBooked = bookedSeats.includes(seat);
-                      return (
-                        <div
-                          key={cIdx}
-                          className={`w-14 h-10 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all border ${
-                            isUserBooked
-                              ? "bg-[#d84e55] text-white border-red-600 shadow-md shadow-red-500/30 scale-105"
-                              : "bg-gray-50 text-gray-400 border-gray-200"
-                          }`}
-                        >
-                          <span>{seat}</span>
-                          <span className="text-[9px] font-medium opacity-90">
-                            {isUserBooked ? "Your Seat" : "Occupied"}
-                          </span>
-                        </div>
-                      );
-                    })}
+                      <div className="space-y-2">
+                        {lowerDeckRows.map((r, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            {/* Single Berth Left */}
+                            <div
+                              className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
+                                bookedSeats.includes(r.left)
+                                  ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                  : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
+                              }`}
+                            >
+                              <div
+                                className={`w-full h-2 rounded-xs ${
+                                  bookedSeats.includes(r.left) ? "bg-white/40" : "bg-slate-300/60"
+                                }`}
+                              />
+                              <span className="text-[10px] font-black">{r.left}</span>
+                              <div className="h-1" />
+                            </div>
+
+                            {/* Aisle Spacer */}
+                            <div className="w-2" />
+
+                            {/* Double Berths Right */}
+                            <div className="flex gap-1.5">
+                              {[r.right1, r.right2].map((s) => (
+                                <div
+                                  key={s}
+                                  className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
+                                    bookedSeats.includes(s)
+                                      ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                      : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-full h-2 rounded-xs ${
+                                      bookedSeats.includes(s) ? "bg-white/40" : "bg-slate-300/60"
+                                    }`}
+                                  />
+                                  <span className="text-[10px] font-black">{s}</span>
+                                  <div className="h-1" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-[8.5px] font-bold text-slate-400 text-center pt-1 uppercase">
+                        ▼ Emergency Exit
+                      </p>
+                    </div>
+
+                    {/* Upper Deck */}
+                    <div className="bg-slate-50/80 rounded-2xl border border-slate-200 p-3 space-y-2.5">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 text-xs font-bold text-slate-700">
+                        <span>Upper deck</span>
+                        <span className="text-[10px] font-black text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded-sm">
+                          UP
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {upperDeckRows.map((r, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            {/* Single Berth Left */}
+                            <div
+                              className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
+                                bookedSeats.includes(r.left)
+                                  ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                  : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
+                              }`}
+                            >
+                              <div
+                                className={`w-full h-2 rounded-xs ${
+                                  bookedSeats.includes(r.left) ? "bg-white/40" : "bg-slate-300/60"
+                                }`}
+                              />
+                              <span className="text-[10px] font-black">{r.left}</span>
+                              <div className="h-1" />
+                            </div>
+
+                            {/* Aisle Spacer */}
+                            <div className="w-2" />
+
+                            {/* Double Berths Right */}
+                            <div className="flex gap-1.5">
+                              {[r.right1, r.right2].map((s) => (
+                                <div
+                                  key={s}
+                                  className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
+                                    bookedSeats.includes(s)
+                                      ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                      : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-full h-2 rounded-xs ${
+                                      bookedSeats.includes(s) ? "bg-white/40" : "bg-slate-300/60"
+                                    }`}
+                                  />
+                                  <span className="text-[10px] font-black">{s}</span>
+                                  <div className="h-1" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-[8.5px] font-bold text-slate-400 text-center pt-1 uppercase">
+                        ▼ Emergency Exit
+                      </p>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  // Seater 2+2 Layout
+                  <div className="bg-slate-50/80 rounded-2xl border border-slate-200 p-4 space-y-3">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 text-xs font-bold text-slate-700">
+                      <span>Seater Cabin (2+2)</span>
+                      <span className="text-[10px] font-bold text-slate-400">✇ FRONT</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {seaterRows.map((r, rIdx) => (
+                        <div key={rIdx} className="flex items-center justify-around">
+                          <div className="flex gap-2">
+                            {[r[0], r[1]].map((s) => (
+                              <div
+                                key={s}
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                  bookedSeats.includes(s)
+                                    ? "bg-pink-600 text-white shadow-sm font-black"
+                                    : "bg-slate-200 text-slate-500"
+                                }`}
+                              >
+                                {s}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="w-4 text-center text-slate-300 text-[10px]">|</div>
+                          <div className="flex gap-2">
+                            {[r[3], r[4]].map((s) => (
+                              <div
+                                key={s}
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                  bookedSeats.includes(s)
+                                    ? "bg-pink-600 text-white shadow-sm font-black"
+                                    : "bg-slate-200 text-slate-500"
+                                }`}
+                              >
+                                {s}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-4 text-xs font-bold pt-2 border-t border-gray-100">
+              {/* Clean Legend (Image 3) */}
+              <div className="flex items-center justify-center gap-5 text-xs font-bold pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3.5 h-3.5 rounded bg-[#d84e55]" />
-                  <span>Your Booked Seat</span>
+                  <div className="w-3.5 h-3.5 rounded-sm bg-pink-600" />
+                  <span className="text-slate-800">Your Booked Seat ({bookedSeats.join(", ") || "Yours"})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3.5 h-3.5 rounded bg-gray-100 border border-gray-300" />
-                  <span className="text-gray-500">Other Passengers</span>
+                  <div className="w-3.5 h-3.5 rounded-sm bg-slate-200" />
+                  <span className="text-slate-400 font-medium">Other Berths</span>
                 </div>
               </div>
 
