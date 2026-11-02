@@ -26,7 +26,7 @@ public class SeatLockService {
 
     private final RouteSeatRepository routeSeatRepository;
 
-    @Value("${app.seat-lock.ttl-minutes:10}")
+    @Value("${app.seat-lock.ttl-minutes:7}")
     private int ttlMinutes;
 
     @Transactional

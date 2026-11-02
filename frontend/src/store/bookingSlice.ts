@@ -17,7 +17,14 @@ const loadInitialState = (): BookingState => {
     try {
       const saved = sessionStorage.getItem("redbus_booking_state");
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.selectedSeats) {
+          // Cleanse any legacy phantom 1A default seat
+          parsed.selectedSeats = parsed.selectedSeats.filter(
+            (s: any) => !(s.seatId === 1 && s.seatNumber === "1A" && parsed.selectedSeats.length > 1)
+          );
+        }
+        return parsed;
       }
     } catch {}
   }
@@ -73,6 +80,9 @@ export const bookingSlice = createSlice({
     ) => {
       state.selectedRoute = action.payload.route;
       state.selectedSeats = action.payload.seats;
+      state.lockedSeatIds = action.payload.seats.map((s) => s.seatId);
+      state.lockSecondsRemaining = 420; // 7 minutes payment countdown
+      state.lockExpiry = new Date(Date.now() + 420 * 1000).toISOString();
       state.boardingPoint = action.payload.boardingPoint || "";
       state.droppingPoint = action.payload.droppingPoint || "";
       state.passengers = action.payload.seats.map((seat) => ({
@@ -174,22 +184,8 @@ export const bookingSlice = createSlice({
       saveToSession(state);
     },
     ensureDefaultPassenger: (state, action: PayloadAction<{ route?: RouteItem | null; userName?: string; userGender?: string }>) => {
-      if (state.selectedSeats.length === 0) {
-        const defaultSeat: SeatItem = {
-          id: 1,
-          seatId: 1,
-          seatNumber: "1A",
-          seatType: "SEATER",
-          deck: "LOWER",
-          rowNum: 1,
-          colNum: 1,
-          genderRestriction: "NONE",
-          status: "AVAILABLE",
-          price: action.payload.route?.basePrice || 750,
-        };
-        state.selectedSeats = [defaultSeat];
-      }
-      if (state.passengers.length === 0) {
+      // Do not inject fake seats. Only sync passengers for user-selected seats
+      if (state.passengers.length === 0 && state.selectedSeats.length > 0) {
         state.passengers = state.selectedSeats.map((seat, idx) => ({
           seatId: seat.seatId,
           seatNumber: seat.seatNumber,

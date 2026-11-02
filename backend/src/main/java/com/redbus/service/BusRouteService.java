@@ -28,6 +28,7 @@ public class BusRouteService {
     private final SeatRepository seatRepository;
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
+    private final ReviewRepository reviewRepository;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
@@ -437,12 +438,23 @@ public class BusRouteService {
                     .collect(Collectors.toList());
         }
 
+        BigDecimal busRating = BigDecimal.ZERO;
+        if (route.getBus() != null && route.getBus().getId() != null) {
+            List<Review> busReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(route.getBus().getId()).stream()
+                    .filter(r -> r.getUserName() == null || (!r.getUserName().contains("Mock") && !r.getUserName().contains("Arun Kumar R.") && !r.getUserName().contains("Priya") && !r.getUserName().contains("Karthik") && !r.getUserName().contains("Divya N.")))
+                    .collect(Collectors.toList());
+            if (!busReviews.isEmpty()) {
+                double avg = busReviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
+                busRating = BigDecimal.valueOf(Math.round(avg * 10.0) / 10.0);
+            }
+        }
+
         return RouteResponseDto.builder()
                 .id(route.getId())
                 .busId(route.getBus().getId())
                 .operatorName(route.getBus().getOperatorName())
                 .busType(route.getBus().getBusType())
-                .rating(route.getBus().getRating())
+                .rating(busRating)
                 .amenities(amenitiesList)
                 .sourceCity(route.getSourceCity())
                 .destinationCity(route.getDestinationCity())

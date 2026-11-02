@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppDispatch } from "@/store";
 import { setSelectedRoute } from "@/store/bookingSlice";
-import { API_BASE_URL } from "@/store/apiSlice";
+import { API_BASE_URL, useGetBusReviewsQuery } from "@/store/apiSlice";
 import type { RouteItem } from "@/types";
 import {
   Star,
@@ -27,6 +27,11 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
   const dispatch = useAppDispatch();
   const [showModal, setShowModal] = useState(false);
   const [initialTab, setInitialTab] = useState<string>("cancellation");
+
+  const { data: reviewData } = useGetBusReviewsQuery(route.busId || route.id);
+  const displayRating = reviewData
+    ? (reviewData.totalRatings > 0 ? reviewData.averageRating.toFixed(1) : "0.0")
+    : (route.rating > 0 ? route.rating.toFixed(1) : "0.0");
 
   useEffect(() => {
     if (autoOpen) {
@@ -89,7 +94,7 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
                       title="Click to view passenger ratings and reviews"
                     >
                       <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
-                      <span>{route.rating.toFixed(1)}</span>
+                      <span>{displayRating}</span>
                     </div>
                   </div>
                   <p className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-slate-400 mt-0.5 sm:mt-1 truncate">

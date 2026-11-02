@@ -13,7 +13,7 @@ export function useSeatLockTimer() {
   const [unlockSeats] = useUnlockSeatsMutation();
 
   useEffect(() => {
-    if (lockSecondsRemaining <= 0 || lockedSeatIds.length === 0) {
+    if (lockSecondsRemaining <= 0) {
       return;
     }
 
@@ -22,7 +22,7 @@ export function useSeatLockTimer() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [lockSecondsRemaining, lockedSeatIds.length, dispatch]);
+  }, [lockSecondsRemaining, dispatch]);
 
   // When timer hits zero after being active, release server locks
   useEffect(() => {
@@ -44,6 +44,6 @@ export function useSeatLockTimer() {
   return {
     lockSecondsRemaining,
     formattedTime: formatTime(lockSecondsRemaining),
-    isLocked: lockSecondsRemaining > 0 && lockedSeatIds.length > 0,
+    isLocked: lockSecondsRemaining > 0,
   };
 }

@@ -351,9 +351,15 @@ export default function BusDetailsModal({
   const { user, token } = useAppSelector((state) => state.auth);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const searchState = useAppSelector((state) => state.search);
-  const { selectedSeats, boardingPoint, droppingPoint } = useAppSelector(
+  const { selectedRoute, selectedSeats, boardingPoint, droppingPoint } = useAppSelector(
     (state) => state.booking
   );
+
+  useEffect(() => {
+    if (isOpen && selectedRoute?.id !== route.id) {
+      dispatch(setSelectedRoute(route));
+    }
+  }, [isOpen, route.id, selectedRoute?.id, dispatch]);
 
   // Active step flow: "SEATS" -> "BOARD_DROP"
   const [activeStep, setActiveStep] = useState<"SEATS" | "BOARD_DROP">("SEATS");
@@ -424,7 +430,7 @@ export default function BusDetailsModal({
   ], []);
 
   const totalReviewsCount = reviewData?.totalRatings || reviewData?.reviews?.length || 0;
-  const avgBusRating = reviewData?.averageRating || route.rating || 4.5;
+  const avgBusRating = totalReviewsCount > 0 ? (reviewData?.averageRating || 0) : 0;
   const starPercentagesMap = reviewData?.starPercentages || {
     5: 46,
     4: 24,
@@ -960,10 +966,10 @@ export default function BusDetailsModal({
                 <div className="flex items-center space-x-2 shrink-0">
                   <div className="flex items-center space-x-1 px-2.5 py-1 bg-[#15803d] text-white rounded-lg text-xs font-bold shadow-2xs">
                     <Star className="w-3.5 h-3.5 fill-white" />
-                    <span>{reviewData?.averageRating?.toFixed(1) || route.rating.toFixed(1)}</span>
+                    <span>{totalReviewsCount > 0 ? (reviewData?.averageRating || 0).toFixed(1) : "0.0"}</span>
                   </div>
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium hidden sm:inline">
-                    {reviewData?.totalRatings !== undefined ? reviewData.totalRatings : 0} ratings
+                    {totalReviewsCount} ratings
                   </span>
                 </div>
               </div>
@@ -1499,24 +1505,8 @@ export default function BusDetailsModal({
                                   </div>
                                 </div>
                               ) : (
-                                /* Image 2: Overview with Bus Features, Star Breakdown, Loved Tags, Read All Reviews */
+                                /* Overview with Star Breakdown, Loved Tags, Read All Reviews */
                                 <div className="space-y-5">
-                                  {/* Bus features */}
-                                  <div className="space-y-2.5">
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Bus features</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                      {busFeaturesList.map((f, i) => (
-                                        <div
-                                          key={i}
-                                          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-200 shadow-xs"
-                                        >
-                                          <span>{f.icon}</span>
-                                          <span>{f.label}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-
                                   {/* Ratings & reviews Section */}
                                   <div className="space-y-3 pt-1">
                                     <div className="flex items-center justify-between">

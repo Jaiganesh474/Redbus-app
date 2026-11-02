@@ -65,7 +65,7 @@ app:
   frontend:
     url: ${FRONTEND_URL:https://redbusai.app}
   seat-lock:
-    ttl-minutes: 5
+    ttl-minutes: 7
   firebase:
     api-key: ${FIREBASE_API_KEY:${NEXT_PUBLIC_FIREBASE_API_KEY:}}
     server-key: ${FIREBASE_SERVER_KEY:}

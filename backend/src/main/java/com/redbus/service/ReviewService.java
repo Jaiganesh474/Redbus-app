@@ -51,7 +51,9 @@ public class ReviewService {
             bus.setRating(BigDecimal.valueOf(avg));
             busRepository.save(bus);
         } else {
-            avg = bus.getRating() != null ? bus.getRating().doubleValue() : 4.5;
+            avg = 0.0;
+            bus.setRating(BigDecimal.ZERO);
+            busRepository.save(bus);
         }
 
         // Star breakdown percentages (5 down to 1)

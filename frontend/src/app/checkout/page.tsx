@@ -1648,43 +1648,174 @@ function CheckoutContent() {
                       ))}
                     </div>
 
-                    {/* Mini Seat Layout Map (Image 4) */}
-                    <div className="p-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 space-y-3">
+                    {/* Authentic Vertical Dual-Deck Chassis Layout (Matching Image 5) */}
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1.5 flex-1">
-                          {Array.from({ length: 10 }).map((_, s) => {
-                            const isSelected = selectedSeats.some((st) => st.seatNumber.includes(`${s + 1}`));
-                            return (
-                              <div
-                                key={s}
-                                className={`w-5 h-4 rounded-xs ${
-                                  isSelected ? "bg-pink-500 shadow-xs" : "bg-gray-200 dark:bg-slate-700"
-                                }`}
-                              />
-                            );
-                          })}
+                        <span className="text-xs font-bold text-gray-800 dark:text-white">Selected seat layout</span>
+                        <div className="flex items-center space-x-3 text-[10px]">
+                          <span className="flex items-center space-x-1">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-pink-600 inline-block" />
+                            <span className="text-gray-600 dark:text-gray-300 font-semibold">Your Seat</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <span className="w-2.5 h-2.5 rounded-xs bg-slate-200 dark:bg-slate-700 inline-block" />
+                            <span className="text-gray-400">Other</span>
+                          </span>
                         </div>
-                        <span className="text-[10px] text-gray-400 pl-3">Lower</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1.5 flex-1">
-                          {Array.from({ length: 10 }).map((_, s) => {
-                            const isSelected = selectedSeats.some((st) => st.seatNumber.startsWith(`U${s + 1}`) || st.seatNumber.includes(`U${s + 1}`));
-                            return (
-                              <div
-                                key={s}
-                                className={`w-5 h-4 rounded-xs ${
-                                  isSelected ? "bg-pink-500 shadow-xs" : "bg-gray-200 dark:bg-slate-700"
-                                }`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <span className="text-[10px] text-gray-400 pl-3">Upper</span>
-                      </div>
-                    </div>
 
-                    {/* Contact Details */}
+                      {activeRoute?.busType?.toLowerCase()?.includes("sleeper") ||
+                      selectedSeats.some((s) => s.seatNumber?.toUpperCase().startsWith("U") || s.seatNumber?.toUpperCase().startsWith("L")) ? (
+                        <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-700">
+                          {/* Lower Deck */}
+                          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-2.5 space-y-2">
+                            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-slate-700 text-[11px] font-bold text-gray-700 dark:text-slate-300">
+                              <span>Lower deck</span>
+                              <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-700 text-gray-500 flex items-center justify-center text-[10px]" title="Steering Wheel">
+                                ✇
+                              </span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {[
+                                { left: "L1", right1: "L2", right2: "L3" },
+                                { left: "L4", right1: "L5", right2: "L6" },
+                                { left: "L7", right1: "L8", right2: "L9" },
+                                { left: "L10", right1: "L11", right2: "L12" },
+                                { left: "L13", right1: "L14", right2: "L15" },
+                              ].map((r, idx) => (
+                                <div key={idx} className="flex items-center justify-between">
+                                  {(() => {
+                                    const isSel = selectedSeats.some((s) => s.seatNumber === r.left);
+                                    return (
+                                      <div
+                                        className={`w-7 h-10 rounded-md flex flex-col items-center justify-between p-0.5 transition-all ${
+                                          isSel
+                                            ? "bg-pink-600 border border-pink-700 text-white shadow-xs font-black scale-105"
+                                            : "bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-400"
+                                        }`}
+                                      >
+                                        <div className={`w-full h-1.5 rounded-2xs ${isSel ? "bg-white/40" : "bg-slate-200 dark:bg-slate-600"}`} />
+                                        <span className="text-[9px] font-bold">{r.left}</span>
+                                        <div className="h-0.5" />
+                                      </div>
+                                    );
+                                  })()}
+                                  <div className="w-1.5" />
+                                  <div className="flex gap-1">
+                                    {[r.right1, r.right2].map((seatNum) => {
+                                      const isSel = selectedSeats.some((s) => s.seatNumber === seatNum);
+                                      return (
+                                        <div
+                                          key={seatNum}
+                                          className={`w-7 h-10 rounded-md flex flex-col items-center justify-between p-0.5 transition-all ${
+                                            isSel
+                                              ? "bg-pink-600 border border-pink-700 text-white shadow-xs font-black scale-105"
+                                              : "bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-400"
+                                          }`}
+                                        >
+                                          <div className={`w-full h-1.5 rounded-2xs ${isSel ? "bg-white/40" : "bg-slate-200 dark:bg-slate-600"}`} />
+                                          <span className="text-[9px] font-bold">{seatNum}</span>
+                                          <div className="h-0.5" />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[7.5px] font-bold text-gray-400 text-center pt-1 uppercase">▼ Emergency Exit</p>
+                          </div>
+
+                          {/* Upper Deck */}
+                          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-2.5 space-y-2">
+                            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-slate-700 text-[11px] font-bold text-gray-700 dark:text-slate-300">
+                              <span>Upper deck</span>
+                              <span className="text-[9px] font-black text-gray-400 bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded-2xs">UP</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {[
+                                { left: "U1", right1: "U2", right2: "U3" },
+                                { left: "U4", right1: "U5", right2: "U6" },
+                                { left: "U7", right1: "U8", right2: "U9" },
+                                { left: "U10", right1: "U11", right2: "U12" },
+                                { left: "U13", right1: "U14", right2: "U15" },
+                                { left: "U16", right1: "U17", right2: "U18" },
+                              ].map((r, idx) => (
+                                <div key={idx} className="flex items-center justify-between">
+                                  {(() => {
+                                    const isSel = selectedSeats.some((s) => s.seatNumber === r.left);
+                                    return (
+                                      <div
+                                        className={`w-7 h-10 rounded-md flex flex-col items-center justify-between p-0.5 transition-all ${
+                                          isSel
+                                            ? "bg-pink-600 border border-pink-700 text-white shadow-xs font-black scale-105"
+                                            : "bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-400"
+                                        }`}
+                                      >
+                                        <div className={`w-full h-1.5 rounded-2xs ${isSel ? "bg-white/40" : "bg-slate-200 dark:bg-slate-600"}`} />
+                                        <span className="text-[9px] font-bold">{r.left}</span>
+                                        <div className="h-0.5" />
+                                      </div>
+                                    );
+                                  })()}
+                                  <div className="w-1.5" />
+                                  <div className="flex gap-1">
+                                    {[r.right1, r.right2].map((seatNum) => {
+                                      const isSel = selectedSeats.some((s) => s.seatNumber === seatNum);
+                                      return (
+                                        <div
+                                          key={seatNum}
+                                          className={`w-7 h-10 rounded-md flex flex-col items-center justify-between p-0.5 transition-all ${
+                                            isSel
+                                              ? "bg-pink-600 border border-pink-700 text-white shadow-xs font-black scale-105"
+                                              : "bg-slate-100 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-400"
+                                          }`}
+                                        >
+                                          <div className={`w-full h-1.5 rounded-2xs ${isSel ? "bg-white/40" : "bg-slate-200 dark:bg-slate-600"}`} />
+                                          <span className="text-[9px] font-bold">{seatNum}</span>
+                                          <div className="h-0.5" />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[7.5px] font-bold text-gray-400 text-center pt-1 uppercase">▼ Emergency Exit</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-200 dark:border-slate-700 space-y-1.5 max-h-[250px] overflow-y-auto">
+                          {[
+                            ["1A", "1B", "AISLE", "1C", "1D"],
+                            ["2A", "2B", "AISLE", "2C", "2D"],
+                            ["3A", "3B", "AISLE", "3C", "3D"],
+                            ["4A", "4B", "AISLE", "4C", "4D"],
+                            ["5A", "5B", "AISLE", "5C", "5D"],
+                            ["6A", "6B", "AISLE", "6C", "6D"],
+                          ].map((row, rIdx) => (
+                            <div key={rIdx} className="flex items-center justify-center space-x-2">
+                              {row.map((seatNum, cIdx) => {
+                                if (seatNum === "AISLE") return <div key={cIdx} className="w-4" />;
+                                const isSel = selectedSeats.some((s) => s.seatNumber === seatNum);
+                                return (
+                                  <div
+                                    key={cIdx}
+                                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold transition-all ${
+                                      isSel
+                                        ? "bg-pink-600 text-white shadow-xs font-black scale-105"
+                                        : "bg-slate-100 dark:bg-slate-700/60 text-slate-400 border border-slate-200 dark:border-slate-600"
+                                    }`}
+                                  >
+                                    {seatNum}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-gray-900 dark:text-white">Passenger contact details</h4>
                       <p className="text-xs text-gray-400">We'll send ticket updates here</p>

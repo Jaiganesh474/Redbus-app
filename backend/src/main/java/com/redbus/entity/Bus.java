@@ -45,7 +45,7 @@ public class Bus {
 
     @Column(precision = 2, scale = 1)
     @Builder.Default
-    private BigDecimal rating = new BigDecimal("4.5");
+    private BigDecimal rating = BigDecimal.ZERO;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;

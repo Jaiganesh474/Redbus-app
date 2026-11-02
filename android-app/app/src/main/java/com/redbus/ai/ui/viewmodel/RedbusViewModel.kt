@@ -76,7 +76,7 @@ data class RedbusUiState(
     val lockedSeatIds: List<Int> = emptyList(),
     val selectedBoardingPoint: String = "",
     val selectedDroppingPoint: String = "",
-    val seatLockSeconds: Int = 600,
+    val seatLockSeconds: Int = 420,
     // Checkout & In-App Razorpay Payment State
     val passengers: List<PassengerInput> = emptyList(),
     val contactEmail: String = "",
@@ -991,15 +991,15 @@ class RedbusViewModel(
                         it.copy(
                             isLoading = false,
                             lockedSeatIds = lockRes.lockedSeatIds ?: seatIds,
-                            seatLockSeconds = lockRes.remainingSeconds ?: 600
+                            seatLockSeconds = lockRes.remainingSeconds ?: 420
                         )
                     }
-                    startSeatLockTimer(lockRes.remainingSeconds ?: 600)
+                    startSeatLockTimer(lockRes.remainingSeconds ?: 420)
                     onProceed()
                 }
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false) }
-                    startSeatLockTimer(600)
+                    startSeatLockTimer(420)
                     onProceed()
                 }
         }
