@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AiChatWidget from "@/components/AiChatWidget";
 import RealtimeNotificationToast from "@/components/RealtimeNotificationToast";
+import DynamicTitle from "@/components/DynamicTitle";
 
 // Load Google Fonts matching Zomato / redBus modern UI design system
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
     apple: "/apple-icon",
   },
   openGraph: {
-    title: "redBus - India's No. 1 Online Bus Ticketing Platform",
+    title: "redBus - Online Ticket Booking Sleeper or Volvo Buses",
     description: "Book bus tickets online with redBus. AI-powered search, live seat tracking, and instant refunds.",
     url: "https://redbusai.app",
     siteName: "redBus",
@@ -67,6 +68,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
+          <DynamicTitle />
           <Navbar />
           <RealtimeNotificationToast />
           <main className="flex-1">{children}</main>

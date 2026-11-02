@@ -2930,7 +2930,7 @@ export default function OperatorPortalPage() {
                       className="text-[11px] font-bold text-slate-800 hover:text-black flex items-center gap-1.5 bg-white hover:bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-300 shadow-xs cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                     >
                       <Sliders className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Studio Studio</span>
+                      <span>Studio</span>
                     </button>
                     <button
                       type="button"
@@ -2938,7 +2938,6 @@ export default function OperatorPortalPage() {
                       onClick={() => handleQuickAiGenerate()}
                       className="text-[11px] font-bold text-white flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 px-3.5 py-1.5 rounded-xl border border-amber-600 shadow-sm cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <Wand2 className="w-3.5 h-3.5 text-white" />
                       <span>{busPhotoUrl ? "🔄 Regenerate AI Bus" : "✨ Ask AI to Generate"}</span>
                     </button>
                   </div>

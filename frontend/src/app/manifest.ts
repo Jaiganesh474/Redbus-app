@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "redBus - Online Bus Ticket Booking",
+    name: "redBus - Online Ticket Booking Sleeper or Volvo Buses",
     short_name: "redBus",
     description: "Book Bus Tickets Online across 30,000+ routes with AI assistant and live seat tracking",
     start_url: "/",
