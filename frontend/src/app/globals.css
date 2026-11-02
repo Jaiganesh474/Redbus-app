@@ -65,6 +65,81 @@ html.dark body {
   color: #f8fafc;
 }
 
+/* ========================================================================= */
+/* UNIVERSAL DARK MODE ENHANCEMENTS: INPUT VISIBILITY, TEXT & CONTRAST */
+/* ========================================================================= */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="range"]),
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.dark select option {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3) !important;
+  outline: none !important;
+}
+
+/* Ensure form labels and field legends are white/light in dark mode */
+html.dark label {
+  color: #f1f5f9;
+}
+
+/* Headings and text contrast in dark mode */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: #ffffff;
+}
+
+/* Ensure text-gray classes in dark mode are white/light and completely visible */
+html.dark .text-gray-900 {
+  color: #ffffff;
+}
+
+html.dark .text-gray-800 {
+  color: #f1f5f9;
+}
+
+html.dark .text-gray-700 {
+  color: #e2e8f0;
+}
+
+html.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+
+html.dark .text-gray-500 {
+  color: #94a3b8;
+}
+
+/* Dark mode backgrounds for cards and panels */
+html.dark .bg-gray-50 {
+  background-color: #1e293b;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200 {
+  border-color: #334155;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

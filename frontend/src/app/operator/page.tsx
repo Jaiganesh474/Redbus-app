@@ -933,63 +933,63 @@ export default function OperatorPortalPage() {
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Gross Revenue */}
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-gray-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-gray-400 dark:text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Gross Sales</span>
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
                     <DollarSign className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-gray-900">
+                <div className="text-2xl font-black text-gray-900 dark:text-white">
                   ₹{Number(analytics?.totalRevenue || 0).toLocaleString("en-IN")}
                 </div>
-                <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" /> Live from bookings
                 </p>
               </div>
 
               {/* Net Earnings */}
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-gray-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-gray-400 dark:text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Net Payout</span>
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
                     <Percent className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-blue-900">
+                <div className="text-2xl font-black text-blue-900 dark:text-blue-300">
                   ₹{Number(analytics?.netEarnings || 0).toLocaleString("en-IN")}
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium">
+                <p className="text-[11px] text-gray-400 dark:text-slate-400 font-medium">
                   After 10% platform fee (₹{Number(analytics?.commissionPaid || 0).toLocaleString("en-IN")})
                 </p>
               </div>
 
               {/* Tickets Sold */}
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-gray-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-gray-400 dark:text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Tickets Sold</span>
-                  <div className="p-2 bg-red-50 text-[#d84e55] rounded-xl">
+                  <div className="p-2 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl">
                     <Ticket className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-gray-900">
-                  {analytics?.ticketsSold || 0} <span className="text-xs font-medium text-gray-400">seats</span>
+                <div className="text-2xl font-black text-gray-900 dark:text-white">
+                  {analytics?.ticketsSold || 0} <span className="text-xs font-medium text-gray-400 dark:text-slate-400">seats</span>
                 </div>
-                <p className="text-[11px] text-gray-500 font-medium">Across all scheduled routes</p>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400 font-medium">Across all scheduled routes</p>
               </div>
 
               {/* Fleet Occupancy */}
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-gray-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-gray-400 dark:text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Avg Occupancy</span>
-                  <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                  <div className="p-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl">
                     <Activity className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-purple-900">
+                <div className="text-2xl font-black text-purple-900 dark:text-purple-300">
                   {analytics?.averageOccupancyPercentage || 0}%
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-purple-600 h-full rounded-full transition-all"
                     style={{ width: `${Math.min(100, Number(analytics?.averageOccupancyPercentage || 0))}%` }}
@@ -998,30 +998,30 @@ export default function OperatorPortalPage() {
               </div>
 
               {/* Active Fleet */}
-              <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-gray-400">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between text-gray-400 dark:text-slate-400">
                   <span className="text-xs font-bold uppercase tracking-wider">Active Fleet</span>
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                  <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl">
                     <Bus className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-gray-900">
-                  {analytics?.activeFleetCount || 0} <span className="text-xs font-medium text-gray-400">Buses</span>
+                <div className="text-2xl font-black text-gray-900 dark:text-white">
+                  {analytics?.activeFleetCount || 0} <span className="text-xs font-medium text-gray-400 dark:text-slate-400">Buses</span>
                 </div>
-                <p className="text-[11px] text-gray-400 font-medium">
+                <p className="text-[11px] text-gray-400 dark:text-slate-400 font-medium">
                   {analytics?.activeSchedulesCount || 0} active schedules
                 </p>
               </div>
             </div>
 
             {/* Daily Revenue Bar Timeline (CSS Graph) */}
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs space-y-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-gray-100 dark:border-slate-800 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">7-Day Ticket Revenue Timeline</h3>
-                  <p className="text-xs text-gray-400">Live booking sales per day</p>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">7-Day Ticket Revenue Timeline</h3>
+                  <p className="text-xs text-gray-400 dark:text-slate-400">Live booking sales per day</p>
                 </div>
-                <span className="text-xs font-bold text-[#d84e55] bg-red-50 px-3 py-1 rounded-full">
+                <span className="text-xs font-bold text-[#d84e55] dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 px-3 py-1 rounded-full">
                   Real-time Data
                 </span>
               </div>
@@ -1736,7 +1736,7 @@ export default function OperatorPortalPage() {
                 {buses.map((bus) => (
                   <div
                     key={bus.id}
-                    className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all space-y-4 relative overflow-hidden"
+                    className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-4 relative overflow-hidden"
                   >
                     <BusImageSlider
                       photoUrls={bus.photoUrls}
@@ -1748,39 +1748,39 @@ export default function OperatorPortalPage() {
 
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 font-mono text-[10px] font-bold rounded-md">
+                        <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 font-mono text-[10px] font-bold rounded-md">
                           {bus.registrationNumber}
                         </span>
-                        <h3 className="text-base font-bold text-gray-900 mt-1">{bus.operatorName}</h3>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mt-1">{bus.operatorName}</h3>
                         <p className="text-xs font-semibold text-[#d84e55]">{bus.busType}</p>
                       </div>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
                         <CheckCircle2 className="w-3 h-3" /> Active
                       </span>
                     </div>
 
-                    <div className="p-3 bg-gray-50 rounded-2xl grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-2xl grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-gray-400 block text-[10px]">Total Capacity</span>
-                        <span className="font-bold text-gray-900">{bus.totalSeats} Seats</span>
+                        <span className="text-gray-400 dark:text-slate-400 block text-[10px]">Total Capacity</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{bus.totalSeats} Seats</span>
                       </div>
                       <div>
-                        <span className="text-gray-400 block text-[10px]">Layout Style</span>
-                        <span className="font-bold text-gray-900">
+                        <span className="text-gray-400 dark:text-slate-400 block text-[10px]">Layout Style</span>
+                        <span className="font-bold text-gray-900 dark:text-white">
                           {bus.busType.includes("Sleeper") ? "2+1 Double Deck" : "2+2 Single Deck"}
                         </span>
                       </div>
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-slate-400 uppercase tracking-wider block mb-1">
                         Amenities
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {bus.amenities.split(",").map((a, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded-md"
+                            className="px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-[10px] font-medium rounded-md"
                           >
                             {a.trim()}
                           </span>
@@ -1840,8 +1840,8 @@ export default function OperatorPortalPage() {
           <div className="space-y-6 animate-in fade-in">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Active Published Schedules</h2>
-                <p className="text-xs text-gray-500">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Active Published Schedules</h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
                   Recurring services automatically materialized as bookable daily trips on redBus
                 </p>
               </div>
@@ -1858,14 +1858,14 @@ export default function OperatorPortalPage() {
             </div>
 
             {isLoadingSchedules ? (
-              <div className="py-12 text-center text-xs text-gray-400">Loading schedules...</div>
+              <div className="py-12 text-center text-xs text-gray-400 dark:text-slate-500">Loading schedules...</div>
             ) : schedules.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 space-y-4">
-                <div className="w-16 h-16 bg-red-50 text-[#d84e55] rounded-2xl flex items-center justify-center mx-auto">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-gray-100 dark:border-slate-800 space-y-4">
+                <div className="w-16 h-16 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-2xl flex items-center justify-center mx-auto">
                   <Calendar className="w-8 h-8" />
                 </div>
-                <h3 className="text-base font-bold text-gray-900">No Schedules Published</h3>
-                <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">No Schedules Published</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
                   Publish a recurring schedule with departure timing and fare to make your buses instantly bookable on redBus.
                 </p>
                 <button
@@ -1883,26 +1883,26 @@ export default function OperatorPortalPage() {
                 {schedules.map((sch) => (
                   <div
                     key={sch.id}
-                    className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center space-x-2">
-                        <span className="text-base font-black text-gray-900">
+                        <span className="text-base font-black text-gray-900 dark:text-white">
                           {sch.sourceCity} → {sch.destinationCity}
                         </span>
-                        <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                        <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold rounded-full border border-emerald-200 dark:border-emerald-800/60">
                           {sch.status}
                         </span>
                       </div>
-                      <p className="text-xs font-semibold text-gray-600">
+                      <p className="text-xs font-semibold text-gray-600 dark:text-slate-300">
                         {sch.busName} ({sch.busType})
                       </p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 pt-1">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-slate-400 pt-1">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-[#d84e55]" /> {sch.departureTime} - {sch.arrivalTime}
                         </span>
                         <span>•</span>
-                        <span className="font-semibold text-gray-700">{sch.operatingDays}</span>
+                        <span className="font-semibold text-gray-700 dark:text-slate-200">{sch.operatingDays}</span>
                         <span>•</span>
                         <span>
                           Valid: {sch.validFrom} to {sch.validTo}
@@ -2560,22 +2560,22 @@ export default function OperatorPortalPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Edit Profile Form */}
-              <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-xs space-y-6">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-slate-800 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-2xl bg-red-50 text-[#d84e55] flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 flex items-center justify-center font-bold">
                       <Edit3 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900">Edit Operator Credentials</h3>
-                      <p className="text-xs text-gray-400">Updates will reflect across all search results & passenger e-tickets</p>
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">Edit Operator Credentials</h3>
+                      <p className="text-xs text-gray-400 dark:text-slate-400">Updates will reflect across all search results & passenger e-tickets</p>
                     </div>
                   </div>
                 </div>
 
                 <form onSubmit={handleUpdateProfile} className="space-y-5">
                   {formError && (
-                    <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                    <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs rounded-xl border border-red-200 dark:border-red-900/40 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                       <span>{formError}</span>
                     </div>
@@ -2583,41 +2583,41 @@ export default function OperatorPortalPage() {
 
                   {/* Section 1: Brand & Representative */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-slate-400">
                       1. Brand Identity & Representative
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           Agency / Bus Brand Name <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <Building2 className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <Building2 className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
                             required
                             value={profileCompanyName}
                             onChange={(e) => setProfileCompanyName(e.target.value)}
                             placeholder="e.g. Royal Travels India"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           Authorized Signatory / Contact Person <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <UserIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <UserIcon className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
                             required
                             value={profileContactPerson}
                             onChange={(e) => setProfileContactPerson(e.target.value)}
                             placeholder="e.g. Jai Ganesh"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
                       </div>
@@ -2625,40 +2625,40 @@ export default function OperatorPortalPage() {
                   </div>
 
                   {/* Section 2: Contact & Support */}
-                  <div className="space-y-4 pt-2 border-t border-gray-100">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-slate-800">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-slate-400">
                       2. Communication & Passenger Support
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           Dispatch Contact Phone / Helpline
                         </label>
                         <div className="relative">
-                          <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <Phone className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
                             value={profilePhone}
                             onChange={(e) => setProfilePhone(e.target.value)}
                             placeholder="+91 9876543210"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           Official Business Email
                         </label>
                         <div className="relative">
-                          <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <Mail className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="email"
                             value={profileEmail}
                             onChange={(e) => setProfileEmail(e.target.value)}
                             placeholder="support@royaltravels.com"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
                       </div>
@@ -2666,43 +2666,43 @@ export default function OperatorPortalPage() {
                   </div>
 
                   {/* Section 3: Payout Settlement & KYC */}
-                  <div className="space-y-4 pt-2 border-t border-gray-100">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-slate-800">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-slate-400">
                       3. Settlement Bank Account & Compliance
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           Bank Account / UPI / Settlement Reference
                         </label>
                         <div className="relative">
-                          <CreditCard className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <CreditCard className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
                             value={profileBankAccountRef}
                             onChange={(e) => setProfileBankAccountRef(e.target.value)}
                             placeholder="e.g. HDFC0001234 - AC 501004928192"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1">
+                        <p className="text-[10px] text-gray-400 dark:text-slate-400 mt-1">
                           Ticket sales earnings will be disbursed automatically to this settlement account.
                         </p>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">
                           GSTIN / Business Registration / Document Reference
                         </label>
                         <div className="relative">
-                          <FileCheck className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                          <FileCheck className="w-4 h-4 text-gray-400 dark:text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
                             value={profileKycDocUrl}
                             onChange={(e) => setProfileKycDocUrl(e.target.value)}
                             placeholder="e.g. 33AAAAA0000A1Z5 / Permit #8849"
-                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                            className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                           />
                         </div>
                       </div>
@@ -2710,7 +2710,7 @@ export default function OperatorPortalPage() {
                   </div>
 
                   {/* Submit Button */}
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-3">
+                  <div className="pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-end space-x-3">
                     <button
                       type="button"
                       onClick={() => {
@@ -2841,32 +2841,32 @@ export default function OperatorPortalPage() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Operator / Bus Brand Name</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Operator / Bus Brand Name</label>
                 <input
                   type="text"
                   required
                   value={busOperatorName}
                   onChange={(e) => setBusOperatorName(e.target.value)}
                   placeholder="e.g. Royal Travels"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Registration Plate Number</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Registration Plate Number</label>
                 <input
                   type="text"
                   required
                   value={busRegistrationNumber}
                   onChange={(e) => setBusRegistrationNumber(e.target.value)}
                   placeholder="e.g. KA-01-AB-1234"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-mono font-bold uppercase focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-mono font-bold uppercase text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Bus Layout Type</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Bus Layout Type</label>
                   <select
                     value={busType}
                     onChange={(e) => {
@@ -2874,7 +2874,7 @@ export default function OperatorPortalPage() {
                       if (e.target.value.includes("Sleeper")) setBusTotalSeats(30);
                       else setBusTotalSeats(40);
                     }}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   >
                     <option value="AC Sleeper (2+1)">AC Sleeper (2+1)</option>
                     <option value="Volvo Multi-Axle AC Sleeper (2+1)">Volvo Multi-Axle Sleeper</option>
@@ -2886,7 +2886,7 @@ export default function OperatorPortalPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Total Capacity</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Total Capacity</label>
                   <input
                     type="number"
                     required
@@ -2894,30 +2894,30 @@ export default function OperatorPortalPage() {
                     max={60}
                     value={busTotalSeats}
                     onChange={(e) => setBusTotalSeats(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Amenities (Comma separated)</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Amenities (Comma separated)</label>
                 <textarea
                   rows={2}
                   value={busAmenities}
                   onChange={(e) => setBusAmenities(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-medium text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               {/* AI Bus Photo Studio Generator & Real Image Upload */}
-              <div className="space-y-3 bg-gradient-to-b from-gray-50 to-slate-50 p-4 rounded-2xl border border-gray-200 shadow-inner">
+              <div className="space-y-3 bg-gradient-to-b from-gray-50 to-slate-50 dark:from-slate-800 dark:to-slate-900/90 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-inner">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <label className="block text-xs font-bold text-gray-800 dark:text-white flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                       <span>AI Bus Photo Studio</span>
                     </label>
-                    <p className="text-[10px] text-gray-500">Auto-generates verified multi-angle exterior, sleeper/seater cabin & cockpit photos</p>
+                    <p className="text-[10px] text-gray-500 dark:text-slate-400">Auto-generates verified multi-angle exterior, sleeper/seater cabin & cockpit photos</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -3466,15 +3466,15 @@ export default function OperatorPortalPage() {
       {/* MODAL 4: EDIT BUS AI PHOTO STUDIO */}
       {isPhotoStudioOpen && editingBus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 border border-gray-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 bg-red-50 text-[#d84e55] rounded-xl flex items-center justify-center">
+                <div className="w-9 h-9 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl flex items-center justify-center">
                   <Wand2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">AI Bus Photo Studio</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">AI Bus Photo Studio</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     {editingBus.operatorName} • {editingBus.registrationNumber} ({editingBus.busType})
                   </p>
                 </div>
@@ -3484,17 +3484,17 @@ export default function OperatorPortalPage() {
                   setIsPhotoStudioOpen(false);
                   setEditingBus(null);
                 }}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200/80">
+            <div className="space-y-3 bg-gray-50/80 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-gray-200/80 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-gray-800">Generate Multi-Angle Bus Photos</span>
-                  <p className="text-[10px] text-gray-500">Exterior, luxury cabin berths, cockpit & amenities</p>
+                  <span className="text-xs font-bold text-gray-800 dark:text-white">Generate Multi-Angle Bus Photos</span>
+                  <p className="text-[10px] text-gray-500 dark:text-slate-400">Exterior, luxury cabin berths, cockpit & amenities</p>
                 </div>
                 <button
                   type="button"
@@ -3622,15 +3622,15 @@ export default function OperatorPortalPage() {
       {/* MODAL 5: EDIT FLEET BUS DETAILS */}
       {isEditBusOpen && editBusId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
               <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 bg-red-50 text-[#d84e55] rounded-xl flex items-center justify-center">
+                <div className="w-9 h-9 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl flex items-center justify-center">
                   <Pencil className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Edit Bus in Fleet</h3>
-                  <p className="text-xs text-gray-500">Update registration, seating layout and amenities</p>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Edit Bus in Fleet</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Update registration, seating layout and amenities</p>
                 </div>
               </div>
               <button
@@ -3638,7 +3638,7 @@ export default function OperatorPortalPage() {
                   setIsEditBusOpen(false);
                   setEditingBusId(null);
                 }}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3646,32 +3646,32 @@ export default function OperatorPortalPage() {
 
             <form onSubmit={handleUpdateBus} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Operator / Brand Name</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Operator / Brand Name</label>
                 <input
                   type="text"
                   required
                   value={editOperatorName}
                   onChange={(e) => setEditOperatorName(e.target.value)}
                   placeholder="e.g. Das Travels"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Registration No. *</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Registration No. *</label>
                   <input
                     type="text"
                     required
                     value={editRegistrationNumber}
                     onChange={(e) => setEditRegistrationNumber(e.target.value.toUpperCase())}
                     placeholder="KA-01-AB-1234"
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-mono font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-mono font-bold uppercase text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Total Seats *</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Total Seats *</label>
                   <input
                     type="number"
                     required
@@ -3679,17 +3679,17 @@ export default function OperatorPortalPage() {
                     max={60}
                     value={editTotalSeats}
                     onChange={(e) => setEditTotalSeats(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Bus & Layout Type</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Bus & Layout Type</label>
                 <select
                   value={editBusType}
                   onChange={(e) => setEditBusType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 >
                   <option value="AC Sleeper (2+1)">AC Sleeper (2+1) - 30/36 Berths</option>
                   <option value="Non-AC Sleeper (2+1)">Non-AC Sleeper (2+1) - 30/36 Berths</option>
@@ -3702,18 +3702,18 @@ export default function OperatorPortalPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Amenities (Comma separated)</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-200 mb-1">Amenities (Comma separated)</label>
                 <input
                   type="text"
                   value={editAmenities}
                   onChange={(e) => setEditAmenities(e.target.value)}
                   placeholder="WiFi, Charging Point, Water Bottle, Blanket, Live Tracking, Emergency Exit"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-medium text-gray-900 dark:text-white dark:placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               {/* AI Bus Theme / Photo selection */}
-              <div className="space-y-2 bg-gray-50/80 p-3 rounded-2xl border border-gray-200">
+              <div className="space-y-2 bg-gray-50/80 dark:bg-slate-800/80 p-3 rounded-2xl border border-gray-200 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-800">Bus Photos / AI Suite</span>
                   <button
