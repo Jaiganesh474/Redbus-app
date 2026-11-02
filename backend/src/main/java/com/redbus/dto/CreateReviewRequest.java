@@ -26,5 +26,7 @@ public class CreateReviewRequest {
     private String comment;
     private String userName;
     private List<String> tags;
+    private String travelerType;
+    private List<String> couldBeBetterTags;
     private String pnr;
 }

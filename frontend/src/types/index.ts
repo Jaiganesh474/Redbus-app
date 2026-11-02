@@ -421,6 +421,9 @@ export interface ReviewDto {
   rating: number;
   comment?: string;
   tags?: string[];
+  badge?: string;
+  couldBeBetterTags?: string[];
+  travelerType?: string;
   createdAt: string;
 }
 

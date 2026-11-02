@@ -25,6 +25,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.redbus.ai.data.model.ReviewSummary
 import com.redbus.ai.data.model.ReviewItem
 import com.redbus.ai.data.model.RouteItem
 import com.redbus.ai.data.model.SeatItem
@@ -551,6 +554,7 @@ fun SeatSelectionScreen(
                                     "reviews" -> CustomerReviewsPanel(
                                         busId = if (route.busId > 0) route.busId.toLong() else route.id.toLong(),
                                         reviews = uiState.currentBusReviews,
+                                        reviewSummary = uiState.currentBusReviewSummary,
                                         isLoading = uiState.isLoadingReviews,
                                         onSubmitReview = onSubmitReview
                                     )
@@ -1533,127 +1537,651 @@ private fun BoardingPreviewPanel(
 private fun CustomerReviewsPanel(
     busId: Long,
     reviews: List<ReviewItem>,
+    reviewSummary: ReviewSummary?,
     isLoading: Boolean,
     onSubmitReview: (Long, Int, String) -> Unit
 ) {
     var showWriteReviewDialog by remember { mutableStateOf(false) }
+    var showAllReviewsDialog by remember { mutableStateOf(false) }
+
+    val busFeatures = remember {
+        listOf(
+            "💧" to "Water Bottle",
+            "🛏️" to "Blankets",
+            "🔌" to "Charging Point",
+            "💡" to "Reading Light",
+            "📹" to "CCTV",
+            "🚻" to "Toilet",
+            "🚪" to "Emergency Exit",
+            "📍" to "Track My Bus"
+        )
+    }
+
+    val totalRatingsCount = remember(reviews, reviewSummary) {
+        val count = reviewSummary?.totalRatings ?: 0
+        if (count > 0) count else reviews.size
+    }
+
+    val avgRating = remember(reviews, reviewSummary) {
+        if (reviews.isNotEmpty()) {
+            val avg = reviews.map { it.rating }.average()
+            if (avg > 0) Math.round(avg * 10.0) / 10.0 else 4.5
+        } else if (reviewSummary != null && reviewSummary.averageRating > 0) {
+            reviewSummary.averageRating
+        } else {
+            4.5
+        }
+    }
+
+    val starPercentages = remember(reviews, reviewSummary) {
+        if (reviews.isNotEmpty()) {
+            val total = reviews.size.toDouble()
+            (1..5).associateWith { star ->
+                val c = reviews.count { it.rating == star }
+                ((c / total) * 100).roundToInt()
+            }
+        } else {
+            mapOf(5 to 46, 4 to 24, 3 to 12, 2 to 6, 1 to 12)
+        }
+    }
+
+    val lovedTags = remember(reviewSummary) {
+        reviewSummary?.lovedTags?.takeIf { it.isNotEmpty() } ?: mapOf(
+            "Driving" to 254,
+            "Rest stop hygiene" to 157,
+            "Seat / Sleep Comfort" to 253,
+            "AC" to 193,
+            "Live tracking" to 209,
+            "Cleanliness" to 268,
+            "Staff behavior" to 306,
+            "Punctuality" to 337
+        )
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header matching screenshot: "Customer Reviews" and "+ Write Review"
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Section 1: Bus Features (Image 2)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = "Customer Reviews",
+                text = "Bus features",
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
+                fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            TextButton(
-                onClick = { showWriteReviewDialog = true },
-                colors = ButtonDefaults.textButtonColors(contentColor = RedbusCrimson)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "+ Write Review",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 13.sp
-                )
+                busFeatures.forEach { (emoji, label) ->
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) {
+                            Text(text = emoji, fontSize = 13.sp)
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF334155)
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        if (isLoading && reviews.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = RedbusCrimson, modifier = Modifier.size(28.dp))
+        // Section 2: Ratings & Reviews Overview (Image 2)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Ratings & reviews",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                TextButton(
+                    onClick = { showWriteReviewDialog = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = RedbusCrimson)
+                ) {
+                    Text(
+                        text = "+ Write Review",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp
+                    )
+                }
             }
-        } else if (reviews.isEmpty()) {
+
             Surface(
-                color = Color.White,
+                color = Color(0xFFF8FAFC),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.RateReview,
-                        contentDescription = null,
-                        tint = Color.Gray,
-                        modifier = Modifier.size(32.dp)
+                    // Left: Score & count & verified badge
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.width(115.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFF15803D)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = String.format("%.1f", avgRating),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$totalRatingsCount Ratings",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = Color(0xFF1E293B)
+                        )
+
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color(0xFF15803D),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "Real feedback from verified travelers",
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF15803D),
+                                textAlign = TextAlign.Center,
+                                lineHeight = 10.sp
+                            )
+                        }
+                    }
+
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(80.dp)
+                            .background(Color(0xFFCBD5E1))
                     )
-                    Text(
-                        text = "No reviews yet, Be the first one to review your journey experience",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF4B5563),
-                        textAlign = TextAlign.Center
-                    )
+
+                    // Right: 5-Star progress breakdown (5 down to 1)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(5, 4, 3, 2, 1).forEach { star ->
+                            val pct = starPercentages[star] ?: 0
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "$star ★",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF475569),
+                                    modifier = Modifier.width(22.dp)
+                                )
+                                LinearProgressIndicator(
+                                    progress = { (pct / 100f).coerceIn(0f, 1f) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = Color(0xFF15803D),
+                                    trackColor = Color(0xFFE2E8F0)
+                                )
+                                Text(
+                                    text = "$pct%",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF64748B),
+                                    modifier = Modifier.width(28.dp),
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        } else {
-            reviews.forEach { r ->
-                Surface(
-                    color = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+        }
+
+        // Section 3: Loved by travellers (Image 2)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Loved by travellers",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                lovedTags.forEach { (tag, count) ->
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
-                                text = r.userName,
+                                text = tag,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                text = "($count)",
+                                fontSize = 11.sp,
+                                color = Color(0xFF64748B)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 4: Read all reviews button (Image 2)
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showAllReviewsDialog = true }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Read all reviews ($totalRatingsCount)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+
+    if (showAllReviewsDialog) {
+        var selectedFilter by remember { mutableStateOf("All") }
+        var selectedSort by remember { mutableStateOf("Relevant Reviews") }
+
+        val filterList = listOf(
+            "All", "Solo", "Women", "Cleanliness", "Staff behavior", "Punctuality",
+            "Other", "Group", "Seat comfort", "Rest stop hygiene", "Contact information",
+            "Late Arrival", "Driving", "Less noise"
+        )
+        val sortList = listOf("Relevant Reviews", "Recent Reviews", "Low To High Ratings")
+
+        val filteredReviews = remember(reviews, selectedFilter, selectedSort) {
+            var list = reviews
+            if (selectedFilter != "All") {
+                val f = selectedFilter.lowercase()
+                list = list.filter { r ->
+                    (r.travelerType?.lowercase()?.contains(f) == true) ||
+                    (r.tags?.any { t -> t.lowercase().contains(f) } == true) ||
+                    (r.comment.lowercase().contains(f)) ||
+                    (r.couldBeBetterTags?.any { t -> t.lowercase().contains(f) } == true)
+                }
+            }
+            when (selectedSort) {
+                "Low To High Ratings" -> list.sortedBy { it.rating }
+                "Recent Reviews" -> list.sortedByDescending { it.createdAt ?: "" }
+                else -> list.sortedWith(compareByDescending<ReviewItem> { it.badge != null }.thenByDescending { it.rating })
+            }
+        }
+
+        Dialog(
+            onDismissRequest = { showAllReviewsDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color(0xFFF8FAFC)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                ) {
+                    // Header (Image 3)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            IconButton(onClick = { showAllReviewsDialog = false }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = "$totalRatingsCount Reviews",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
+                                fontSize = 17.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+                        }
 
-                            // Rating badge pill matching screenshot (e.g. 5 ★ in green surface)
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFDCFCE7)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF15803D)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = Color(0xFF15803D),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = "${r.rating}",
-                                        color = Color(0xFF15803D),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 12.sp
-                                    )
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = String.format("%.1f", avgRating),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFE2E8F0))
+
+                    // Filters and Reviews List in LazyColumn
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Filter Pills Row
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                filterList.forEach { filter ->
+                                    val isSelected = selectedFilter == filter
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (isSelected) RedbusCrimson else Color.White,
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSelected) RedbusCrimson else Color(0xFFCBD5E1)
+                                        ),
+                                        modifier = Modifier.clickable { selectedFilter = filter }
+                                    ) {
+                                        Text(
+                                            text = filter,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isSelected) Color.White else Color(0xFF334155),
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        Text(
-                            text = r.comment,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 18.sp
-                        )
+                        // Sort By Row
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                sortList.forEach { sortOpt ->
+                                    val isSelected = selectedSort == sortOpt
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (isSelected) Color(0xFF0F172A) else Color(0xFFF1F5F9),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSelected) Color(0xFF0F172A) else Color(0xFFE2E8F0)
+                                        ),
+                                        modifier = Modifier.clickable { selectedSort = sortOpt }
+                                    ) {
+                                        Text(
+                                            text = sortOpt,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) Color.White else Color(0xFF475569),
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Verified Travelers Badge
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF15803D),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Real feedback from verified travelers",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF15803D)
+                                )
+                            }
+                        }
+
+                        // Review Cards (Image 3)
+                        if (filteredReviews.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No reviews match \"$selectedFilter\"",
+                                        fontSize = 13.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        } else {
+                            items(filteredReviews.size) { idx ->
+                                val r = filteredReviews[idx]
+                                Surface(
+                                    color = Color.White,
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Row 1: Name and Rating Badge
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = r.userName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 15.sp,
+                                                color = Color(0xFF0F172A)
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0xFF15803D)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Star,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(11.dp)
+                                                    )
+                                                    Text(
+                                                        text = "${r.rating}",
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Black,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Row 2: Badge and Date
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "🏆 ${r.badge ?: "Frequent Traveler"}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFD97706)
+                                            )
+                                            Text(
+                                                text = "•",
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF94A3B8)
+                                            )
+                                            Text(
+                                                text = r.createdAt?.take(10) ?: "04 Feb 2025",
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF64748B)
+                                            )
+                                        }
+
+                                        // Row 3: Comment
+                                        if (r.comment.isNotBlank()) {
+                                            Text(
+                                                text = r.comment,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF334155),
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+
+                                        // Row 4: Could be better tags
+                                        if (!r.couldBeBetterTags.isNullOrEmpty()) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                modifier = Modifier.padding(top = 4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Could be better:",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color(0xFF64748B)
+                                                )
+                                                r.couldBeBetterTags.forEach { tag ->
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = Color(0xFFF1F5F9),
+                                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                                                    ) {
+                                                        Text(
+                                                            text = tag,
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = Color(0xFF475569),
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

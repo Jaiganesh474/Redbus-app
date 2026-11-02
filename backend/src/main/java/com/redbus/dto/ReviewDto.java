@@ -20,5 +20,8 @@ public class ReviewDto {
     private Integer rating;
     private String comment;
     private List<String> tags;
+    private String badge;
+    private List<String> couldBeBetterTags;
+    private String travelerType;
     private LocalDateTime createdAt;
 }

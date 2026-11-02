@@ -37,6 +37,13 @@ public class Review {
     @Column(length = 255)
     private String tags; // e.g. "Punctuality,Cleanliness,Driving,Seat Comfort"
 
+    @Column(name = "traveler_type", length = 50)
+    @Builder.Default
+    private String travelerType = "Solo";
+
+    @Column(name = "could_be_better", length = 255)
+    private String couldBeBetter;
+
     @Column(name = "created_at")
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

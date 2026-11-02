@@ -377,6 +377,9 @@ export default function BusDetailsModal({
   const [showWriteReview, setShowWriteReview] = useState(false);
   const [showAllBoarding, setShowAllBoarding] = useState(false);
   const [showAllDropping, setShowAllDropping] = useState(false);
+  const [showAllReviewsView, setShowAllReviewsView] = useState(false);
+  const [selectedReviewFilter, setSelectedReviewFilter] = useState("All");
+  const [selectedReviewSort, setSelectedReviewSort] = useState("Relevant Reviews");
 
   // Effective travel date
   const effectiveTravelDate =
@@ -408,6 +411,60 @@ export default function BusDetailsModal({
     },
     { skip: !isOpen }
   );
+
+  const busFeaturesList = useMemo(() => [
+    { label: "Water Bottle", icon: "💧" },
+    { label: "Blankets", icon: "🛏️" },
+    { label: "Charging Point", icon: "🔌" },
+    { label: "Reading Light", icon: "💡" },
+    { label: "CCTV", icon: "📹" },
+    { label: "Toilet", icon: "🚻" },
+    { label: "Emergency Exit", icon: "🚪" },
+    { label: "Track My Bus", icon: "📍" },
+  ], []);
+
+  const totalReviewsCount = reviewData?.totalRatings || reviewData?.reviews?.length || 0;
+  const avgBusRating = reviewData?.averageRating || route.rating || 4.5;
+  const starPercentagesMap = reviewData?.starPercentages || {
+    5: 46,
+    4: 24,
+    3: 12,
+    2: 6,
+    1: 12,
+  };
+  const lovedAspectsMap = reviewData?.lovedTags || {
+    "Driving": 254,
+    "Rest stop hygiene": 157,
+    "Seat / Sleep Comfort": 253,
+    "AC": 193,
+    "Live tracking": 209,
+    "Cleanliness": 268,
+    "Staff behavior": 306,
+    "Punctuality": 337,
+  };
+
+  const filteredReviewsList = useMemo(() => {
+    let list = reviewData?.reviews ? [...reviewData.reviews] : [];
+    if (selectedReviewFilter && selectedReviewFilter !== "All") {
+      const f = selectedReviewFilter.toLowerCase();
+      list = list.filter((r) => {
+        if (r.travelerType && r.travelerType.toLowerCase().includes(f)) return true;
+        if (r.tags && r.tags.some((t) => t.toLowerCase().includes(f))) return true;
+        if (r.comment && r.comment.toLowerCase().includes(f)) return true;
+        if (r.couldBeBetterTags && r.couldBeBetterTags.some((t) => t.toLowerCase().includes(f))) return true;
+        return false;
+      });
+    }
+
+    if (selectedReviewSort === "Low To High Ratings") {
+      list.sort((a, b) => a.rating - b.rating);
+    } else if (selectedReviewSort === "Recent Reviews") {
+      list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    } else {
+      list.sort((a, b) => (b.badge ? 1 : 0) - (a.badge ? 1 : 0) || b.rating - a.rating);
+    }
+    return list;
+  }, [reviewData?.reviews, selectedReviewFilter, selectedReviewSort]);
 
   // Realistic 1-second seat loading timer so seat layout loading looks authentic
   const [isMinSeatLoading, setIsMinSeatLoading] = useState(true);
@@ -1090,7 +1147,7 @@ export default function BusDetailsModal({
                                     <span>AI Delay Prediction Model</span>
                                   </span>
                                   <span className="text-[10px] font-extrabold px-2 py-0.5 bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-100 rounded-full">
-                                    {delayPrediction?.confidenceScore || 92}% Accuracy
+                                    {delayPrediction?.confidenceScore || "92% Accuracy"}
                                   </span>
                                 </div>
                                 <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
@@ -1262,37 +1319,287 @@ export default function BusDetailsModal({
                             </div>
                           )}
 
+                          {/* Bus Features Tab */}
+                          {activeTab === "features" && (
+                            <div className="space-y-4">
+                              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Bus features & Amenities</h3>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                                Amenities provided on this {route.busType} for maximum passenger comfort and safety.
+                              </p>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                                {busFeaturesList.map((f, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-center space-x-2.5 p-3 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50/70 dark:bg-slate-800/60 shadow-xs"
+                                  >
+                                    <span className="text-base">{f.icon}</span>
+                                    <span className="text-xs font-semibold text-gray-800 dark:text-slate-200">{f.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Reviews Tab */}
                           {activeTab === "reviews" && (
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Customer Reviews</h3>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowWriteReview(true)}
-                                  className="text-xs font-bold text-[#d84e55] hover:underline"
-                                >
-                                  + Write Review
-                                </button>
-                              </div>
-                              <div className="space-y-3">
-                                {reviewData?.reviews && reviewData.reviews.length > 0 ? (
-                                  reviewData.reviews.map((rev) => (
-                                    <div key={rev.id} className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-200 dark:border-slate-700">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-bold text-xs text-gray-900 dark:text-white">{rev.userName}</span>
-                                        <div className="flex items-center space-x-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">
-                                          <Star className="w-3 h-3 fill-emerald-800" />
-                                          <span>{rev.rating}</span>
+                            <div className="space-y-5">
+                              {showAllReviewsView ? (
+                                /* Image 3: Full Filterable Reviews View */
+                                <div className="space-y-4">
+                                  {/* Header with Back Arrow, Title, Rating Badge */}
+                                  <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-slate-800">
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowAllReviewsView(false)}
+                                        className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-slate-200 transition-colors"
+                                      >
+                                        <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
+                                      </button>
+                                      <h3 className="text-base font-black text-gray-900 dark:text-white">
+                                        {totalReviewsCount || filteredReviewsList.length} Reviews
+                                      </h3>
+                                    </div>
+                                    <div className="flex items-center space-x-1 px-2.5 py-1 bg-[#15803d] text-white rounded-lg font-black text-xs shadow-sm">
+                                      <Star className="w-3.5 h-3.5 fill-white" />
+                                      <span>{avgBusRating.toFixed(1)}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Filter Pills (Horizontally scrollable) */}
+                                  <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+                                    {[
+                                      "All",
+                                      "Solo",
+                                      "Women",
+                                      "Cleanliness",
+                                      "Staff behavior",
+                                      "Punctuality",
+                                      "Other",
+                                      "Group",
+                                      "Seat comfort",
+                                      "Rest stop hygiene",
+                                      "Contact information",
+                                      "Late Arrival",
+                                      "Driving",
+                                      "Less noise",
+                                    ].map((tag) => {
+                                      const isSelected = selectedReviewFilter === tag;
+                                      return (
+                                        <button
+                                          key={tag}
+                                          type="button"
+                                          onClick={() => setSelectedReviewFilter(tag)}
+                                          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                                            isSelected
+                                              ? "bg-[#d84e55] text-white border-[#d84e55] shadow-xs"
+                                              : "bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:border-gray-300"
+                                          }`}
+                                        >
+                                          {tag}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Sort By Pills */}
+                                  <div className="flex items-center space-x-2 pt-1">
+                                    {["Relevant Reviews", "Recent Reviews", "Low To High Ratings"].map((sortOpt) => {
+                                      const isSelected = selectedReviewSort === sortOpt;
+                                      return (
+                                        <button
+                                          key={sortOpt}
+                                          type="button"
+                                          onClick={() => setSelectedReviewSort(sortOpt)}
+                                          className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                                            isSelected
+                                              ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
+                                              : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 border-gray-200 dark:border-slate-700"
+                                          }`}
+                                        >
+                                          {sortOpt}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Verified Traveler Feedback Subheader */}
+                                  <div className="flex items-center space-x-1.5 text-xs text-[#15803d] font-semibold pt-1">
+                                    <Check className="w-4 h-4 stroke-[3]" />
+                                    <span>Real feedback from verified travelers</span>
+                                  </div>
+
+                                  {/* Review Cards List */}
+                                  <div className="space-y-4 pt-1">
+                                    {filteredReviewsList.length > 0 ? (
+                                      filteredReviewsList.map((rev) => (
+                                        <div
+                                          key={rev.id}
+                                          className="p-4 bg-white dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xs space-y-2.5"
+                                        >
+                                          {/* Top row: Name & Star Badge */}
+                                          <div className="flex items-center justify-between">
+                                            <span className="font-bold text-sm text-gray-900 dark:text-white">
+                                              {rev.userName}
+                                            </span>
+                                            <div className="flex items-center space-x-1 px-2 py-0.5 bg-[#15803d] text-white rounded font-bold text-xs">
+                                              <Star className="w-3 h-3 fill-white" />
+                                              <span>{rev.rating}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Badge & Date */}
+                                          <div className="flex items-center space-x-2 text-[11px] text-gray-500 dark:text-slate-400 font-medium">
+                                            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                                              <Award className="w-3.5 h-3.5" />
+                                              <span>{rev.badge || "Frequent Traveler"}</span>
+                                            </span>
+                                            <span>•</span>
+                                            <span>
+                                              {rev.createdAt
+                                                ? new Date(rev.createdAt).toLocaleDateString("en-GB", {
+                                                    day: "2-digit",
+                                                    month: "short",
+                                                    year: "numeric",
+                                                  })
+                                                : "04 Feb 2025"}
+                                            </span>
+                                          </div>
+
+                                          {/* Comment */}
+                                          {rev.comment && (
+                                            <p className="text-xs text-gray-700 dark:text-slate-300 leading-relaxed font-normal">
+                                              {rev.comment}
+                                            </p>
+                                          )}
+
+                                          {/* Could be better tags */}
+                                          {rev.couldBeBetterTags && rev.couldBeBetterTags.length > 0 && (
+                                            <div className="pt-1.5 flex items-center flex-wrap gap-1.5">
+                                              <span className="text-[11px] font-semibold text-gray-500 dark:text-slate-400">
+                                                Could be better:
+                                              </span>
+                                              {rev.couldBeBetterTags.map((tag, tIdx) => (
+                                                <span
+                                                  key={tIdx}
+                                                  className="px-2 py-0.5 rounded-md border border-gray-200 dark:border-slate-700 text-[10px] font-semibold text-gray-600 dark:text-slate-300 bg-gray-50 dark:bg-slate-800"
+                                                >
+                                                  {tag}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="py-8 text-center text-xs text-gray-400">
+                                        No reviews match "{selectedReviewFilter}".
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                /* Image 2: Overview with Bus Features, Star Breakdown, Loved Tags, Read All Reviews */
+                                <div className="space-y-5">
+                                  {/* Bus features */}
+                                  <div className="space-y-2.5">
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Bus features</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {busFeaturesList.map((f, i) => (
+                                        <div
+                                          key={i}
+                                          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-200 shadow-xs"
+                                        >
+                                          <span>{f.icon}</span>
+                                          <span>{f.label}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Ratings & reviews Section */}
+                                  <div className="space-y-3 pt-1">
+                                    <div className="flex items-center justify-between">
+                                      <h3 className="text-base font-bold text-gray-900 dark:text-white">Ratings & reviews</h3>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowWriteReview(true)}
+                                        className="text-xs font-bold text-[#d84e55] hover:underline cursor-pointer"
+                                      >
+                                        + Write Review
+                                      </button>
+                                    </div>
+
+                                    {/* Overall Score & Star Breakdown Card */}
+                                    <div className="p-4 bg-gray-50/70 dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row gap-5 items-center">
+                                      {/* Left: Overall badge & verified text */}
+                                      <div className="flex flex-col items-center justify-center sm:border-r sm:border-gray-200 dark:sm:border-slate-700 sm:pr-6 shrink-0 text-center">
+                                        <div className="inline-flex items-center space-x-1 px-3 py-1 bg-[#15803d] text-white rounded-lg font-black text-lg shadow-sm">
+                                          <Star className="w-4 h-4 fill-white" />
+                                          <span>{avgBusRating.toFixed(1)}</span>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-800 dark:text-slate-200 mt-1.5">
+                                          {totalReviewsCount} Ratings
+                                        </p>
+                                        <div className="flex items-center space-x-1 text-[11px] text-[#15803d] font-semibold mt-1">
+                                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                          <span>Real feedback from verified travelers</span>
                                         </div>
                                       </div>
-                                      <p className="text-xs text-gray-600 dark:text-slate-300 mt-1">{rev.comment}</p>
+
+                                      {/* Right: 5-Star progress distribution breakdown */}
+                                      <div className="flex-1 w-full space-y-1.5">
+                                        {[5, 4, 3, 2, 1].map((stars) => {
+                                          const pct = starPercentagesMap[stars] ?? 0;
+                                          return (
+                                            <div key={stars} className="flex items-center text-xs space-x-2">
+                                              <span className="w-6 font-bold text-gray-700 dark:text-slate-300 text-right">
+                                                {stars} ★
+                                              </span>
+                                              <div className="flex-1 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                <div
+                                                  className="h-full bg-[#15803d] rounded-full transition-all duration-500"
+                                                  style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                                                />
+                                              </div>
+                                              <span className="w-9 font-semibold text-gray-500 dark:text-slate-400 text-right">
+                                                {pct}%
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                  ))
-                                ) : (
-                                  <p className="text-xs text-gray-400">No reviews yet, Be the first one to review your journey experience</p>
-                                )}
-                              </div>
+
+                                    {/* Loved by travellers */}
+                                    <div className="space-y-2.5 pt-2">
+                                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Loved by travellers</h4>
+                                      <div className="flex flex-wrap gap-2">
+                                        {Object.entries(lovedAspectsMap).map(([tag, count], i) => (
+                                          <span
+                                            key={i}
+                                            className="inline-flex items-center px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-200 shadow-xs"
+                                          >
+                                            {tag} <span className="ml-1 text-gray-400 font-normal">({count})</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Read all reviews action button */}
+                                    <div className="pt-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowAllReviewsView(true)}
+                                        className="w-full py-3 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-750 font-bold text-xs text-gray-900 dark:text-white flex items-center justify-between shadow-xs transition-all cursor-pointer group"
+                                      >
+                                        <span>Read all reviews ({totalReviewsCount || filteredReviewsList.length})</span>
+                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </motion.div>

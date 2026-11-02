@@ -383,6 +383,9 @@ data class ReviewItem(
     val rating: Int = 5,
     val comment: String = "",
     val tags: List<String>? = emptyList(),
+    val badge: String? = "Frequent Traveler",
+    val couldBeBetterTags: List<String>? = emptyList(),
+    val travelerType: String? = "Solo",
     val createdAt: String? = null
 )
 
