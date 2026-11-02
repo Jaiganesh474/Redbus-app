@@ -13,6 +13,7 @@ object SessionManager {
     private const val KEY_LANGUAGE = "redbus_selected_language"
     private const val KEY_READ_NOTIFS = "redbus_read_notifications"
     private const val KEY_DISMISSED_NOTIFS = "redbus_dismissed_notifications"
+    private const val KEY_REVIEWED_PNRS = "redbus_reviewed_pnrs"
 
     private var prefs: SharedPreferences? = null
     private val gson = Gson()
@@ -97,6 +98,22 @@ object SessionManager {
 
     fun saveDismissedNotificationIds(ids: Set<String>) {
         prefs?.edit()?.putStringSet(KEY_DISMISSED_NOTIFS, ids)?.apply()
+    }
+
+    fun getReviewedPnrs(): Map<String, Int> {
+        val raw = prefs?.getString(KEY_REVIEWED_PNRS, null) ?: return emptyMap()
+        return try {
+            val type = object : com.google.gson.reflect.TypeToken<Map<String, Int>>() {}.type
+            gson.fromJson<Map<String, Int>>(raw, type) ?: emptyMap()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    fun saveReviewedPnr(pnr: String, rating: Int) {
+        val current = getReviewedPnrs().toMutableMap()
+        current[pnr] = rating
+        prefs?.edit()?.putString(KEY_REVIEWED_PNRS, gson.toJson(current))?.apply()
     }
 }
 

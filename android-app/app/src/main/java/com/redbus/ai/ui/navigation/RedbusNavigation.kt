@@ -358,8 +358,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToLogin = {
                             navigateToTab(navController, ScreenRoute.Profile.route)
                         },
-                        onSubmitReview = { busId, rating, comment ->
-                            viewModel.submitReview(busId, rating, comment)
+                        onSubmitReview = { busId, rating, comment, pnr ->
+                            viewModel.submitReview(busId, rating, comment, pnr)
                         },
                         onNavigateToAiHelp = { navigateToTab(navController, ScreenRoute.AiCopilot.route) },
                         onMarkNotificationAsRead = viewModel::markNotificationAsRead,

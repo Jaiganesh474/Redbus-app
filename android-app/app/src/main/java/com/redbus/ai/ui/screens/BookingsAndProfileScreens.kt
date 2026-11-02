@@ -355,14 +355,14 @@ fun CancelTicketWebsiteModal(
                                 ) {
                                     Text(
                                         text = "Time of Cancellation",
-                                        modifier = Modifier.weight(2f),
+                                        modifier = Modifier.weight(2.4f),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF6B7280)
                                     )
                                     Text(
                                         text = "Refund %",
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(0.8f),
                                         textAlign = TextAlign.Center,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -370,7 +370,7 @@ fun CancelTicketWebsiteModal(
                                     )
                                     Text(
                                         text = "Fee %",
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(0.8f),
                                         textAlign = TextAlign.End,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold,
@@ -389,7 +389,7 @@ fun CancelTicketWebsiteModal(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(
-                                            modifier = Modifier.weight(2f),
+                                            modifier = Modifier.weight(2.4f),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             if (slab.isActive) {
@@ -406,25 +406,10 @@ fun CancelTicketWebsiteModal(
                                                 fontWeight = if (slab.isActive) FontWeight.Bold else FontWeight.Medium,
                                                 color = if (slab.isActive) Color(0xFF065F46) else Color(0xFF4B5563)
                                             )
-                                            if (slab.isActive) {
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Surface(
-                                                    color = Color(0xFF059669),
-                                                    shape = RoundedCornerShape(4.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "CURRENT",
-                                                        color = Color.White,
-                                                        fontSize = 8.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                                    )
-                                                }
-                                            }
                                         }
                                         Text(
                                             text = "${slab.refundPct}%",
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.weight(0.8f),
                                             textAlign = TextAlign.Center,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
@@ -432,7 +417,7 @@ fun CancelTicketWebsiteModal(
                                         )
                                         Text(
                                             text = "${slab.feePct}%",
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.weight(0.8f),
                                             textAlign = TextAlign.End,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
@@ -702,7 +687,7 @@ fun CancelTicketWebsiteModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp),
+                            .padding(top = 10.dp, bottom = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Button(
@@ -1425,7 +1410,7 @@ fun MyBookingsScreen(
     onChangeJourneyDate: (String, String?, Long?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _ -> },
     onEmailTicket: (String) -> Unit,
     onNavigateToLogin: () -> Unit,
-    onSubmitReview: (Long, Int, String) -> Unit = { _, _, _ -> },
+    onSubmitReview: (Long, Int, String, String?) -> Unit = { _, _, _, _ -> },
     onNavigateToAiHelp: () -> Unit = {},
     onMarkNotificationAsRead: (String) -> Unit = {},
     onMarkAllNotificationsAsRead: (Collection<String>) -> Unit = {},
@@ -1745,6 +1730,7 @@ fun MyBookingsScreen(
                 items(filteredBookings, key = { it.pnr.ifBlank { it.id.toString() } }) { booking ->
                     BookingTicketCard(
                         booking = booking,
+                        isReviewed = booking.userRating != null || uiState.reviewedPnrs.containsKey(booking.pnr),
                         onViewTicketClick = { selectedTicketToView = booking },
                         onCancelClick = { bookingToCancel = booking },
                         onEmailClick = { onEmailTicket(booking.pnr) },
@@ -1768,6 +1754,7 @@ fun MyBookingsScreen(
     selectedTicketToView?.let { ticketBooking ->
         EnhancedTicketJourneyModal(
             booking = ticketBooking,
+            reviewedPnrs = uiState.reviewedPnrs,
             onDismiss = { selectedTicketToView = null },
             onOpenPerforatedTicket = {
                 perforatedTicketToView = ticketBooking
@@ -1787,8 +1774,8 @@ fun MyBookingsScreen(
             onCancelBooking = {
                 bookingToCancel = ticketBooking
             },
-            onSubmitReview = { busId, rating, comment ->
-                onSubmitReview(busId, rating, comment)
+            onSubmitReview = { busId, rating, comment, pnr ->
+                onSubmitReview(busId, rating, comment, pnr)
             },
             onHelpClick = onNavigateToAiHelp
         )
@@ -1811,8 +1798,8 @@ fun MyBookingsScreen(
         RateJourneyModal(
             booking = b,
             onDismiss = { bookingToRate = null },
-            onSubmitReview = { busId, rating, comment ->
-                onSubmitReview(busId, rating, comment)
+            onSubmitReview = { busId, rating, comment, pnr ->
+                onSubmitReview(busId, rating, comment, pnr)
             }
         )
     }
@@ -1849,6 +1836,7 @@ fun MyBookingsScreen(
 @Composable
 private fun BookingTicketCard(
     booking: BookingDetails,
+    isReviewed: Boolean = false,
     onViewTicketClick: () -> Unit,
     onCancelClick: () -> Unit,
     onEmailClick: () -> Unit,
@@ -2021,23 +2009,28 @@ private fun BookingTicketCard(
                             }
                         }
                         RealtimeTripStatus.TRIP_COMPLETED -> {
+                            val isRated = isReviewed || booking.userRating != null
                             Button(
                                 onClick = onRateClick,
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFDCFCE7),
-                                    contentColor = Color(0xFF15803D)
+                                    containerColor = if (isRated) Color(0xFFFEF3C7) else Color(0xFFDCFCE7),
+                                    contentColor = if (isRated) Color(0xFFB45309) else Color(0xFF15803D)
                                 ),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Star,
                                     contentDescription = null,
-                                    tint = Color(0xFF15803D),
+                                    tint = if (isRated) Color(0xFFB45309) else Color(0xFF15803D),
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Rate Journey", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(
+                                    if (isRated) "Rated ★" else "Rate Journey",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
                             }
                         }
                         RealtimeTripStatus.TRIP_STARTED -> {
@@ -2650,6 +2643,7 @@ private fun ChangeTripPointsBottomSheet(
                             ) {
                                 Text("Update Trip Details", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
+                            Spacer(modifier = Modifier.height(28.dp))
                         }
                     }
                 }
@@ -2848,12 +2842,13 @@ private fun FreeBusChangeModal(
 @Composable
 fun EnhancedTicketJourneyModal(
     booking: BookingDetails,
+    reviewedPnrs: Map<String, Int> = emptyMap(),
     onDismiss: () -> Unit,
     onOpenPerforatedTicket: () -> Unit,
     onChangeTripPoints: (pnr: String, bp: String?, dp: String?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
     onChangeJourneyDate: (pnr: String, newDate: String?, newRouteId: Long?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
     onCancelBooking: () -> Unit,
-    onSubmitReview: (Long, Int, String) -> Unit,
+    onSubmitReview: (Long, Int, String, String?) -> Unit = { _, _, _, _ -> },
     onHelpClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -3089,6 +3084,7 @@ fun EnhancedTicketJourneyModal(
                             ) {
                                 if (isCompleted) {
                                     // Rate this trip section matching Image 3
+                                    val existingRating = booking.userRating ?: reviewedPnrs[booking.pnr]
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
                                         color = Color.White,
@@ -3100,7 +3096,7 @@ fun EnhancedTicketJourneyModal(
                                             verticalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
                                             Text(
-                                                text = "Rate this trip",
+                                                text = if (existingRating != null) "Your Rating" else "Rate this trip",
                                                 fontWeight = FontWeight.Black,
                                                 fontSize = 18.sp,
                                                 color = Color(0xFF111827)
@@ -3110,8 +3106,9 @@ fun EnhancedTicketJourneyModal(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 (1..5).forEach { starIdx ->
+                                                    val isFilled = existingRating != null && starIdx <= existingRating
                                                     Icon(
-                                                        imageVector = Icons.Default.StarOutline,
+                                                        imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarOutline,
                                                         contentDescription = "Rate $starIdx Stars",
                                                         tint = RatingAmber,
                                                         modifier = Modifier
@@ -3121,6 +3118,14 @@ fun EnhancedTicketJourneyModal(
                                                             }
                                                     )
                                                 }
+                                            }
+                                            if (existingRating != null) {
+                                                Text(
+                                                    text = "You rated this trip $existingRating / 5 ⭐",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF047857)
+                                                )
                                             }
                                         }
                                     }
@@ -3385,7 +3390,7 @@ fun EnhancedTicketJourneyModal(
                                             )
                                             Text(
                                                 text = when {
-                                                    isCompleted -> "Locked: Trip completed"
+                                                    isCompleted -> "Trip completed"
                                                     isWithin2Hours -> "Locked within 2 hours of departure"
                                                     else -> "Boarding and dropping point"
                                                 },
@@ -3433,7 +3438,7 @@ fun EnhancedTicketJourneyModal(
                                                 color = if (!canBusChange) Color.Gray else Color(0xFF111827)
                                             )
                                             Text(
-                                                text = if (isCompleted) "Locked: Trip completed" else "Postpone journey date to another date",
+                                                text = if (isCompleted) "Trip completed" else "Postpone journey date to another date",
                                                 fontSize = 11.sp,
                                                 color = if (!canBusChange) Color.Gray else Color(0xFF6B7280)
                                             )
@@ -3475,7 +3480,7 @@ fun EnhancedTicketJourneyModal(
                                                     color = if (!canCancelBooking) Color.Gray else Color(0xFF111827)
                                                 )
                                                 Text(
-                                                    text = if (isCompleted) "Locked: Trip completed" else "Eligible for partial refund",
+                                                    text = if (isCompleted) "Trip completed" else "Eligible for partial refund",
                                                     fontSize = 11.sp,
                                                     color = if (!canCancelBooking) Color.Gray else Color(0xFF6B7280)
                                                 )
@@ -3537,8 +3542,8 @@ fun EnhancedTicketJourneyModal(
         RateJourneyModal(
             booking = booking,
             onDismiss = { showRateModal = false },
-            onSubmitReview = { busId, rating, comment ->
-                onSubmitReview(busId, rating, comment)
+            onSubmitReview = { busId, rating, comment, pnr ->
+                onSubmitReview(busId, rating, comment, pnr)
                 showRateModal = false
                 Toast.makeText(context, "Review submitted! Thank you.", Toast.LENGTH_SHORT).show()
             }
@@ -4090,7 +4095,7 @@ private fun ViewTicketDetailsModal(
 private fun RateJourneyModal(
     booking: BookingDetails,
     onDismiss: () -> Unit,
-    onSubmitReview: (Long, Int, String) -> Unit
+    onSubmitReview: (Long, Int, String, String?) -> Unit
 ) {
     var rating by remember { mutableIntStateOf(5) }
     var cleanlinessRating by remember { mutableIntStateOf(5) }
@@ -4268,7 +4273,7 @@ private fun RateJourneyModal(
                     // 5. Submit Button
                     Button(
                         onClick = {
-                            val targetBusId = if (booking.routeId > 0) booking.routeId.toLong() else booking.id.toLong()
+                            val targetBusId = booking.busId ?: if (booking.routeId > 0) booking.routeId.toLong() else 1L
                             val fullComment = buildString {
                                 if (comment.isNotBlank()) append(comment.trim())
                                 if (selectedTags.isNotEmpty()) {
@@ -4278,7 +4283,7 @@ private fun RateJourneyModal(
                                 }
                                 append(" (Hygiene: $cleanlinessRating/5, Punctuality: $punctualityRating/5, Staff: $staffRating/5)")
                             }
-                            onSubmitReview(targetBusId, rating, fullComment)
+                            onSubmitReview(targetBusId, rating, fullComment, booking.pnr)
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),

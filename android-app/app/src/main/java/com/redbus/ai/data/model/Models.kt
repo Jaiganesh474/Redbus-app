@@ -252,6 +252,8 @@ data class BookingDetails(
     val serviceFee: Double? = 0.0,
     val walletAmountUsed: Double? = 0.0,
     val refundAmount: Double? = null,
+    val userRating: Int? = null,
+    val userReview: String? = null,
     val createdAt: String = "",
     val passengers: List<PassengerInput>? = emptyList()
 )
@@ -397,7 +399,8 @@ data class CreateReviewRequest(
     val rating: Int,
     val comment: String,
     val userName: String? = null,
-    val tags: List<String>? = emptyList()
+    val tags: List<String>? = emptyList(),
+    val pnr: String? = null
 )
 
 data class DeviceSessionItem(

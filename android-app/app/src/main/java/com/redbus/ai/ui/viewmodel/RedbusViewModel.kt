@@ -99,6 +99,7 @@ data class RedbusUiState(
     // Live Reviews & Ratings
     val currentBusReviews: List<ReviewItem> = emptyList(),
     val currentBusReviewSummary: ReviewSummary? = null,
+    val reviewedPnrs: Map<String, Int> = SessionManager.getReviewedPnrs(),
     val isLoadingReviews: Boolean = false,
     val isReviewSubmitting: Boolean = false,
     val reviewActionMessage: String? = null,
@@ -787,33 +788,51 @@ class RedbusViewModel(
         }
     }
 
-    fun submitReview(busId: Long, rating: Int, comment: String, onDone: (() -> Unit)? = null) {
+    fun submitReview(busId: Long, rating: Int, comment: String, pnr: String? = null, onDone: (() -> Unit)? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isReviewSubmitting = true, reviewActionMessage = null) }
             val authorName = _uiState.value.user?.name?.ifBlank { "Verified Passenger" } ?: "Verified Passenger"
+            if (!pnr.isNullOrBlank()) {
+                SessionManager.saveReviewedPnr(pnr, rating)
+                val updatedReviewedPnrs = SessionManager.getReviewedPnrs()
+                _uiState.update { it.copy(reviewedPnrs = updatedReviewedPnrs) }
+            }
             repository.createReview(
                 CreateReviewRequest(
                     busId = busId,
                     rating = rating,
                     comment = comment,
-                    userName = authorName
+                    userName = authorName,
+                    pnr = pnr
                 )
             )
                 .onSuccess { newReview ->
+                    if (!pnr.isNullOrBlank()) {
+                        SessionManager.saveReviewedPnr(pnr, rating)
+                    }
+                    val updatedReviewedPnrs = SessionManager.getReviewedPnrs()
                     _uiState.update { state ->
                         val updatedList =
-                            listOf(newReview) + state.currentBusReviews.filterNot { it.id == newReview.id }
-                        val newAvg = updatedList.map { it.rating }.average()
+                            listOf(newReview) + state.currentBusReviews.filterNot {
+                                it.id == newReview.id || (it.userName.isNotBlank() && it.userName.equals(newReview.userName, ignoreCase = true))
+                            }
+                        val newAvg = if (updatedList.isNotEmpty()) updatedList.map { it.rating }.average() else 4.4
                         val updatedRoute =
                             state.selectedRoute?.copy(rating = if (newAvg > 0) newAvg else state.selectedRoute.rating)
+                        val updatedBookings = state.myBookings.map { b ->
+                            if (b.pnr == pnr) b.copy(userRating = rating, userReview = comment) else b
+                        }
                         state.copy(
                             isReviewSubmitting = false,
                             currentBusReviews = updatedList,
                             selectedRoute = updatedRoute,
+                            myBookings = updatedBookings,
+                            reviewedPnrs = updatedReviewedPnrs,
                             reviewActionMessage = "Thank you! Your review has been published."
                         )
                     }
                     fetchBusReviews(busId)
+                    fetchMyBookings()
                     onDone?.invoke()
                 }
                 .onFailure { err ->
@@ -1248,7 +1267,10 @@ class RedbusViewModel(
             _uiState.update { it.copy(isBookingsLoading = true) }
             repository.getMyBookings()
                 .onSuccess { list ->
-                    _uiState.update { it.copy(isBookingsLoading = false, myBookings = list) }
+                    val serverRatedPnrs = list.filter { it.userRating != null }.associate { it.pnr to it.userRating!! }
+                    val mergedPnrs = SessionManager.getReviewedPnrs() + serverRatedPnrs
+                    mergedPnrs.forEach { (pnr, r) -> SessionManager.saveReviewedPnr(pnr, r) }
+                    _uiState.update { it.copy(isBookingsLoading = false, myBookings = list, reviewedPnrs = mergedPnrs) }
                 }
                 .onFailure {
                     _uiState.update { it.copy(isBookingsLoading = false) }

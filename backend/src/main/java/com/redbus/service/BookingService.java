@@ -573,6 +573,8 @@ public class BookingService {
                 .contactPhone(booking.getContactPhone())
                 .cancellationReason(booking.getCancellationReason())
                 .refundAmount(booking.getRefundAmount())
+                .userRating(booking.getUserRating())
+                .userReview(booking.getUserReview())
                 .createdAt(booking.getCreatedAt())
                 .passengers(passengerDtos)
                 .build();

@@ -157,6 +157,8 @@ export interface BookingDetails {
   walletAmountUsed?: number;
   cancellationReason?: string;
   refundAmount?: number;
+  userRating?: number;
+  userReview?: string;
   createdAt: string;
   passengers: PassengerInput[];
 }
@@ -436,6 +438,7 @@ export interface CreateReviewRequest {
   comment?: string;
   userName?: string;
   tags?: string[];
+  pnr?: string;
 }
 
 export interface AiTelemetryItem {

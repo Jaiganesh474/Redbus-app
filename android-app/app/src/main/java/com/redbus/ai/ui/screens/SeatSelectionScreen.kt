@@ -95,6 +95,20 @@ fun SeatSelectionScreen(
         if (it.price > 0) it.price else route.basePrice
     }
 
+    val liveRatingsCount = remember(uiState.currentBusReviewSummary, uiState.currentBusReviews) {
+        val summaryCount = uiState.currentBusReviewSummary?.totalRatings ?: 0
+        val liveReviewsCount = uiState.currentBusReviews.size
+        if (summaryCount > 0) summaryCount else (109 + liveReviewsCount)
+    }
+    val liveAverageRating = remember(route.rating, uiState.currentBusReviews, uiState.currentBusReviewSummary) {
+        if (uiState.currentBusReviews.isNotEmpty()) {
+            val avg = uiState.currentBusReviews.map { it.rating }.average()
+            if (avg > 0) avg else route.rating
+        } else {
+            uiState.currentBusReviewSummary?.averageRating ?: (if (route.rating > 0) route.rating else 4.4)
+        }
+    }
+
     Scaffold(
         topBar = {
             Surface(
@@ -188,7 +202,7 @@ fun SeatSelectionScreen(
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = String.format("%.1f", route.rating),
+                                        text = "${String.format(java.util.Locale.US, "%.1f", liveAverageRating)} ( $liveRatingsCount )",
                                         color = Color.White,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -196,7 +210,7 @@ fun SeatSelectionScreen(
                                 }
                             }
                             Text(
-                                text = "427 ratings",
+                                text = "$liveRatingsCount ratings",
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp)
@@ -475,7 +489,7 @@ fun SeatSelectionScreen(
                                         "ai_demand" to "⚡ AI Punctuality & Demand",
                                         "cancellation" to "Cancellation policy",
                                         "boarding" to "Boarding & Dropping",
-                                        "reviews" to "⭐ Customer Reviews (${if (uiState.currentBusReviews.isNotEmpty()) uiState.currentBusReviews.size else 4})"
+                                        "reviews" to "⭐ Customer Reviews (${uiState.currentBusReviews.size})"
                                     )
                                     tabs.forEach { (id, label) ->
                                         val selected = activeDetailTab == id

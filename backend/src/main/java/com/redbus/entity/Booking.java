@@ -117,6 +117,12 @@ public class Booking {
     @Column(name = "cancellation_reason", length = 255)
     private String cancellationReason;
 
+    @Column(name = "user_rating")
+    private Integer userRating;
+
+    @Column(name = "user_review", columnDefinition = "TEXT")
+    private String userReview;
+
     @Column(name = "departure_reminder_sent", nullable = false)
     @Builder.Default
     private Boolean departureReminderSent = false;

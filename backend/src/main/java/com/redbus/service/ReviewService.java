@@ -7,6 +7,7 @@ import com.redbus.entity.Bus;
 import com.redbus.entity.Review;
 import com.redbus.entity.User;
 import com.redbus.exception.ResourceNotFoundException;
+import com.redbus.repository.BookingRepository;
 import com.redbus.repository.BusRepository;
 import com.redbus.repository.ReviewRepository;
 import com.redbus.repository.UserRepository;
@@ -29,6 +30,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final BusRepository busRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
     @Transactional
     public ReviewSummaryDto getReviewSummary(Long busId) {
@@ -48,7 +50,7 @@ public class ReviewService {
                 .average()
                 .orElse(bus.getRating() != null ? bus.getRating().doubleValue() : 4.4);
 
-        int totalCount = Math.max(reviews.size(), 427); // Baseline realistic Redbus ratings count
+        int totalCount = Math.max(reviews.size(), 109); // Baseline realistic Redbus ratings count
 
         // Star breakdown percentages
         Map<Integer, Integer> starPercentages = new LinkedHashMap<>();
@@ -118,17 +120,43 @@ public class ReviewService {
                 ? String.join(",", request.getTags())
                 : "Punctuality,Seat / Sleep Comfort";
 
-        Review review = Review.builder()
-                .bus(bus)
-                .user(user)
-                .userName(reviewerName)
-                .rating(request.getRating())
-                .comment(request.getComment() != null ? request.getComment().trim() : "")
-                .tags(tagsStr)
-                .createdAt(LocalDateTime.now())
-                .build();
+        // Prevent duplicate review count from the same passenger/user
+        Review existing = null;
+        if (user != null) {
+            existing = reviewRepository.findFirstByBusIdAndUserId(bus.getId(), user.getId()).orElse(null);
+        }
+        if (existing == null && reviewerName != null && !reviewerName.isBlank()) {
+            existing = reviewRepository.findFirstByBusIdAndUserName(bus.getId(), reviewerName).orElse(null);
+        }
 
-        Review saved = reviewRepository.save(review);
+        Review saved;
+        if (existing != null) {
+            existing.setRating(request.getRating());
+            existing.setComment(request.getComment() != null ? request.getComment().trim() : "");
+            existing.setTags(tagsStr);
+            existing.setCreatedAt(LocalDateTime.now());
+            saved = reviewRepository.save(existing);
+        } else {
+            Review review = Review.builder()
+                    .bus(bus)
+                    .user(user)
+                    .userName(reviewerName)
+                    .rating(request.getRating())
+                    .comment(request.getComment() != null ? request.getComment().trim() : "")
+                    .tags(tagsStr)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            saved = reviewRepository.save(review);
+        }
+
+        // If PNR was provided, link and persist the rating onto the Booking entity
+        if (request.getPnr() != null && !request.getPnr().isBlank()) {
+            bookingRepository.findByPnr(request.getPnr().trim().toUpperCase()).ifPresent(b -> {
+                b.setUserRating(request.getRating());
+                b.setUserReview(request.getComment() != null ? request.getComment().trim() : "");
+                bookingRepository.save(b);
+            });
+        }
 
         // Recalculate bus average rating
         List<Review> allReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(bus.getId());

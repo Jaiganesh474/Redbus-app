@@ -50,6 +50,8 @@ public class BookingResponseDto {
     private Boolean hasTripGuarantee;
     private BigDecimal tripGuaranteeFee;
     private BigDecimal serviceFee;
+    private Integer userRating;
+    private String userReview;
     private LocalDateTime createdAt;
     private List<PassengerDto> passengers;
 }

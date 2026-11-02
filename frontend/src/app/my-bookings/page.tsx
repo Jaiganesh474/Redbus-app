@@ -96,6 +96,17 @@ export default function MyBookingsPage() {
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [copyPnrFeedback, setCopyPnrFeedback] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("redbus_reviewed_pnrs");
+      if (saved) {
+        setReviewedPnrs(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+
+
   const [changeTripPointsMutation, { isLoading: isChangingPoints }] = useChangeTripPointsMutation();
   const [changeJourneyDateMutation, { isLoading: isChangingDate }] = useChangeJourneyDateMutation();
   const [createReviewMutation, { isLoading: isSubmittingReview }] = useCreateReviewMutation();
@@ -170,7 +181,7 @@ export default function MyBookingsPage() {
     selectedBookingForReview,
   ]);
 
-  const { data: userBookingsData, isLoading: isUserBookingsLoading } = useGetMyBookingsQuery(
+  const { data: userBookingsData, isLoading: isUserBookingsLoading, refetch: refetchBookings } = useGetMyBookingsQuery(
     {},
     { skip: !isAuthenticated }
   );
@@ -231,6 +242,28 @@ export default function MyBookingsPage() {
       setCancelMessage(err?.data?.message || "Failed to cancel booking.");
     }
   };
+
+  useEffect(() => {
+    if (userBookingsData?.content && userBookingsData.content.length > 0) {
+      setReviewedPnrs((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        userBookingsData.content.forEach((b: BookingDetails) => {
+          if (b.userRating != null && !next[b.pnr]) {
+            next[b.pnr] = true;
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            localStorage.setItem("redbus_reviewed_pnrs", JSON.stringify(next));
+          } catch {}
+          return next;
+        }
+        return prev;
+      });
+    }
+  }, [userBookingsData]);
 
   const rawBookings: BookingDetails[] = [];
   if (pnrBooking) {
@@ -817,7 +850,7 @@ export default function MyBookingsPage() {
                           className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 border border-amber-200 cursor-pointer"
                         >
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                          <span>{reviewedPnrs[booking.pnr] ? "Rated ★" : "Rate Journey"}</span>
+                          <span>{booking.userRating != null || reviewedPnrs[booking.pnr] ? "Rated ★" : "Rate Journey"}</span>
                         </button>
                       </div>
                     ) : (
@@ -1436,7 +1469,7 @@ export default function MyBookingsPage() {
                             </button>
                           ))}
                         </div>
-                        {reviewedPnrs[booking.pnr] && (
+                        {(booking.userRating != null || reviewedPnrs[booking.pnr]) && (
                           <p className="text-xs font-bold text-emerald-600">✓ Thank you for rating this journey!</p>
                         )}
                       </div>
@@ -1602,7 +1635,7 @@ export default function MyBookingsPage() {
                               Change trip details
                             </p>
                             <p className="text-[11px] text-gray-500">
-                              {isCompleted ? "Locked: Trip completed" : within2h ? "Locked within 2 hours of departure" : "Boarding and dropping point"}
+                              {isCompleted ? "Trip completed" : within2h ? "Locked within 2 hours of departure" : "Boarding and dropping point"}
                             </p>
                           </div>
                         </div>
@@ -1635,7 +1668,7 @@ export default function MyBookingsPage() {
                               Free bus change
                             </p>
                             <p className="text-[11px] text-gray-500">
-                              {isCompleted ? "Locked: Trip completed" : "Postpone journey date to future schedule"}
+                              {isCompleted ? "Trip completed" : "Postpone journey date to future schedule"}
                             </p>
                           </div>
                         </div>
@@ -1666,7 +1699,7 @@ export default function MyBookingsPage() {
                                 Cancel Booking
                               </p>
                               <p className="text-[11px] text-gray-500">
-                                {isCompleted ? "Locked: Trip completed" : "Eligible for instant wallet refund"}
+                                {isCompleted ? "Trip completed" : "Eligible for instant wallet refund"}
                               </p>
                             </div>
                           </div>
@@ -2326,17 +2359,28 @@ export default function MyBookingsPage() {
               comment: reviewComment || "Smooth and comfortable journey!",
               userName: activeUser?.name || "Passenger",
               tags: ["Comfortable Berths", "Punctual", "Clean Bus"],
+              pnr: booking.pnr,
             }).unwrap();
 
-            setReviewedPnrs((prev) => ({ ...prev, [booking.pnr]: true }));
+            const updated = { ...reviewedPnrs, [booking.pnr]: true };
+            setReviewedPnrs(updated);
+            try {
+              localStorage.setItem("redbus_reviewed_pnrs", JSON.stringify(updated));
+            } catch {}
             setReviewSuccess("Thank you for reviewing your journey!");
+            refetchBookings();
             setTimeout(() => {
               setSelectedBookingForReview(null);
               setReviewSuccess("");
             }, 1200);
           } catch {
+            const updated = { ...reviewedPnrs, [booking.pnr]: true };
+            setReviewedPnrs(updated);
+            try {
+              localStorage.setItem("redbus_reviewed_pnrs", JSON.stringify(updated));
+            } catch {}
             setReviewSuccess("Review registered successfully!");
-            setReviewedPnrs((prev) => ({ ...prev, [booking.pnr]: true }));
+            refetchBookings();
             setTimeout(() => {
               setSelectedBookingForReview(null);
               setReviewSuccess("");
