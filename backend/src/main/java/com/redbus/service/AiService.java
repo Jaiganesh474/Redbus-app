@@ -1046,10 +1046,10 @@ public class AiService {
 
         if (lower.contains("chennai") || lower.equals("maa")) {
             boarding = "Koyambedu Omni Bus Stand (20:30), Guindy (21:00), Ashok Pillar (21:15), Tambaram (21:45), Perungalathur (22:00)";
-            dropping = "Perungalathur (04:30), Tambaram (04:45), Guindy (05:15), Koyambedu Omni Bus Stand (05:45), Central Railway Station (06:00)";
+            dropping = "Perungalathur (04:30), Guindy (05:00), Tambaram (05:30)";
             landmarks = List.of("Koyambedu Omni Stand", "Guindy", "Ashok Pillar", "Tambaram", "Perungalathur", "Chennai Central");
         } else if (lower.contains("bangalore") || lower.contains("bengaluru") || lower.equals("blr")) {
-            boarding = "Majestic Anand Rao Circle (21:00), Madiwala (21:30), Silk Board (21:45), Electronic City Toll (22:00)";
+            boarding = "Majestic Anand Rao Circle (21:00), Madiwala (21:30), Silk Board (21:45), Electronic City (22:15)";
             dropping = "Electronic City Toll (04:30), Silk Board (04:45), Madiwala (05:00), Majestic Anand Rao Circle (05:30), Kalasipalyam (06:00)";
             landmarks = List.of("Majestic Anand Rao Circle", "Madiwala", "Silk Board", "Electronic City", "Kalasipalyam", "Hebbal");
         } else if (lower.contains("dindigul") || lower.contains("dindugal") || lower.equals("dgl")) {

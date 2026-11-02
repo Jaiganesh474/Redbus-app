@@ -98,14 +98,16 @@ fun SeatSelectionScreen(
     val liveRatingsCount = remember(uiState.currentBusReviewSummary, uiState.currentBusReviews) {
         val summaryCount = uiState.currentBusReviewSummary?.totalRatings ?: 0
         val liveReviewsCount = uiState.currentBusReviews.size
-        if (summaryCount > 0) summaryCount else (109 + liveReviewsCount)
+        if (summaryCount > 0) summaryCount else liveReviewsCount
     }
     val liveAverageRating = remember(route.rating, uiState.currentBusReviews, uiState.currentBusReviewSummary) {
         if (uiState.currentBusReviews.isNotEmpty()) {
             val avg = uiState.currentBusReviews.map { it.rating }.average()
-            if (avg > 0) avg else route.rating
+            if (avg > 0) Math.round(avg * 10.0) / 10.0 else route.rating
+        } else if (uiState.currentBusReviewSummary != null && uiState.currentBusReviewSummary.averageRating > 0) {
+            uiState.currentBusReviewSummary.averageRating
         } else {
-            uiState.currentBusReviewSummary?.averageRating ?: (if (route.rating > 0) route.rating else 4.4)
+            if (route.rating > 0) route.rating else 4.5
         }
     }
 
@@ -202,7 +204,7 @@ fun SeatSelectionScreen(
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = "${String.format(java.util.Locale.US, "%.1f", liveAverageRating)} ( $liveRatingsCount )",
+                                        text = String.format(java.util.Locale.US, "%.1f", liveAverageRating),
                                         color = Color.White,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -210,7 +212,7 @@ fun SeatSelectionScreen(
                                 }
                             }
                             Text(
-                                text = "$liveRatingsCount ratings",
+                                text = if (liveRatingsCount > 0) "$liveRatingsCount ratings" else "0 ratings",
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 2.dp)
@@ -1536,41 +1538,6 @@ private fun CustomerReviewsPanel(
 ) {
     var showWriteReviewDialog by remember { mutableStateOf(false) }
 
-    val displayedReviews = remember(reviews) {
-        reviews.ifEmpty {
-            listOf(
-                ReviewItem(
-                    id = 1,
-                    busId = busId,
-                    userName = "Arun Kumar R.",
-                    rating = 5,
-                    comment = "Excellent Volvo journey! Bus was on time at Madiwala. Clean blankets, working charging port, and very smooth driving overnight."
-                ),
-                ReviewItem(
-                    id = 2,
-                    busId = busId,
-                    userName = "Priya Venkatesh",
-                    rating = 5,
-                    comment = "Safe for solo female travelers. The sleeper berth was spacious and curtains provided full privacy. Driver was courteous."
-                ),
-                ReviewItem(
-                    id = 3,
-                    busId = busId,
-                    userName = "Karthik Subramanian",
-                    rating = 4,
-                    comment = "Good rest stop at Shri Balaji Bhavan. Food and washrooms were clean. Arrived in Chennai 15 minutes ahead of schedule."
-                ),
-                ReviewItem(
-                    id = 4,
-                    busId = busId,
-                    userName = "Divya N.",
-                    rating = 4,
-                    comment = "Pleasant travel experience. Water bottle provided. Smooth online ticket confirmation via redBus."
-                )
-            )
-        }
-    }
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -1604,8 +1571,35 @@ private fun CustomerReviewsPanel(
             Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = RedbusCrimson, modifier = Modifier.size(28.dp))
             }
+        } else if (reviews.isEmpty()) {
+            Surface(
+                color = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RateReview,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text(
+                        text = "No reviews yet, Be the first one to review your journey experience",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4B5563),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         } else {
-            displayedReviews.forEach { r ->
+            reviews.forEach { r ->
                 Surface(
                     color = Color.White,
                     shape = RoundedCornerShape(16.dp),

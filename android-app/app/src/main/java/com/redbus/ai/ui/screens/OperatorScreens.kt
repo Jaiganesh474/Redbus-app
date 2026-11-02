@@ -827,6 +827,7 @@ private fun OperatorFormField(
 fun OperatorHubScreen(
     uiState: RedbusUiState,
     onRefresh: () -> Unit,
+    onRefreshManifest: (String?, Long?) -> Unit = { _, _ -> },
     onCreateBus: (String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
     onUpdateBus: (Long, String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
     onDeleteBus: (Long, () -> Unit, (String) -> Unit) -> Unit,
@@ -1112,7 +1113,8 @@ fun OperatorHubScreen(
                         PassengerManifestTabContent(
                             uiState = uiState,
                             selectedScheduleId = manifestScheduleFilter,
-                            onScheduleIdChange = { manifestScheduleFilter = it }
+                            onScheduleIdChange = { manifestScheduleFilter = it },
+                            onRefreshManifest = onRefreshManifest
                         )
                     }
                 }
@@ -3299,7 +3301,8 @@ private fun printManifestSheet(
 private fun PassengerManifestTabContent(
     uiState: RedbusUiState,
     selectedScheduleId: String = "ALL",
-    onScheduleIdChange: (String) -> Unit = {}
+    onScheduleIdChange: (String) -> Unit = {},
+    onRefreshManifest: (String?, Long?) -> Unit = { _, _ -> }
 ) {
     var selectedDatePreset by remember { mutableStateOf("Today") }
     var manifestDate by remember { mutableStateOf(LocalDate.now().toString()) }
@@ -3309,53 +3312,12 @@ private fun PassengerManifestTabContent(
 
     val boardedMap = remember { mutableStateMapOf<String, Boolean>() }
 
-    val allManifest = uiState.operatorManifest.ifEmpty {
-        listOf(
-            OperatorPassengerManifestDto(
-                bookingId = 1L,
-                pnr = "RB-2026-8KE7T2",
-                passengerName = "leo",
-                age = 25,
-                gender = "MALE",
-                seatNumber = "S7",
-                seatType = "SEATER",
-                berthLabel = "Seater",
-                seatDisplay = "S7 (Seater)",
-                sourceCity = "Bangalore",
-                destinationCity = "Chennai",
-                departureTime = "17:00:00",
-                arrivalTime = "04:30:00",
-                boardingPoint = "Majestic Anand Rao Circle (21:00)",
-                droppingPoint = "Perungalathur (04:30)",
-                contactPhone = "+91 8939129572",
-                busOperator = "ZingBus",
-                busType = "Scania AC Seater (2+2)",
-                status = "CONFIRMED"
-            ),
-            OperatorPassengerManifestDto(
-                bookingId = 2L,
-                pnr = "RB-2026-4XA991",
-                passengerName = "Jaiganesh",
-                age = 28,
-                gender = "MALE",
-                seatNumber = "L1",
-                seatType = "SLEEPER",
-                deck = "LOWER",
-                berthLabel = "Lower Berth",
-                seatDisplay = "L1 (Lower Berth)",
-                sourceCity = "Bangalore",
-                destinationCity = "Chennai",
-                departureTime = "23:30:00",
-                arrivalTime = "05:30:00",
-                boardingPoint = "Electronic City Toll (22:30)",
-                droppingPoint = "Koyambedu Omni Bus Stand (04:30)",
-                contactPhone = "+91 9876543210",
-                busOperator = "Intercity SmartBus",
-                busType = "BharatBenz AC Sleeper (2+1)",
-                status = "CONFIRMED"
-            )
-        )
+    LaunchedEffect(manifestDate, scheduleFilter) {
+        val schedId = if (scheduleFilter == "ALL") null else scheduleFilter.toLongOrNull()
+        onRefreshManifest(manifestDate, schedId)
     }
+
+    val allManifest = uiState.operatorManifest
 
     // Filter passengers by search query
     val filteredPassengers = allManifest.filter { p ->
@@ -3448,7 +3410,10 @@ private fun PassengerManifestTabContent(
                 Text("Print Sheet", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
             }
 
-            IconButton(onClick = { }) {
+            IconButton(onClick = {
+                val schedId = if (scheduleFilter == "ALL") null else scheduleFilter.toLongOrNull()
+                onRefreshManifest(manifestDate, schedId)
+            }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = Color.Gray)
             }
         }
@@ -3512,6 +3477,7 @@ private fun PassengerManifestTabContent(
                 // Filter by Route Schedule Dropdown
                 Text("FILTER BY ROUTE SCHEDULE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                 Box {
+                    val selectedSched = uiState.operatorSchedules.find { it.id.toString() == scheduleFilter }
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
@@ -3523,7 +3489,8 @@ private fun PassengerManifestTabContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                if (scheduleFilter == "ALL") "Bangalore → Chennai (23:30:00)" else scheduleFilter,
+                                if (scheduleFilter == "ALL" || selectedSched == null) "All Routes & Schedules (${uiState.operatorSchedules.size})"
+                                else "${selectedSched.sourceCity} → ${selectedSched.destinationCity} (${selectedSched.departureTime})",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1
@@ -3536,17 +3503,23 @@ private fun PassengerManifestTabContent(
                         onDismissRequest = { isScheduleDropdownOpen = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Bangalore → Chennai (23:30:00)", fontSize = 12.sp) },
-                            onClick = { scheduleFilter = "Bangalore → Chennai (23:30:00)"; isScheduleDropdownOpen = false }
+                            text = { Text("All Routes & Schedules (${uiState.operatorSchedules.size})", fontSize = 12.sp) },
+                            onClick = {
+                                scheduleFilter = "ALL"
+                                onScheduleIdChange("ALL")
+                                isScheduleDropdownOpen = false
+                            }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Chennai → Coimbatore (21:30:00)", fontSize = 12.sp) },
-                            onClick = { scheduleFilter = "Chennai → Coimbatore (21:30:00)"; isScheduleDropdownOpen = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("All Routes & Schedules", fontSize = 12.sp) },
-                            onClick = { scheduleFilter = "ALL"; isScheduleDropdownOpen = false }
-                        )
+                        uiState.operatorSchedules.forEach { sch ->
+                            DropdownMenuItem(
+                                text = { Text("${sch.sourceCity} → ${sch.destinationCity} (${sch.departureTime})", fontSize = 12.sp) },
+                                onClick = {
+                                    scheduleFilter = sch.id.toString()
+                                    onScheduleIdChange(sch.id.toString())
+                                    isScheduleDropdownOpen = false
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -5601,11 +5574,13 @@ private fun PublishScheduleModal(
     var showToDatePicker by remember { mutableStateOf(false) }
 
     var boardingPoints by remember {
-        mutableStateOf("${sourceCity} Central Omni Bus Stand (21:30), ${sourceCity} Highway Toll Plaza (22:15)")
+        mutableStateOf(getAiBoardingPoints(sourceCity))
     }
     var droppingPoints by remember {
-        mutableStateOf("Perungalathur (04:30), Guindy (05:15), Koyambedu Omni Bus Stand (05:30)")
+        mutableStateOf(getAiDroppingPoints(destCity))
     }
+    var showDepartureTimePicker by remember { mutableStateOf(false) }
+    var showArrivalTimePicker by remember { mutableStateOf(false) }
 
     val isEditing = editingSchedule != null
 
@@ -5712,7 +5687,7 @@ private fun PublishScheduleModal(
                                 onValueChange = {
                                     sourceCity = it
                                     isSourceMenuExpanded = true
-                                    boardingPoints = "${it} Central Omni Bus Stand (21:30), ${it} Toll Plaza (22:15)"
+                                    boardingPoints = getAiBoardingPoints(it)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isSourceMenuExpanded = !isSourceMenuExpanded }) {
@@ -5771,7 +5746,7 @@ private fun PublishScheduleModal(
                                         },
                                         onClick = {
                                             sourceCity = city.name
-                                            boardingPoints = "${city.name} Central Omni Bus Stand (21:30), ${city.name} Toll Plaza (22:15)"
+                                            boardingPoints = getAiBoardingPoints(city.name)
                                             isSourceMenuExpanded = false
                                         }
                                     )
@@ -5793,7 +5768,7 @@ private fun PublishScheduleModal(
                                 onValueChange = {
                                     destCity = it
                                     isDestMenuExpanded = true
-                                    droppingPoints = "Perungalathur (04:30), Guindy (05:15), ${it} Omni Bus Stand (05:30)"
+                                    droppingPoints = getAiDroppingPoints(it)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isDestMenuExpanded = !isDestMenuExpanded }) {
@@ -5852,7 +5827,7 @@ private fun PublishScheduleModal(
                                         },
                                         onClick = {
                                             destCity = city.name
-                                            droppingPoints = "Perungalathur (04:30), Guindy (05:15), ${city.name} Omni Bus Stand (05:30)"
+                                            droppingPoints = getAiDroppingPoints(city.name)
                                             isDestMenuExpanded = false
                                         }
                                     )
@@ -5866,26 +5841,48 @@ private fun PublishScheduleModal(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Departure", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = departureTime,
-                            onValueChange = { departureTime = it },
-                            trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp)) },
-                            singleLine = true,
+                        Surface(
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clickable { showDepartureTimePicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(departureTime, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                            }
+                        }
                     }
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Arrival", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(
-                            value = arrivalTime,
-                            onValueChange = { arrivalTime = it },
-                            trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
-                            singleLine = true,
+                        Surface(
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clickable { showArrivalTimePicker = true }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(arrivalTime, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            }
+                        }
                     }
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -6079,6 +6076,24 @@ private fun PublishScheduleModal(
             initialDate = validTo,
             onDateSelected = { validTo = it },
             onDismiss = { showToDatePicker = false }
+        )
+    }
+
+    if (showDepartureTimePicker) {
+        ScheduleTimePickerDialog(
+            title = "Select Departure Time",
+            initialTime = departureTime,
+            onTimeSelected = { departureTime = it },
+            onDismiss = { showDepartureTimePicker = false }
+        )
+    }
+
+    if (showArrivalTimePicker) {
+        ScheduleTimePickerDialog(
+            title = "Select Arrival Time",
+            initialTime = arrivalTime,
+            onTimeSelected = { arrivalTime = it },
+            onDismiss = { showArrivalTimePicker = false }
         )
     }
 }
@@ -6280,3 +6295,189 @@ private fun CreateCouponModal(
 }
 
 
+
+private fun getAiBoardingPoints(city: String): String {
+    val lower = city.trim().lowercase()
+    return when {
+        lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
+            "Majestic Anand Rao Circle (21:00), Madiwala (21:30), Silk Board (21:45), Electronic City (22:15)"
+        lower.contains("chennai") || lower == "maa" ->
+            "Koyambedu Omni Bus Stand (20:30), Guindy (21:00), Ashok Pillar (21:15), Tambaram (21:45), Perungalathur (22:00)"
+        lower.contains("dindigul") ->
+            "Dindigul Central Bus Stand (21:00), Dindigul Bypass Roundana (21:30), Palani Road Junction (21:45)"
+        lower.contains("tirunelveli") || lower.contains("nellai") ->
+            "Vannarpettai (20:30), New Bus Stand (21:00), Kayathar Toll Plaza (21:45)"
+        lower.contains("coimbatore") || lower == "cbe" ->
+            "Gandhipuram (21:00), Omni Bus Stand (21:30), Hopes College (21:45), KMCH (22:00)"
+        lower.contains("hyderabad") || lower == "hyd" ->
+            "Ameerpet (20:30), Lakdikapul (21:00), Gachibowli (21:30), Shamshabad (22:15)"
+        else ->
+            "$city Central Omni Bus Stand (21:00), $city Toll Plaza (21:45)"
+    }
+}
+
+private fun getAiDroppingPoints(city: String): String {
+    val lower = city.trim().lowercase()
+    return when {
+        lower.contains("chennai") || lower == "maa" ->
+            "Perungalathur (04:30), Guindy (05:00), Tambaram (05:30)"
+        lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
+            "Electronic City Toll (04:30), Silk Board (04:45), Madiwala (05:00), Majestic Anand Rao Circle (05:30)"
+        lower.contains("dindigul") ->
+            "Dindigul Bypass Roundana (04:30), Palani Road Junction (05:00), Dindigul Central Bus Stand (05:30)"
+        lower.contains("tirunelveli") || lower.contains("nellai") ->
+            "Kayathar Toll Plaza (05:00), New Bus Stand (05:30), Vannarpettai (06:00)"
+        lower.contains("coimbatore") || lower == "cbe" ->
+            "KMCH (04:30), Hopes College (04:45), Gandhipuram (05:15)"
+        lower.contains("hyderabad") || lower == "hyd" ->
+            "Shamshabad (04:30), Gachibowli (05:15), Ameerpet (05:45)"
+        else ->
+            "$city Bypass Roundana (04:30), $city Central Terminal (05:15)"
+    }
+}
+
+@Composable
+fun ScheduleTimePickerDialog(
+    title: String,
+    initialTime: String,
+    onTimeSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val parts = initialTime.split(":")
+    var selectedHour by remember { mutableIntStateOf(parts.getOrNull(0)?.toIntOrNull() ?: 21) }
+    var selectedMinute by remember { mutableIntStateOf(parts.getOrNull(1)?.toIntOrNull() ?: 30) }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF111827))
+                    Surface(
+                        color = Color(0xFFFEE2E2),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = String.format(java.util.Locale.US, "%02d:%02d", selectedHour, selectedMinute),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp,
+                            color = RedbusCrimson,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Hours Column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("HOUR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            items((0..23).toList()) { hour ->
+                                val isSelected = hour == selectedHour
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.85f)
+                                        .padding(vertical = 2.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) Color(0xFF2563EB) else Color.Transparent)
+                                        .clickable { selectedHour = hour }
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%02d", hour),
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else Color(0xFF334155),
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalDivider(color = Color(0xFFF1F5F9), modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Minutes Column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("MINUTE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            val minutesList = (0..59).toList()
+                            items(minutesList) { minute ->
+                                val isSelected = minute == selectedMinute
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.85f)
+                                        .padding(vertical = 2.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) Color(0xFF2563EB) else Color.Transparent)
+                                        .clickable { selectedMinute = minute }
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%02d", minute),
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else Color(0xFF334155),
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onTimeSelected(String.format(java.util.Locale.US, "%02d:%02d", selectedHour, selectedMinute))
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                    ) {
+                        Text("Set Time", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}

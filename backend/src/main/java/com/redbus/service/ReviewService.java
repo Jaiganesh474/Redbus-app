@@ -37,55 +37,52 @@ public class ReviewService {
         Bus bus = busRepository.findById(busId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bus not found with id: " + busId));
 
-        List<Review> reviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(busId);
+        List<Review> reviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(busId).stream()
+                .filter(r -> !isMockReview(r))
+                .collect(Collectors.toList());
 
-        // Seed realistic default verified traveler reviews if none exist
-        if (reviews.isEmpty()) {
-            reviews = seedInitialReviews(bus);
+        double avg;
+        int totalCount = reviews.size();
+        if (!reviews.isEmpty()) {
+            avg = reviews.stream()
+                    .mapToInt(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+            avg = Math.round(avg * 10.0) / 10.0;
+            bus.setRating(BigDecimal.valueOf(avg));
+            busRepository.save(bus);
+        } else {
+            avg = bus.getRating() != null ? bus.getRating().doubleValue() : 0.0;
         }
-
-        // Calculate aggregate statistics
-        double avg = reviews.stream()
-                .mapToInt(Review::getRating)
-                .average()
-                .orElse(bus.getRating() != null ? bus.getRating().doubleValue() : 4.4);
-
-        int totalCount = Math.max(reviews.size(), 109); // Baseline realistic Redbus ratings count
 
         // Star breakdown percentages
         Map<Integer, Integer> starPercentages = new LinkedHashMap<>();
-        starPercentages.put(5, 71);
-        starPercentages.put(4, 14);
-        starPercentages.put(3, 3);
-        starPercentages.put(2, 3);
-        starPercentages.put(1, 8);
-
-        // Dynamic adjustment if actual reviews exist
-        if (reviews.size() > 5) {
+        if (totalCount > 0) {
             long c5 = reviews.stream().filter(r -> r.getRating() == 5).count();
             long c4 = reviews.stream().filter(r -> r.getRating() == 4).count();
             long c3 = reviews.stream().filter(r -> r.getRating() == 3).count();
             long c2 = reviews.stream().filter(r -> r.getRating() == 2).count();
             long c1 = reviews.stream().filter(r -> r.getRating() == 1).count();
-            int total = reviews.size();
-
-            starPercentages.put(5, (int) Math.round((double) c5 / total * 100));
-            starPercentages.put(4, (int) Math.round((double) c4 / total * 100));
-            starPercentages.put(3, (int) Math.round((double) c3 / total * 100));
-            starPercentages.put(2, (int) Math.round((double) c2 / total * 100));
-            starPercentages.put(1, (int) Math.round((double) c1 / total * 100));
+            starPercentages.put(5, (int) Math.round((double) c5 / totalCount * 100));
+            starPercentages.put(4, (int) Math.round((double) c4 / totalCount * 100));
+            starPercentages.put(3, (int) Math.round((double) c3 / totalCount * 100));
+            starPercentages.put(2, (int) Math.round((double) c2 / totalCount * 100));
+            starPercentages.put(1, (int) Math.round((double) c1 / totalCount * 100));
+        } else {
+            starPercentages.put(5, 0);
+            starPercentages.put(4, 0);
+            starPercentages.put(3, 0);
+            starPercentages.put(2, 0);
+            starPercentages.put(1, 0);
         }
 
-        // Loved tags mapping (matching Redbus UI)
         Map<String, Integer> lovedTags = new LinkedHashMap<>();
-        lovedTags.put("Punctuality", 210);
-        lovedTags.put("Staff behavior", 181);
-        lovedTags.put("Seat / Sleep Comfort", 179);
-        lovedTags.put("Driving", 178);
-        lovedTags.put("Cleanliness", 174);
-        lovedTags.put("Rest stop hygiene", 171);
-        lovedTags.put("AC", 155);
-        lovedTags.put("Live tracking", 151);
+        if (totalCount > 0) {
+            lovedTags.put("Punctuality", totalCount);
+            lovedTags.put("Staff behavior", totalCount);
+            lovedTags.put("Seat / Sleep Comfort", totalCount);
+            lovedTags.put("Cleanliness", totalCount);
+        }
 
         List<ReviewDto> dtos = reviews.stream().map(this::mapToDto).collect(Collectors.toList());
 
@@ -158,8 +155,10 @@ public class ReviewService {
             });
         }
 
-        // Recalculate bus average rating
-        List<Review> allReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(bus.getId());
+        // Recalculate bus average rating with verified non-mock reviews
+        List<Review> allReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(bus.getId()).stream()
+                .filter(r -> !isMockReview(r))
+                .collect(Collectors.toList());
         double newAvg = allReviews.stream().mapToInt(Review::getRating).average().orElse(request.getRating());
         bus.setRating(BigDecimal.valueOf(Math.round(newAvg * 10.0) / 10.0));
         busRepository.save(bus);
@@ -167,52 +166,25 @@ public class ReviewService {
         return mapToDto(saved);
     }
 
-    private List<Review> seedInitialReviews(Bus bus) {
-        List<Review> seeded = new ArrayList<>();
-
-        Review r1 = Review.builder()
-                .bus(bus)
-                .userName("Arun Kumar R.")
-                .rating(5)
-                .comment("Excellent Volvo journey! Bus was on time at Madiwala. Clean blankets, working charging port, and very smooth driving overnight.")
-                .tags("Punctuality,Driving,Cleanliness,AC")
-                .createdAt(LocalDateTime.now().minusDays(1))
-                .build();
-
-        Review r2 = Review.builder()
-                .bus(bus)
-                .userName("Priya Venkatesh")
-                .rating(5)
-                .comment("Safe for solo female travelers. The sleeper berth was spacious and curtains provided full privacy. Driver was courteous.")
-                .tags("Seat / Sleep Comfort,Staff behavior,Live tracking")
-                .createdAt(LocalDateTime.now().minusDays(3))
-                .build();
-
-        Review r3 = Review.builder()
-                .bus(bus)
-                .userName("Karthik Subramanian")
-                .rating(4)
-                .comment("Good rest stop at Shri Balaji Bhavan. Food and washrooms were clean. Arrived in Chennai 15 minutes ahead of schedule.")
-                .tags("Punctuality,Rest stop hygiene,Food Quality")
-                .createdAt(LocalDateTime.now().minusDays(5))
-                .build();
-
-        Review r4 = Review.builder()
-                .bus(bus)
-                .userName("Divya N.")
-                .rating(4)
-                .comment("Pleasant travel experience. Water bottle provided. Smooth online ticket confirmation via redBus.")
-                .tags("Staff behavior,Seat / Sleep Comfort")
-                .createdAt(LocalDateTime.now().minusDays(7))
-                .build();
-
-        seeded.add(reviewRepository.save(r1));
-        seeded.add(reviewRepository.save(r2));
-        seeded.add(reviewRepository.save(r3));
-        seeded.add(reviewRepository.save(r4));
-
-        return seeded;
+    @Transactional(readOnly = true)
+    public List<ReviewDto> getBusReviews(Long busId) {
+        return reviewRepository.findByBusIdOrderByCreatedAtDesc(busId)
+                .stream()
+                .filter(r -> !isMockReview(r))
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
+
+    private boolean isMockReview(Review r) {
+        String name = r.getUserName();
+        if (name == null) return false;
+        String trimmed = name.trim();
+        return trimmed.equalsIgnoreCase("Arun Kumar R.")
+                || trimmed.equalsIgnoreCase("Priya Venkatesh")
+                || trimmed.equalsIgnoreCase("Karthik Subramanian")
+                || trimmed.equalsIgnoreCase("Divya N.");
+    }
+
 
     private ReviewDto mapToDto(Review r) {
         List<String> tagsList = Collections.emptyList();

@@ -1964,18 +1964,18 @@ export default function OperatorPortalPage() {
         {activeTab === "manifest" && (
           <div className="space-y-6 animate-in fade-in">
             {/* Header / Date & Action Bar */}
-            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xs space-y-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-gray-100 dark:border-slate-800 shadow-xs space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 dark:border-slate-800 pb-6">
                 <div>
                   <div className="flex items-center space-x-2.5 mb-1">
-                    <span className="px-2.5 py-0.5 bg-red-50 text-[#d84e55] border border-red-100 text-xs font-bold rounded-lg flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 border border-red-100 dark:border-red-900/40 text-xs font-bold rounded-lg flex items-center gap-1.5">
                       <FileCheck className="w-3.5 h-3.5" /> Conductor Boarding Chart
                     </span>
-                    <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg">
+                    <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-xs font-semibold rounded-lg">
                       Official Passenger Manifest
                     </span>
                   </div>
-                  <h2 className="text-xl font-black text-gray-900">
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white">
                     Daily Passenger Verification & Onboarding Roster
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -2014,9 +2014,12 @@ export default function OperatorPortalPage() {
 
                   <button
                     type="button"
-                    onClick={() => refetchManifest()}
+                    onClick={() => {
+                      refetchManifest();
+                      refetchSchedules();
+                    }}
                     disabled={isFetchingManifest}
-                    className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all cursor-pointer"
+                    className="p-2.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-xl transition-all cursor-pointer"
                     title="Refresh Passenger List"
                   >
                     <RefreshCw className={`w-4 h-4 ${isFetchingManifest ? "animate-spin text-[#d84e55]" : ""}`} />
@@ -2065,7 +2068,7 @@ export default function OperatorPortalPage() {
                         type="date"
                         value={manifestDate}
                         onChange={(e) => setManifestDate(e.target.value)}
-                        className="pl-3 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                        className="pl-3 pr-2 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-bold text-gray-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                       />
                     </div>
                   </div>
@@ -2073,13 +2076,13 @@ export default function OperatorPortalPage() {
 
                 {/* Route Schedule Filter */}
                 <div className="md:col-span-3 space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-slate-300">
                     Filter by Route Schedule
                   </label>
                   <select
                     value={manifestScheduleId}
                     onChange={(e) => setManifestScheduleId(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   >
                     <option value="ALL">All Routes & Schedules ({schedules.length})</option>
                     {schedules.map((sch) => (
@@ -2092,7 +2095,7 @@ export default function OperatorPortalPage() {
 
                 {/* Search Passenger Bar */}
                 <div className="md:col-span-3 space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-slate-300">
                     Search Passengers
                   </label>
                   <div className="relative">
@@ -2102,12 +2105,12 @@ export default function OperatorPortalPage() {
                       value={manifestSearchQuery}
                       onChange={(e) => setManifestSearchQuery(e.target.value)}
                       placeholder="Name, Seat, PNR, Phone..."
-                      className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                      className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                     />
                     {manifestSearchQuery && (
                       <button
                         onClick={() => setManifestSearchQuery("")}
-                        className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                        className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -2119,45 +2122,45 @@ export default function OperatorPortalPage() {
 
             {/* Quick Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-                <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Bookings</span>
-                <span className="text-xl font-black text-gray-900">{manifestStats.total}</span>
-                <span className="text-[10px] text-gray-500 block">Passengers on chart</span>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-400 block">Total Bookings</span>
+                <span className="text-xl font-black text-gray-900 dark:text-white">{manifestStats.total}</span>
+                <span className="text-[10px] text-gray-500 dark:text-slate-400 block">Passengers on chart</span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-                <span className="text-[10px] uppercase font-bold text-gray-400 block">Conductor Verified</span>
-                <span className="text-xl font-black text-emerald-600">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-400 block">Conductor Verified</span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                   {manifestStats.verifiedCount} / {manifestStats.total}
                 </span>
-                <span className="text-[10px] text-emerald-600 font-semibold block">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
                   {manifestStats.total > 0
                     ? `${Math.round((manifestStats.verifiedCount / manifestStats.total) * 100)}% Boarded`
                     : "0% Boarded"}
                 </span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-emerald-100/60 bg-emerald-50/20 shadow-xs">
-                <span className="text-[10px] uppercase font-bold text-emerald-700 block">Lower Berths</span>
-                <span className="text-xl font-black text-emerald-800">{manifestStats.lowerBerthCount}</span>
-                <span className="text-[10px] text-emerald-600 block">Ground deck sleepers</span>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-emerald-100/60 dark:border-emerald-900/40 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">Lower Berths</span>
+                <span className="text-xl font-black text-emerald-800 dark:text-emerald-300">{manifestStats.lowerBerthCount}</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">Ground deck sleepers</span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-indigo-100/60 bg-indigo-50/20 shadow-xs">
-                <span className="text-[10px] uppercase font-bold text-indigo-700 block">Upper Berths</span>
-                <span className="text-xl font-black text-indigo-800">{manifestStats.upperBerthCount}</span>
-                <span className="text-[10px] text-indigo-600 block">Upper deck sleepers</span>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-indigo-100/60 dark:border-indigo-900/40 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-indigo-700 dark:text-indigo-400 block">Upper Berths</span>
+                <span className="text-xl font-black text-indigo-800 dark:text-indigo-300">{manifestStats.upperBerthCount}</span>
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 block">Upper deck sleepers</span>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-amber-100/60 bg-amber-50/20 shadow-xs col-span-2 sm:col-span-1">
-                <span className="text-[10px] uppercase font-bold text-amber-700 block">Seater Seats</span>
-                <span className="text-xl font-black text-amber-800">{manifestStats.seaterCount}</span>
-                <span className="text-[10px] text-amber-600 block">Push-back seats</span>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-amber-100/60 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/20 shadow-xs col-span-2 sm:col-span-1">
+                <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 block">Seater Seats</span>
+                <span className="text-xl font-black text-amber-800 dark:text-amber-300">{manifestStats.seaterCount}</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Push-back seats</span>
               </div>
             </div>
 
             {/* Passenger Manifest Table */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xs overflow-hidden">
               {isLoadingManifest ? (
                 <div className="p-12 text-center text-xs text-gray-400 space-y-3">
                   <div className="w-8 h-8 border-3 border-[#d84e55] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -2195,7 +2198,7 @@ export default function OperatorPortalPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-black uppercase tracking-wider text-gray-500">
+                      <tr className="bg-gray-50/80 dark:bg-slate-800/80 border-b border-gray-100 dark:border-slate-800 text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-slate-400">
                         <th className="py-3.5 px-4 w-12 text-center">Verify</th>
                         <th className="py-3.5 px-4">#</th>
                         <th className="py-3.5 px-4">Passenger Name</th>
@@ -2207,7 +2210,7 @@ export default function OperatorPortalPage() {
                         <th className="py-3.5 px-4 text-right">PNR & Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs">
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-xs">
                       {filteredManifestPassengers.map((p, idx) => {
                         const passengerKey = `${p.pnr}_${p.seatNumber}`;
                         const isBoarded = checkedPassengers[passengerKey] || p.verificationStatus === "BOARDED";
@@ -2218,8 +2221,8 @@ export default function OperatorPortalPage() {
                         return (
                           <tr
                             key={`${p.pnr}_${p.seatNumber}_${idx}`}
-                            className={`transition-colors hover:bg-gray-50/80 ${
-                              isBoarded ? "bg-emerald-50/30" : ""
+                            className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-slate-800/50 ${
+                              isBoarded ? "bg-emerald-50/30 dark:bg-emerald-950/20" : ""
                             }`}
                           >
                             {/* Checkbox for Conductor */}
@@ -2233,27 +2236,27 @@ export default function OperatorPortalPage() {
                                 {isBoarded ? (
                                   <CheckSquare className="w-5 h-5 text-emerald-600" />
                                 ) : (
-                                  <Square className="w-5 h-5 text-gray-300" />
+                                  <Square className="w-5 h-5 text-gray-300 dark:text-slate-600" />
                                 )}
                               </button>
                             </td>
 
                             {/* Row Index */}
-                            <td className="py-3 px-4 font-mono font-bold text-gray-400">
+                            <td className="py-3 px-4 font-mono font-bold text-gray-400 dark:text-slate-500">
                               {idx + 1}
                             </td>
 
                             {/* Passenger Name & Age */}
                             <td className="py-3 px-4">
                               <div className="flex items-center space-x-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
                                   {p.passengerName ? p.passengerName.charAt(0).toUpperCase() : "P"}
                                 </div>
                                 <div>
-                                  <span className={`font-bold block ${isBoarded ? "text-emerald-950 line-through decoration-emerald-500/50" : "text-gray-900"}`}>
+                                  <span className={`font-bold block ${isBoarded ? "text-emerald-950 dark:text-emerald-300 line-through decoration-emerald-500/50" : "text-gray-900 dark:text-white"}`}>
                                     {p.passengerName}
                                   </span>
-                                  <span className="text-[11px] text-gray-400">
+                                  <span className="text-[11px] text-gray-400 dark:text-slate-400">
                                     {p.gender || "Adult"}, {p.age ? `${p.age} yrs` : "N/A"}
                                   </span>
                                 </div>
@@ -2264,25 +2267,25 @@ export default function OperatorPortalPage() {
                             <td className="py-3 px-4">
                               <div className="space-y-1">
                                 {isLower && (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-black rounded-lg">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-black rounded-lg">
                                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                     {p.seatDisplay || `${p.seatNumber} (Lower Berth)`}
                                   </span>
                                 )}
                                 {isUpper && (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-200/80 text-indigo-800 text-xs font-black rounded-lg">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-800 dark:text-indigo-300 text-xs font-black rounded-lg">
                                     <span className="w-2 h-2 rounded-full bg-indigo-500" />
                                     {p.seatDisplay || `${p.seatNumber} (Upper Berth)`}
                                   </span>
                                 )}
                                 {isSeater && (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-black rounded-lg">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs font-black rounded-lg">
                                     <span className="w-2 h-2 rounded-full bg-amber-500" />
                                     {p.seatDisplay || `${p.seatNumber} (Seater)`}
                                   </span>
                                 )}
                                 {!isLower && !isUpper && !isSeater && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-lg">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 text-xs font-bold rounded-lg">
                                     {p.seatDisplay || p.seatNumber}
                                   </span>
                                 )}
@@ -2291,10 +2294,10 @@ export default function OperatorPortalPage() {
 
                             {/* Route & Bus Info */}
                             <td className="py-3 px-4">
-                              <div className="font-semibold text-gray-800 text-xs">
+                              <div className="font-semibold text-gray-800 dark:text-slate-200 text-xs">
                                 {p.sourceCity} → {p.destinationCity}
                               </div>
-                              <div className="text-[11px] text-gray-400 truncate max-w-[150px]">
+                              <div className="text-[11px] text-gray-400 dark:text-slate-400 truncate max-w-[150px]">
                                 {p.busOperator || "Coach"} ({p.busRegistration || p.busType || "Bus"})
                               </div>
                             </td>
@@ -2304,10 +2307,10 @@ export default function OperatorPortalPage() {
                               <div className="flex items-start space-x-1.5">
                                 <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                                 <div>
-                                  <span className="font-bold text-gray-900 block">
+                                  <span className="font-bold text-gray-900 dark:text-white block">
                                     {p.boardingPoint || "Main Depot"}
                                   </span>
-                                  <span className="text-[10px] text-gray-400 block font-mono">
+                                  <span className="text-[10px] text-gray-400 dark:text-slate-400 block font-mono">
                                     {p.departureTime}
                                   </span>
                                 </div>
@@ -2319,10 +2322,10 @@ export default function OperatorPortalPage() {
                               <div className="flex items-start space-x-1.5">
                                 <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
                                 <div>
-                                  <span className="font-bold text-gray-900 block">
+                                  <span className="font-bold text-gray-900 dark:text-white block">
                                     {p.droppingPoint || "City Center"}
                                   </span>
-                                  <span className="text-[10px] text-gray-400 block font-mono">
+                                  <span className="text-[10px] text-gray-400 dark:text-slate-400 block font-mono">
                                     {p.arrivalTime}
                                   </span>
                                 </div>
@@ -2334,9 +2337,9 @@ export default function OperatorPortalPage() {
                               <div className="space-y-1">
                                 <a
                                   href={`tel:${p.contactPhone}`}
-                                  className="font-bold text-gray-900 hover:text-[#d84e55] flex items-center gap-1 transition-colors"
+                                  className="font-bold text-gray-900 dark:text-white hover:text-[#d84e55] flex items-center gap-1 transition-colors"
                                 >
-                                  <Phone className="w-3 h-3 text-gray-400" />
+                                  <Phone className="w-3 h-3 text-gray-400 dark:text-slate-400" />
                                   <span>{p.contactPhone || "N/A"}</span>
                                 </a>
                                 {p.contactPhone && (
@@ -2344,7 +2347,7 @@ export default function OperatorPortalPage() {
                                     href={`https://wa.me/${p.contactPhone.replace(/[^0-9]/g, "")}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[10px] text-emerald-700 hover:underline flex items-center gap-1 font-semibold"
+                                    className="text-[10px] text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
                                   >
                                     <Smartphone className="w-2.5 h-2.5" />
                                     <span>WhatsApp Msg</span>
@@ -2355,12 +2358,12 @@ export default function OperatorPortalPage() {
 
                             {/* PNR & Status */}
                             <td className="py-3 px-4 text-right">
-                              <span className="font-mono font-black text-xs text-[#d84e55] bg-red-50 px-2 py-0.5 rounded-md block w-fit ml-auto">
+                              <span className="font-mono font-black text-xs text-[#d84e55] bg-red-50 dark:bg-red-950/40 dark:border dark:border-red-900/40 px-2 py-0.5 rounded-md block w-fit ml-auto">
                                 {p.pnr}
                               </span>
                               <span
                                 className={`text-[10px] font-bold uppercase tracking-wider block mt-0.5 ${
-                                  isBoarded ? "text-emerald-600" : "text-gray-400"
+                                  isBoarded ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-slate-500"
                                 }`}
                               >
                                 {isBoarded ? "BOARDED" : p.status || "CONFIRMED"}
@@ -2810,20 +2813,20 @@ export default function OperatorPortalPage() {
       {/* MODAL: ADD BUS TO FLEET */}
       {isAddBusOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 relative max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-red-50 text-[#d84e55] rounded-xl">
+                <div className="p-2 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl">
                   <Bus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Add Bus to Fleet</h3>
-                  <p className="text-xs text-gray-500">Auto-generates seat map layout</p>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Add Bus to Fleet</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Auto-generates seat map layout</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddBusOpen(false)}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                className="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3086,17 +3089,17 @@ export default function OperatorPortalPage() {
       {/* MODAL: PUBLISH SCHEDULE */}
       {isAddScheduleOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 relative max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-red-50 text-[#d84e55] rounded-xl">
+                <div className="p-2 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
                     {editingSchedule ? "Edit Route Schedule" : "Publish Route Schedule"}
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     {editingSchedule ? "Update timings, fares, and active days for this corridor" : "Materializes live bookable trips for passengers"}
                   </p>
                 </div>
@@ -3106,7 +3109,7 @@ export default function OperatorPortalPage() {
                   setIsAddScheduleOpen(false);
                   setEditingSchedule(null);
                 }}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                className="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3288,7 +3291,7 @@ export default function OperatorPortalPage() {
                 />
               </div>
 
-              <div className="p-3 bg-red-50/70 border border-red-200/60 rounded-xl text-[11px] text-[#d84e55] leading-relaxed">
+              <div className="p-3 bg-red-50/70 dark:bg-red-950/30 border border-red-200/60 dark:border-red-900/40 rounded-xl text-[11px] text-[#d84e55] dark:text-red-300 leading-relaxed">
                 ✨ <strong>Instant Materialization:</strong> When you click Publish, trips and seat maps for each calendar day are immediately saved to MySQL and become live on passenger searches.
               </div>
 
@@ -3299,7 +3302,7 @@ export default function OperatorPortalPage() {
                     setIsAddScheduleOpen(false);
                     setEditingSchedule(null);
                   }}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -3321,20 +3324,20 @@ export default function OperatorPortalPage() {
       {/* MODAL: CREATE LIVE COUPON */}
       {isAddCouponOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 relative max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 relative max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-red-50 text-[#d84e55] rounded-xl">
+                <div className="p-2 bg-red-50 dark:bg-red-950/40 text-[#d84e55] dark:text-red-400 rounded-xl">
                   <Tag className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Create Live Discount Coupon</h3>
-                  <p className="text-xs text-gray-500">Instant activation for passenger bookings</p>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Create Live Discount Coupon</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Instant activation for passenger bookings</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddCouponOpen(false)}
-                className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                className="p-2 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3342,49 +3345,49 @@ export default function OperatorPortalPage() {
 
             <form onSubmit={handleCreateCoupon} className="p-6 overflow-y-auto space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs rounded-xl border border-red-200 dark:border-red-900/40 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Coupon Promo Code *</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Coupon Promo Code *</label>
                 <input
                   type="text"
                   required
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   placeholder="e.g. SUPER2, SAVE5, FESTIVE10"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-mono font-bold uppercase focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-mono font-bold uppercase focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Promo Title</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Promo Title</label>
                 <input
                   type="text"
                   value={couponTitle}
                   onChange={(e) => setCouponTitle(e.target.value)}
                   placeholder="e.g. Special Route Offer"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Description</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Description</label>
                 <input
                   type="text"
                   value={couponDescription}
                   onChange={(e) => setCouponDescription(e.target.value)}
                   placeholder="e.g. 2% off on all AC Sleeper routes"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Discount % *</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Discount % *</label>
                   <input
                     type="number"
                     required
@@ -3392,12 +3395,12 @@ export default function OperatorPortalPage() {
                     max={90}
                     value={couponDiscountPercentage}
                     onChange={(e) => setCouponDiscountPercentage(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold text-emerald-700 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-bold text-emerald-700 dark:text-emerald-400 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Max Discount (₹) *</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Max Discount (₹) *</label>
                   <input
                     type="number"
                     required
@@ -3405,36 +3408,36 @@ export default function OperatorPortalPage() {
                     max={5000}
                     value={couponMaxDiscountAmount}
                     onChange={(e) => setCouponMaxDiscountAmount(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Min Booking (₹)</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Min Booking (₹)</label>
                   <input
                     type="number"
                     min={0}
                     value={couponMinBookingAmount}
                     onChange={(e) => setCouponMinBookingAmount(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-bold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Expiry Date</label>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">Expiry Date</label>
                   <input
                     type="date"
                     value={couponExpiryDate}
                     onChange={(e) => setCouponExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                    className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
               </div>
 
-              <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl text-[11px] text-emerald-800 leading-relaxed flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
                   <strong>Instant Live:</strong> Once saved, passengers can immediately apply this coupon during checkout!
                 </span>
@@ -3444,7 +3447,7 @@ export default function OperatorPortalPage() {
                 <button
                   type="button"
                   onClick={() => setIsAddCouponOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl"
                 >
                   Cancel
                 </button>

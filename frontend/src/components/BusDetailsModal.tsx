@@ -906,7 +906,7 @@ export default function BusDetailsModal({
                     <span>{reviewData?.averageRating?.toFixed(1) || route.rating.toFixed(1)}</span>
                   </div>
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium hidden sm:inline">
-                    {reviewData?.totalRatings || 427} ratings
+                    {reviewData?.totalRatings !== undefined ? reviewData.totalRatings : 0} ratings
                   </span>
                 </div>
               </div>
@@ -1290,7 +1290,7 @@ export default function BusDetailsModal({
                                     </div>
                                   ))
                                 ) : (
-                                  <p className="text-xs text-gray-400">No reviews yet. Be the first to review!</p>
+                                  <p className="text-xs text-gray-400">No reviews yet, Be the first one to review your journey experience</p>
                                 )}
                               </div>
                             </div>

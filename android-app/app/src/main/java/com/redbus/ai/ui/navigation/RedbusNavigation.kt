@@ -435,6 +435,9 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         OperatorHubScreen(
                             uiState = uiState,
                             onRefresh = viewModel::fetchOperatorDashboardData,
+                            onRefreshManifest = { date, schedId ->
+                                viewModel.fetchPassengerManifest(date, null, schedId)
+                            },
                             onCreateBus = viewModel::createBus,
                             onUpdateBus = viewModel::updateBus,
                             onDeleteBus = viewModel::deleteBus,
