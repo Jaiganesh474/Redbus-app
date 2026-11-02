@@ -51,3 +51,4 @@ SELECT b.id, 'Rajeshwari M.', 5,
        'Punctuality,Staff behavior,Cleanliness,Seat / Sleep Comfort', 'Women', '', DATE_SUB(NOW(), INTERVAL 22 DAY)
 FROM buses b
 WHERE NOT EXISTS (SELECT 1 FROM reviews r WHERE r.bus_id = b.id AND r.user_name = 'Rajeshwari M.');
+

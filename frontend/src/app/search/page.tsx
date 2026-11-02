@@ -1716,7 +1716,7 @@ function SearchResultsContent() {
             {/* 3. Decorative RedBus Peach Ribbon */}
             <div className="w-full bg-[#fdeee4] dark:bg-slate-900/90 border border-orange-200/80 dark:border-slate-800 rounded-xl sm:rounded-2xl py-1.5 sm:py-2 px-3 sm:px-4 text-center">
               <span className="text-[11px] sm:text-xs font-black text-amber-950 dark:text-amber-300 tracking-wide">
-                ✨ 3.6+ lakh bus routes on redBus
+                ✨ Faster bus routes on redBus
               </span>
             </div>
 

@@ -85,7 +85,27 @@ function CheckoutContent() {
   const { data: routeData } = useGetRouteByIdQuery(routeId, { skip: !routeId });
   const activeRoute = selectedRoute || routeData;
 
-  const { formattedTime, isLocked } = useSeatLockTimer();
+  const { formattedTime, isLocked, lockSecondsRemaining } = useSeatLockTimer();
+  const hadLockedRef = useRef(false);
+
+  // Return to search bus details page when countdown timer expires (requested by user)
+  useEffect(() => {
+    if (isLocked) {
+      hadLockedRef.current = true;
+    } else if (hadLockedRef.current && lockSecondsRemaining === 0) {
+      dispatch(
+        addNotification({
+          id: `lock-expired-${Date.now()}`,
+          title: "Seat Lock Expired",
+          message: "Your seat reservation session expired. Returning to search...",
+          type: "alert",
+          timestamp: new Date().toLocaleTimeString(),
+          read: false,
+        })
+      );
+      router.push("/search");
+    }
+  }, [isLocked, lockSecondsRemaining, router, dispatch]);
   const isPaymentSuccessRef = useRef(false);
 
   const [contactEmail, setContactEmail] = useState(user?.email || "");
@@ -110,6 +130,8 @@ function CheckoutContent() {
   // Trip Guarantee Add-on State (defaults to unselected / null)
   const [hasTripGuarantee, setHasTripGuarantee] = useState<boolean | null>(null);
   const [showTripGuaranteeModal, setShowTripGuaranteeModal] = useState(false);
+  const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false);
+  const [selectedDetailsTab, setSelectedDetailsTab] = useState<"trip" | "cancellation" | "passenger" | "fare">("trip");
 
   // Coupon State
   const [couponCodeInput, setCouponCodeInput] = useState("");
@@ -328,9 +350,57 @@ function CheckoutContent() {
     });
   };
 
-  const handleInitiatePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateCheckoutForm = (): boolean => {
     setErrorMessage("");
+    // Validate passenger names and gender restrictions
+    for (let i = 0; i < passengers.length; i++) {
+      const p = passengers[i];
+      if (!p.name.trim()) {
+        setErrorMessage(`Please enter the passenger name for Seat ${p.seatNumber}`);
+        return false;
+      }
+      const seat = selectedSeats.find((s) => s.seatId === p.seatId);
+      if (seat?.genderRestriction === "FEMALE" && p.gender !== "FEMALE") {
+        setErrorMessage(
+          `Seat ${p.seatNumber} is adjacent to a female passenger and reserved exclusively for females. Please select Female for this passenger.`
+        );
+        return false;
+      }
+    }
+
+    if (!token || !user) {
+      setShowAuthModal(true);
+      return false;
+    }
+
+    if (!contactEmail.trim() || !contactPhone.trim()) {
+      setErrorMessage("Contact email and phone number are required.");
+      return false;
+    }
+
+    if (!activeRoute) {
+      setErrorMessage("Route details missing.");
+      return false;
+    }
+
+    if (user?.role === "ROLE_OPERATOR") {
+      setErrorMessage("Bus Operator accounts are restricted from booking passenger tickets. Please log in with a passenger account.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateCheckoutForm()) {
+      setShowBookingDetailsModal(true);
+    }
+  };
+
+  const executeProceedToPay = async () => {
+    setShowBookingDetailsModal(false);
+    if (!validateCheckoutForm()) return;
 
     // Validate passenger names and gender restrictions
     for (let i = 0; i < passengers.length; i++) {
@@ -622,7 +692,7 @@ function CheckoutContent() {
         </div>
       )}
 
-      <form onSubmit={handleInitiatePayment} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <form onSubmit={handleFormSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Passenger, Contact, Free Cancellation & Promo */}
         <div className="lg:col-span-8 space-y-6">
           {/* Passenger Information Cards with bottom-to-top lazy loading */}
@@ -1407,7 +1477,7 @@ function CheckoutContent() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
-                  <span>Proceed to Pay ₹{finalTotalAmount.toFixed(2)}</span>
+                  <span>Proceed to Booking Details</span>
                   <ArrowRight className="w-5 h-5" />
                 </div>
               )}
@@ -1420,6 +1490,271 @@ function CheckoutContent() {
           </motion.div>
         </div>
       </form>
+
+      {/* SLIDE-UP MODAL: BUS BOOKING DETAILS (Matching Images 3, 4, 5) */}
+      <AnimatePresence>
+        {showBookingDetailsModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              className="bg-white dark:bg-[#0f172a] rounded-t-3xl sm:rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden"
+            >
+              {/* Top Sub-Bar: Pay ₹XXX with Back Arrow & Lock Countdown Timer (Images 3, 4, 5) */}
+              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-slate-850 border-b border-gray-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowBookingDetailsModal(false)}
+                  className="flex items-center space-x-2 text-gray-800 dark:text-slate-200 hover:text-black font-bold text-sm cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Pay ₹{finalTotalAmount.toFixed(2)}</span>
+                </button>
+                <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 rounded-lg font-mono text-xs font-black">
+                  <Clock className="w-3.5 h-3.5 animate-pulse text-amber-700" />
+                  <span>{formattedTime}</span>
+                </div>
+              </div>
+
+              {/* Title Header: Bus booking details and Close X button */}
+              <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-100 dark:border-slate-800">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white">Bus booking details</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowBookingDetailsModal(false)}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Horizontal Tabs Bar */}
+              <div className="flex items-center px-4 border-b border-gray-200 dark:border-slate-800 text-xs font-bold overflow-x-auto">
+                {[
+                  { id: "trip", label: "Trip info" },
+                  { id: "cancellation", label: "Cancellation policy" },
+                  { id: "passenger", label: "Passenger info" },
+                  { id: "fare", label: "Fare breakup" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedDetailsTab(t.id as any)}
+                    className={`py-3 px-4 border-b-2 font-bold cursor-pointer transition-all whitespace-nowrap ${
+                      selectedDetailsTab === t.id
+                        ? "border-[#d84e55] text-[#d84e55]"
+                        : "border-transparent text-gray-500 hover:text-gray-900 dark:text-slate-400"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Modal Content Scrollable Area */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Trip Info (Image 3 top) */}
+                {(selectedDetailsTab === "trip" || selectedDetailsTab === "cancellation") && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-base font-bold text-gray-900 dark:text-white">{activeRoute?.operatorName}</h4>
+                      <p className="text-xs text-gray-500">{activeRoute?.busType}</p>
+                    </div>
+
+                    <div className="flex items-start space-x-4 p-4 rounded-2xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700">
+                      <div className="flex flex-col items-center pt-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600 dark:bg-slate-400" />
+                        <div className="w-0.5 h-12 bg-gray-300 dark:bg-slate-600 my-1" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600 dark:bg-slate-400" />
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="font-bold text-sm text-gray-900 dark:text-white">{activeRoute?.departureTime}</span>
+                            <span className="text-xs text-gray-400 block">{activeRoute?.travelDate || "Today"}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-gray-800 dark:text-slate-200">
+                            {boardingPoint || activeRoute?.boardingPoints?.[0] || activeRoute?.sourceCity}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-gray-400 font-medium block">
+                          {(activeRoute as any)?.duration || "6h 5m"}
+                        </span>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="font-bold text-sm text-gray-900 dark:text-white">{activeRoute?.arrivalTime}</span>
+                            <span className="text-xs text-gray-400 block">Next Day</span>
+                          </div>
+                          <span className="text-xs font-semibold text-gray-800 dark:text-slate-200">
+                            {droppingPoint || activeRoute?.droppingPoints?.[0] || activeRoute?.destinationCity}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cancellation Policy (Image 3 bottom) */}
+                {selectedDetailsTab === "cancellation" && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Cancellation policy</h4>
+                    <div className="rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden text-xs">
+                      <div className="flex justify-between p-3 bg-gray-50 dark:bg-slate-800/80 font-bold text-gray-700 dark:text-slate-300 border-b border-gray-200 dark:border-slate-700">
+                        <span>Time window</span>
+                        <span>Refund</span>
+                      </div>
+                      {[
+                        { time: "Up to 96h before departure", refund: "85%" },
+                        { time: "48h before departure", refund: "70%" },
+                        { time: "24h before departure", refund: "25%" },
+                        { time: "Less than 24h before departure", refund: "5%" },
+                      ].map((row, i) => (
+                        <div key={i} className="flex justify-between p-3 border-b border-gray-100 dark:border-slate-800 last:border-0 text-gray-700 dark:text-slate-300">
+                          <span>{row.time}</span>
+                          <span className="font-bold text-gray-900 dark:text-white">{row.refund}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[11px] text-gray-500 space-y-1">
+                      <p>* Cancellation charges are computed on a per seat basis. Above cancellation fare is calculated based on seat fare of ₹{baseFare.toFixed(2)}</p>
+                      <p>* Cancellation charges are calculated based on service start date + time at :{activeRoute?.departureTime}</p>
+                      <p>* Ticket cannot be cancelled after scheduled bus departure time from the first boarding point</p>
+                      <p>* Note: Cancellation charges mentioned above are excluding GST</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Passenger Info (Image 4) */}
+                {(selectedDetailsTab === "passenger" || selectedDetailsTab === "trip") && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Passengers</h4>
+                      <span className="text-xs text-gray-500">{passengers.length} seat</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {passengers.map((p, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700">
+                          <div>
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">{p.name || "Passenger"}</p>
+                            <p className="text-xs text-gray-500">{p.gender}, {p.age} years</p>
+                          </div>
+                          <span className="px-2.5 py-1 bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300 font-bold text-xs rounded-lg">
+                            {p.seatNumber}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Mini Seat Layout Map (Image 4) */}
+                    <div className="p-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5 flex-1">
+                          {Array.from({ length: 10 }).map((_, s) => {
+                            const isSelected = selectedSeats.some((st) => st.seatNumber.includes(`${s + 1}`));
+                            return (
+                              <div
+                                key={s}
+                                className={`w-5 h-4 rounded-xs ${
+                                  isSelected ? "bg-pink-500 shadow-xs" : "bg-gray-200 dark:bg-slate-700"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <span className="text-[10px] text-gray-400 pl-3">Lower</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5 flex-1">
+                          {Array.from({ length: 10 }).map((_, s) => {
+                            const isSelected = selectedSeats.some((st) => st.seatNumber.startsWith(`U${s + 1}`) || st.seatNumber.includes(`U${s + 1}`));
+                            return (
+                              <div
+                                key={s}
+                                className={`w-5 h-4 rounded-xs ${
+                                  isSelected ? "bg-pink-500 shadow-xs" : "bg-gray-200 dark:bg-slate-700"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <span className="text-[10px] text-gray-400 pl-3">Upper</span>
+                      </div>
+                    </div>
+
+                    {/* Contact Details */}
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Passenger contact details</h4>
+                      <p className="text-xs text-gray-400">We'll send ticket updates here</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">{contactEmail}</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">{contactPhone}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fare Breakup (Image 5) */}
+                <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Price breakup</h4>
+                    <span className="text-xs text-gray-500">{passengers.length} seat</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-600 dark:text-slate-400">
+                    <span>Base Fare</span>
+                    <span className="font-bold text-gray-900 dark:text-white">₹{baseFare.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-600 dark:text-slate-400">
+                    <span>AI Operator Service Fee</span>
+                    <span className="font-bold text-gray-900 dark:text-white">+₹{aiServiceFee.toFixed(2)}</span>
+                  </div>
+                  {hasFreeCancellation && (
+                    <div className="flex justify-between text-xs text-emerald-700">
+                      <span>Free Cancellation Guarantee</span>
+                      <span className="font-bold">+₹{freeCancellationFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {hasTripGuarantee && (
+                    <div className="flex justify-between text-xs text-red-600">
+                      <span>Trip Guarantee</span>
+                      <span className="font-bold">+₹{tripGuaranteeFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-xs text-emerald-700">
+                      <span>Coupon Discount</span>
+                      <span className="font-bold">-₹{discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {walletDeduction > 0 && (
+                    <div className="flex justify-between text-xs text-teal-600">
+                      <span>redBus Wallet Applied</span>
+                      <span className="font-bold">-₹{walletDeduction.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-gray-200 dark:border-slate-700 flex justify-between items-center">
+                    <span className="font-black text-sm text-gray-900 dark:text-white">Total</span>
+                    <span className="font-black text-base text-[#d84e55]">₹{finalTotalAmount.toFixed(2)}</span>
+                  </div>
+
+                  {/* PROCEED TO PAY BUTTON (Image 5) */}
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={executeProceedToPay}
+                      disabled={isProcessingPayment}
+                      className="w-full py-4 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-2xl font-black text-sm shadow-xl shadow-red-500/20 hover:shadow-red-500/35 transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-98"
+                    >
+                      <CreditCard className="w-5 h-5" />
+                      <span>Proceed to Pay (₹{finalTotalAmount.toFixed(2)})</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Trip Guarantee Details Modal */}
       <AnimatePresence>
