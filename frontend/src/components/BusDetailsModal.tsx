@@ -431,23 +431,14 @@ export default function BusDetailsModal({
 
   const totalReviewsCount = reviewData?.totalRatings || reviewData?.reviews?.length || 0;
   const avgBusRating = totalReviewsCount > 0 ? (reviewData?.averageRating || 0) : 0;
-  const starPercentagesMap = reviewData?.starPercentages || {
-    5: 46,
-    4: 24,
-    3: 12,
-    2: 6,
-    1: 12,
+  const starPercentagesMap = totalReviewsCount > 0 && reviewData?.starPercentages ? reviewData.starPercentages : {
+    5: 0,
+    4: 0,
+    3: 0,
+    2: 0,
+    1: 0,
   };
-  const lovedAspectsMap = reviewData?.lovedTags || {
-    "Driving": 254,
-    "Rest stop hygiene": 157,
-    "Seat / Sleep Comfort": 253,
-    "AC": 193,
-    "Live tracking": 209,
-    "Cleanliness": 268,
-    "Staff behavior": 306,
-    "Punctuality": 337,
-  };
+  const lovedAspectsMap = totalReviewsCount > 0 && reviewData?.lovedTags ? reviewData.lovedTags : {};
 
   const filteredReviewsList = useMemo(() => {
     let list = reviewData?.reviews ? [...reviewData.reviews] : [];
@@ -1520,73 +1511,91 @@ export default function BusDetailsModal({
                                       </button>
                                     </div>
 
-                                    {/* Overall Score & Star Breakdown Card */}
-                                    <div className="p-4 bg-gray-50/70 dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row gap-5 items-center">
-                                      {/* Left: Overall badge & verified text */}
-                                      <div className="flex flex-col items-center justify-center sm:border-r sm:border-gray-200 dark:sm:border-slate-700 sm:pr-6 shrink-0 text-center">
-                                        <div className="inline-flex items-center space-x-1 px-3 py-1 bg-[#15803d] text-white rounded-lg font-black text-lg shadow-sm">
-                                          <Star className="w-4 h-4 fill-white" />
-                                          <span>{avgBusRating.toFixed(1)}</span>
+                                    {totalReviewsCount === 0 ? (
+                                      <div className="py-10 px-4 text-center bg-gray-50/70 dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-2">
+                                        <div className="w-12 h-12 mx-auto rounded-full bg-red-50 dark:bg-red-950/40 text-[#d84e55] flex items-center justify-center">
+                                          <Star className="w-6 h-6" />
                                         </div>
-                                        <p className="text-xs font-bold text-gray-800 dark:text-slate-200 mt-1.5">
-                                          {totalReviewsCount} Ratings
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                                          No reviews yet
+                                        </h4>
+                                        <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
+                                          Be the first one to review your journey experience
                                         </p>
-                                        <div className="flex items-center space-x-1 text-[11px] text-[#15803d] font-semibold mt-1">
-                                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                          <span>Real feedback from verified travelers</span>
-                                        </div>
                                       </div>
-
-                                      {/* Right: 5-Star progress distribution breakdown */}
-                                      <div className="flex-1 w-full space-y-1.5">
-                                        {[5, 4, 3, 2, 1].map((stars) => {
-                                          const pct = starPercentagesMap[stars] ?? 0;
-                                          return (
-                                            <div key={stars} className="flex items-center text-xs space-x-2">
-                                              <span className="w-6 font-bold text-gray-700 dark:text-slate-300 text-right">
-                                                {stars} ★
-                                              </span>
-                                              <div className="flex-1 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                                <div
-                                                  className="h-full bg-[#15803d] rounded-full transition-all duration-500"
-                                                  style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
-                                                />
-                                              </div>
-                                              <span className="w-9 font-semibold text-gray-500 dark:text-slate-400 text-right">
-                                                {pct}%
-                                              </span>
+                                    ) : (
+                                      <>
+                                        {/* Overall Score & Star Breakdown Card */}
+                                        <div className="p-4 bg-gray-50/70 dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row gap-5 items-center">
+                                          {/* Left: Overall badge & verified text */}
+                                          <div className="flex flex-col items-center justify-center sm:border-r sm:border-gray-200 dark:sm:border-slate-700 sm:pr-6 shrink-0 text-center">
+                                            <div className="inline-flex items-center space-x-1 px-3 py-1 bg-[#15803d] text-white rounded-lg font-black text-lg shadow-sm">
+                                              <Star className="w-4 h-4 fill-white" />
+                                              <span>{avgBusRating.toFixed(1)}</span>
                                             </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
+                                            <p className="text-xs font-bold text-gray-800 dark:text-slate-200 mt-1.5">
+                                              {totalReviewsCount} Ratings
+                                            </p>
+                                            <div className="flex items-center space-x-1 text-[11px] text-[#15803d] font-semibold mt-1">
+                                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                              <span>Real feedback from verified travelers</span>
+                                            </div>
+                                          </div>
 
-                                    {/* Loved by travellers */}
-                                    <div className="space-y-2.5 pt-2">
-                                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Loved by travellers</h4>
-                                      <div className="flex flex-wrap gap-2">
-                                        {Object.entries(lovedAspectsMap).map(([tag, count], i) => (
-                                          <span
-                                            key={i}
-                                            className="inline-flex items-center px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-200 shadow-xs"
+                                          {/* Right: 5-Star progress distribution breakdown */}
+                                          <div className="flex-1 w-full space-y-1.5">
+                                            {[5, 4, 3, 2, 1].map((stars) => {
+                                              const pct = starPercentagesMap[stars] ?? 0;
+                                              return (
+                                                <div key={stars} className="flex items-center text-xs space-x-2">
+                                                  <span className="w-6 font-bold text-gray-700 dark:text-slate-300 text-right">
+                                                    {stars} ★
+                                                  </span>
+                                                  <div className="flex-1 h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                    <div
+                                                      className="h-full bg-[#15803d] rounded-full transition-all duration-500"
+                                                      style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                                                    />
+                                                  </div>
+                                                  <span className="w-9 font-semibold text-gray-500 dark:text-slate-400 text-right">
+                                                    {pct}%
+                                                  </span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+
+                                        {/* Loved by travellers */}
+                                        {Object.keys(lovedAspectsMap).length > 0 && (
+                                          <div className="space-y-2.5 pt-2">
+                                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Loved by travellers</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                              {Object.entries(lovedAspectsMap).map(([tag, count], i) => (
+                                                <span
+                                                  key={i}
+                                                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-200 shadow-xs"
+                                                >
+                                                  {tag} <span className="ml-1 text-gray-400 font-normal">({count})</span>
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Read all reviews action button */}
+                                        <div className="pt-3">
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowAllReviewsView(true)}
+                                            className="w-full py-3 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-750 font-bold text-xs text-gray-900 dark:text-white flex items-center justify-between shadow-xs transition-all cursor-pointer group"
                                           >
-                                            {tag} <span className="ml-1 text-gray-400 font-normal">({count})</span>
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-
-                                    {/* Read all reviews action button */}
-                                    <div className="pt-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => setShowAllReviewsView(true)}
-                                        className="w-full py-3 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-750 font-bold text-xs text-gray-900 dark:text-white flex items-center justify-between shadow-xs transition-all cursor-pointer group"
-                                      >
-                                        <span>Read all reviews ({totalReviewsCount || filteredReviewsList.length})</span>
-                                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-                                      </button>
-                                    </div>
+                                            <span>Read all reviews ({totalReviewsCount})</span>
+                                            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )}

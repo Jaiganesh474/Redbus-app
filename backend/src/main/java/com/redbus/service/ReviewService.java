@@ -86,13 +86,10 @@ public class ReviewService {
         if (totalCount > 0) {
             for (String cat : aspectCategories) {
                 long count = reviews.stream()
-                        .filter(r -> (r.getTags() != null && r.getTags().toLowerCase().contains(cat.toLowerCase()))
-                                || (r.getRating() >= 4 && (cat.contains("Punctuality") || cat.contains("Cleanliness") || cat.contains("Staff"))))
+                        .filter(r -> r.getTags() != null && r.getTags().toLowerCase().contains(cat.toLowerCase()))
                         .count();
                 if (count > 0) {
                     lovedTags.put(cat, (int) count);
-                } else {
-                    lovedTags.put(cat, Math.max(1, (int) Math.round(totalCount * 0.75)));
                 }
             }
         }
@@ -200,14 +197,28 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
-    private boolean isMockReview(Review r) {
-        String name = r.getUserName();
-        if (name == null) return false;
-        String trimmed = name.trim();
-        return trimmed.equalsIgnoreCase("Arun Kumar R.")
-                || trimmed.equalsIgnoreCase("Priya Venkatesh")
-                || trimmed.equalsIgnoreCase("Karthik Subramanian")
-                || trimmed.equalsIgnoreCase("Divya N.");
+    public static boolean isMockReview(Review r) {
+        if (r == null) return true;
+        if (r.getUser() == null && r.getUserName() == null) return true;
+        return isMockName(r.getUserName());
+    }
+
+    public static boolean isMockName(String name) {
+        if (name == null || name.isBlank()) return true;
+        String trimmed = name.trim().toLowerCase();
+        return trimmed.equals("arun kumar r.")
+                || trimmed.equals("priya venkatesh")
+                || trimmed.equals("karthik subramanian")
+                || trimmed.equals("divya n.")
+                || trimmed.equals("sri sahettya s")
+                || trimmed.equals("thabresh khan")
+                || trimmed.equals("meenakshi sundaram")
+                || trimmed.equals("ananya sharma")
+                || trimmed.equals("venkatesh babu")
+                || trimmed.equals("kavitha ramesh")
+                || trimmed.equals("rajeshwari m.")
+                || trimmed.contains("mock")
+                || trimmed.contains("seed");
     }
 
     private ReviewDto mapToDto(Review r) {

@@ -441,7 +441,7 @@ public class BusRouteService {
         BigDecimal busRating = BigDecimal.ZERO;
         if (route.getBus() != null && route.getBus().getId() != null) {
             List<Review> busReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(route.getBus().getId()).stream()
-                    .filter(r -> r.getUserName() == null || (!r.getUserName().contains("Mock") && !r.getUserName().contains("Arun Kumar R.") && !r.getUserName().contains("Priya") && !r.getUserName().contains("Karthik") && !r.getUserName().contains("Divya N.")))
+                    .filter(r -> !ReviewService.isMockReview(r))
                     .collect(Collectors.toList());
             if (!busReviews.isEmpty()) {
                 double avg = busReviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
