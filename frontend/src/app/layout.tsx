@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Poppins, Outfit } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
@@ -8,25 +8,10 @@ import AiChatWidget from "@/components/AiChatWidget";
 import RealtimeNotificationToast from "@/components/RealtimeNotificationToast";
 import DynamicTitle from "@/components/DynamicTitle";
 
-// Load Google Fonts matching Zomato / redBus modern UI design system
+// Load Google Font matching Zomato / redBus modern UI design system
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--font-zomato",
-  display: "swap",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-outfit",
   display: "swap",
 });
 
@@ -59,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${poppins.variable} ${outfit.variable}`}
+      className={plusJakartaSans.variable}
       suppressHydrationWarning
     >
       <head />
