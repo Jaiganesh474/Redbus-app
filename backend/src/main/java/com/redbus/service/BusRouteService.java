@@ -71,13 +71,16 @@ public class BusRouteService {
                 bus.getId(), date, schedule.getDepartureTime()
         );
 
+        BigDecimal computedDuration = calculateDurationHours(schedule.getDepartureTime(), schedule.getArrivalTime());
         if (existing.isEmpty()) {
+            String depStr = schedule.getDepartureTime() != null ? schedule.getDepartureTime().toString() : "22:30";
+            String arrStr = schedule.getArrivalTime() != null ? schedule.getArrivalTime().toString() : "06:30";
             String boarding = schedule.getBoardingPoints() != null && !schedule.getBoardingPoints().isBlank()
                     ? schedule.getBoardingPoints()
-                    : schedule.getSourceCity() + " Central (08:00), " + schedule.getSourceCity() + " Bypass (08:30)";
+                    : aiService.getAiCityPoints(schedule.getSourceCity(), depStr, arrStr).getBoardingPoints();
             String dropping = schedule.getDroppingPoints() != null && !schedule.getDroppingPoints().isBlank()
                     ? schedule.getDroppingPoints()
-                    : schedule.getDestinationCity() + " City Center (14:00), " + schedule.getDestinationCity() + " Main Terminal (14:30)";
+                    : aiService.getAiCityPoints(schedule.getDestinationCity(), depStr, arrStr).getDroppingPoints();
 
             Route route = Route.builder()
                     .operatorId(schedule.getOperator() != null ? schedule.getOperator().getId() : bus.getOperatorId())
@@ -88,7 +91,7 @@ public class BusRouteService {
                     .arrivalTime(schedule.getArrivalTime())
                     .travelDate(date)
                     .basePrice(schedule.getBasePrice())
-                    .durationHours(new BigDecimal("6.5"))
+                    .durationHours(computedDuration)
                     .boardingPoints(boarding)
                     .droppingPoints(dropping)
                     .build();
@@ -117,8 +120,38 @@ public class BusRouteService {
                 scheduleRepository.save(schedule);
             }
             return true;
+        } else {
+            // Keep existing materialized routes synchronized with updated schedule details
+            boolean anyUpdated = false;
+            for (Route r : existing) {
+                boolean changed = false;
+                if (schedule.getBoardingPoints() != null && !schedule.getBoardingPoints().isBlank() && !schedule.getBoardingPoints().equals(r.getBoardingPoints())) {
+                    r.setBoardingPoints(schedule.getBoardingPoints());
+                    changed = true;
+                }
+                if (schedule.getDroppingPoints() != null && !schedule.getDroppingPoints().isBlank() && !schedule.getDroppingPoints().equals(r.getDroppingPoints())) {
+                    r.setDroppingPoints(schedule.getDroppingPoints());
+                    changed = true;
+                }
+                if (schedule.getBasePrice() != null && !schedule.getBasePrice().equals(r.getBasePrice())) {
+                    r.setBasePrice(schedule.getBasePrice());
+                    changed = true;
+                }
+                if (schedule.getArrivalTime() != null && !schedule.getArrivalTime().equals(r.getArrivalTime())) {
+                    r.setArrivalTime(schedule.getArrivalTime());
+                    changed = true;
+                }
+                if (computedDuration != null && !computedDuration.equals(r.getDurationHours())) {
+                    r.setDurationHours(computedDuration);
+                    changed = true;
+                }
+                if (changed) {
+                    routeRepository.save(r);
+                    anyUpdated = true;
+                }
+            }
+            return anyUpdated;
         }
-        return false;
     }
 
     private boolean isOperatingOnDate(String operatingDays, LocalDate date) {

@@ -618,6 +618,8 @@ fun SeatSelectionScreen(
 
 
                     val hasSeats = uiState.selectedSeats.isNotEmpty()
+                    val hasBoarding = uiState.selectedBoardingPoint.isNotBlank()
+                    val hasDropping = uiState.selectedDroppingPoint.isNotBlank()
 
                     Button(
 
@@ -626,12 +628,14 @@ fun SeatSelectionScreen(
                             if (currentStep == SeatModalStep.SELECT_SEATS) {
 
                                 currentStep = SeatModalStep.BOARD_DROP
+                                if (!hasBoarding) boardDropSubTab = "boarding"
+                                else if (!hasDropping) boardDropSubTab = "dropping"
 
-                            } else if (uiState.selectedBoardingPoint.isBlank()) {
+                            } else if (!hasBoarding) {
 
                                 boardDropSubTab = "boarding"
 
-                            } else if (uiState.selectedDroppingPoint.isBlank()) {
+                            } else if (!hasDropping) {
 
                                 boardDropSubTab = "dropping"
 
@@ -643,7 +647,7 @@ fun SeatSelectionScreen(
 
                         },
 
-                        enabled = hasSeats && !uiState.isLoading,
+                        enabled = hasSeats && !uiState.isLoading && (currentStep == SeatModalStep.SELECT_SEATS || (hasBoarding && hasDropping)),
 
                         shape = RoundedCornerShape(14.dp),
 
@@ -1137,282 +1141,190 @@ fun SeatSelectionScreen(
 
         } else {
 
-            // STEP 2: BOARDING & DROPPING POINT SELECTION
-
-            LazyColumn(
-
+            // STEP 2: BOARDING & DROPPING POINT SELECTION IN 2 TABS (Matching Web Version)
+            Column(
                 modifier = Modifier
-
                     .fillMaxSize()
-
                     .padding(paddingValues)
-
-                    .background(MaterialTheme.colorScheme.background),
-
-                contentPadding = PaddingValues(16.dp),
-
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-
-                item {
-
-                    Card(
-
-                        shape = RoundedCornerShape(18.dp),
-
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-
-                        modifier = Modifier
-
-                            .fillMaxWidth()
-
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
-
+                // Two Sub-Tabs
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isBoardingTab = boardDropSubTab == "boarding"
+                    Surface(
+                        onClick = { boardDropSubTab = "boarding" },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isBoardingTab) RedbusCrimson else Color.Transparent,
+                        modifier = Modifier.weight(1f)
                     ) {
-
-                        Column(modifier = Modifier.padding(16.dp)) {
-
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-
-                                text = "Select Boarding Point (${route.sourceCity})",
-
-                                style = MaterialTheme.typography.titleMedium,
-
-                                color = RedbusCrimson,
-
-                                fontWeight = FontWeight.Black
-
+                                text = "Boarding Point",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (isBoardingTab) Color.White else MaterialTheme.colorScheme.onSurface
                             )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            boardingStops.forEach { bp ->
-
-                                val isChosen = uiState.selectedBoardingPoint == bp
-
-                                Surface(
-
-                                    onClick = {
-
-                                        onUpdateBoardingDropping(
-
-                                            bp,
-
-                                            uiState.selectedDroppingPoint.ifBlank { droppingStops.first() }
-
-                                        )
-
-                                    },
-
-                                    shape = RoundedCornerShape(12.dp),
-
-                                    color = if (isChosen) {
-
-                                        if (uiState.isDarkTheme) Color(0xFF4C1D24) else Color(0xFFFFF1F2)
-
-                                    } else {
-
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-
-                                    },
-
-                                    modifier = Modifier
-
-                                        .fillMaxWidth()
-
-                                        .padding(vertical = 5.dp)
-
-                                        .border(
-
-                                            width = if (isChosen) 1.5.dp else 1.dp,
-
-                                            color = if (isChosen) RedbusCrimson else Color.Transparent,
-
-                                            shape = RoundedCornerShape(12.dp)
-
-                                        )
-
-                                ) {
-
-                                    Row(
-
-                                        modifier = Modifier.padding(14.dp),
-
-                                        verticalAlignment = Alignment.CenterVertically,
-
-                                        horizontalArrangement = Arrangement.SpaceBetween
-
-                                    ) {
-
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-
-                                            RadioButton(
-
-                                                selected = isChosen,
-
-                                                onClick = null,
-
-                                                colors = RadioButtonDefaults.colors(selectedColor = RedbusCrimson)
-
-                                            )
-
-                                            Spacer(modifier = Modifier.width(10.dp))
-
-                                            Text(
-
-                                                text = bp,
-
-                                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
-
-                                                fontSize = 13.sp,
-
-                                                color = MaterialTheme.colorScheme.onSurface
-
-                                            )
-
-                                        }
-
-                                    }
-
-                                }
-
+                            if (uiState.selectedBoardingPoint.isNotBlank()) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (isBoardingTab) Color.White else Color(0xFF15803D), modifier = Modifier.size(14.dp))
                             }
-
                         }
-
                     }
 
-                }
-
-
-
-                item {
-
-                    Card(
-
-                        shape = RoundedCornerShape(18.dp),
-
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-
-                        modifier = Modifier
-
-                            .fillMaxWidth()
-
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
-
+                    val isDroppingTab = boardDropSubTab == "dropping"
+                    Surface(
+                        onClick = { boardDropSubTab = "dropping" },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isDroppingTab) RedbusCrimson else Color.Transparent,
+                        modifier = Modifier.weight(1f)
                     ) {
-
-                        Column(modifier = Modifier.padding(16.dp)) {
-
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-
-                                text = "Select Dropping Point (${route.destinationCity})",
-
-                                style = MaterialTheme.typography.titleMedium,
-
-                                color = Color(0xFF15803D),
-
-                                fontWeight = FontWeight.Black
-
+                                text = "Dropping Point",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (isDroppingTab) Color.White else MaterialTheme.colorScheme.onSurface
                             )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            droppingStops.forEach { dp ->
-
-                                val isChosen = uiState.selectedDroppingPoint == dp
-
-                                Surface(
-
-                                    onClick = {
-
-                                        onUpdateBoardingDropping(
-
-                                            uiState.selectedBoardingPoint.ifBlank { boardingStops.first() },
-
-                                            dp
-
-                                        )
-
-                                    },
-
-                                    shape = RoundedCornerShape(12.dp),
-
-                                    color = if (isChosen) {
-
-                                        if (uiState.isDarkTheme) Color(0xFF123B2B) else Color(0xFFECFDF5)
-
-                                    } else {
-
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-
-                                    },
-
-                                    modifier = Modifier
-
-                                        .fillMaxWidth()
-
-                                        .padding(vertical = 5.dp)
-
-                                        .border(
-
-                                            width = if (isChosen) 1.5.dp else 1.dp,
-
-                                            color = if (isChosen) Color(0xFF15803D) else Color.Transparent,
-
-                                            shape = RoundedCornerShape(12.dp)
-
-                                        )
-
-                                ) {
-
-                                    Row(
-
-                                        modifier = Modifier.padding(14.dp),
-
-                                        verticalAlignment = Alignment.CenterVertically
-
-                                    ) {
-
-                                        RadioButton(
-
-                                            selected = isChosen,
-
-                                            onClick = null,
-
-                                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF15803D))
-
-                                        )
-
-                                        Spacer(modifier = Modifier.width(10.dp))
-
-                                        Text(
-
-                                            text = dp,
-
-                                            fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
-
-                                            fontSize = 13.sp,
-
-                                            color = MaterialTheme.colorScheme.onSurface
-
-                                        )
-
-                                    }
-
-                                }
-
+                            if (uiState.selectedDroppingPoint.isNotBlank()) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (isDroppingTab) Color.White else Color(0xFF15803D), modifier = Modifier.size(14.dp))
                             }
-
                         }
-
                     }
-
                 }
 
+                // List of Stops for Active Tab (Default NONE selected)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    if (boardDropSubTab == "boarding") {
+                        item {
+                            Text(
+                                text = "Select boarding stop in ${route.sourceCity}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(boardingStops.size) { bIdx ->
+                            val bp = boardingStops[bIdx]
+                            val isChosen = uiState.selectedBoardingPoint == bp
+                            Surface(
+                                onClick = {
+                                    onUpdateBoardingDropping(bp, uiState.selectedDroppingPoint)
+                                    if (uiState.selectedDroppingPoint.isBlank()) {
+                                        boardDropSubTab = "dropping"
+                                    }
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isChosen) {
+                                    if (uiState.isDarkTheme) Color(0xFF4C1D24) else Color(0xFFFFF1F2)
+                                } else {
+                                    MaterialTheme.colorScheme.surface
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = if (isChosen) 1.5.dp else 1.dp,
+                                        color = if (isChosen) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isChosen,
+                                        onClick = null,
+                                        colors = RadioButtonDefaults.colors(selectedColor = RedbusCrimson)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = bp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = "Select dropping stop in ${route.destinationCity}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(droppingStops.size) { dIdx ->
+                            val dp = droppingStops[dIdx]
+                            val isChosen = uiState.selectedDroppingPoint == dp
+                            Surface(
+                                onClick = {
+                                    onUpdateBoardingDropping(uiState.selectedBoardingPoint, dp)
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isChosen) {
+                                    if (uiState.isDarkTheme) Color(0xFF123B2B) else Color(0xFFECFDF5)
+                                } else {
+                                    MaterialTheme.colorScheme.surface
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = if (isChosen) 1.5.dp else 1.dp,
+                                        color = if (isChosen) Color(0xFF15803D) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isChosen,
+                                        onClick = null,
+                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF15803D))
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = dp,
+                                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
         }
 
     }

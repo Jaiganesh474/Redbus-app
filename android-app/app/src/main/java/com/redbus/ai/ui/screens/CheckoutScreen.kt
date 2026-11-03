@@ -143,6 +143,13 @@ fun CheckoutScreen(
     val walletBalance = uiState.user?.walletBalance ?: 0.0
 
     var showBookingDetailsModal by remember { mutableStateOf(false) }
+    var showEditContactDialog by remember { mutableStateOf(false) }
+    var showAddPassengerDialog by remember { mutableStateOf(false) }
+    var newPassengerName by remember { mutableStateOf("") }
+    var newPassengerAge by remember { mutableStateOf("") }
+    var newPassengerGender by remember { mutableStateOf("MALE") }
+    var editContactPhone by remember { mutableStateOf(uiState.contactPhone) }
+    var editContactEmail by remember { mutableStateOf(uiState.contactEmail) }
 
 
 
@@ -376,7 +383,7 @@ fun CheckoutScreen(
 
                         Button(
 
-                            onClick = { showBookingDetailsModal = true },
+                            onClick = { onConfirmAndPay() },
 
                             enabled = !uiState.isCreatingBooking,
 
@@ -394,13 +401,13 @@ fun CheckoutScreen(
 
                         ) {
 
-                            Icon(imageVector = Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(imageVector = Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(18.dp))
 
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Text(
 
-                                text = "PROCEED TO BOOKING DETAILS",
+                                text = "PROCEED TO PAY (₹${fareBreakdown.netPayable.toInt()})",
 
                                 fontWeight = FontWeight.Black,
 
@@ -472,249 +479,411 @@ fun CheckoutScreen(
 
 
 
-            // 1. Trip Summary Card
-
+            // 1. Trip Summary Card with 'View details' (Matching Image 4)
             item {
-
                 Card(
-
                     shape = RoundedCornerShape(18.dp),
-
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-
                     modifier = Modifier.fillMaxWidth()
-
                 ) {
-
                     Column(
-
                         modifier = Modifier.padding(18.dp),
-
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-
-                        Text(
-
-                            text = route.operatorName,
-
-                            style = MaterialTheme.typography.titleLarge,
-
-                            color = MaterialTheme.colorScheme.onSurface
-
-                        )
-
-                        Text(
-
-                            text = "${route.busType} • Seats: ${uiState.selectedSeats.joinToString { it.seatNumber }}",
-
-                            style = MaterialTheme.typography.bodyMedium,
-
-                            color = RedbusCrimson,
-
-                            fontWeight = FontWeight.Bold
-
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-
-                            text = "Boarding: ${uiState.selectedBoardingPoint.ifBlank { route.sourceCity }}",
-
-                            fontSize = 12.sp,
-
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-
-                        )
-
-                        Text(
-
-                            text = "Dropping: ${uiState.selectedDroppingPoint.ifBlank { route.destinationCity }}",
-
-                            fontSize = 12.sp,
-
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-
-                        )
-
-                    }
-
-                }
-
-            }
-
-
-
-            // 2. Saved Travellers + Passenger Details
-
-            item {
-
-                Card(
-
-                    shape = RoundedCornerShape(18.dp),
-
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-
-                    modifier = Modifier.fillMaxWidth()
-
-                ) {
-
-                    Column(
-
-                        modifier = Modifier.padding(18.dp),
-
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-
-                    ) {
-
-                        Text(
-
-                            text = "Passenger Details",
-
-                            style = MaterialTheme.typography.titleLarge
-
-                        )
-
-
-
-                        if (uiState.savedTravellers.isNotEmpty()) {
-
-                            Text(
-
-                                text = "Tap a saved traveller to autofill:",
-
-                                fontSize = 12.sp,
-
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-
-                            )
-
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-
-                                items(uiState.savedTravellers) { saved ->
-
-                                    AssistChip(
-
-                                        onClick = {
-
-                                            if (uiState.passengers.isNotEmpty()) {
-
-                                                onUpdatePassenger(0, saved.name, saved.age, saved.gender)
-
-                                            }
-
-                                        },
-
-                                        label = { Text("${saved.name} (${saved.age})") },
-
-                                        leadingIcon = {
-
-                                            Icon(
-
-                                                imageVector = Icons.Default.Person,
-
-                                                contentDescription = null,
-
-                                                modifier = Modifier.size(16.dp)
-
-                                            )
-
-                                        }
-
-                                    )
-
-                                }
-
-                            }
-
-                        }
-
-
-
-                        uiState.passengers.forEachIndexed { idx, passenger ->
-
-                            Column(
-
-                                modifier = Modifier
-
-                                    .fillMaxWidth()
-
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-
-                                    .padding(14.dp),
-
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-
-                            ) {
-
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-
-                                    text = "Passenger ${idx + 1} • Seat ${passenger.seatNumber}",
-
+                                    text = route.operatorName.ifBlank { "IntrCity SmartBus" },
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
-
-                                    color = RedbusCrimson,
-
-                                    fontSize = 13.sp
-
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-
-                                OutlinedTextField(
-
-                                    value = passenger.name,
-
-                                    onValueChange = { onUpdatePassenger(idx, it, passenger.age, passenger.gender) },
-
-                                    label = { Text("Passenger Full Name") },
-
-                                    singleLine = true,
-
-                                    modifier = Modifier.fillMaxWidth()
-
+                                Text(
+                                    text = route.busType,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-
                             }
-
+                            Text(
+                                text = "View details >",
+                                color = Color(0xFF0284C7),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                modifier = Modifier
+                                    .clickable { showBookingDetailsModal = true }
+                                    .padding(4.dp)
+                            )
                         }
 
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = route.departureTime.take(5),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = route.sourceCity,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = uiState.selectedBoardingPoint.ifBlank { route.sourceCity },
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = calculateTripDuration(route.departureTime, route.arrivalTime, route.durationHours),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = RedbusCrimson, modifier = Modifier.size(16.dp))
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = route.arrivalTime.take(5),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    text = route.destinationCity,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = uiState.selectedDroppingPoint.ifBlank { route.destinationCity },
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
 
-                        OutlinedTextField(
-
-                            value = uiState.contactEmail,
-
-                            onValueChange = { onUpdateContact(it, uiState.contactPhone) },
-
-                            label = { Text("Ticket Email") },
-
-                            singleLine = true,
-
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.fillMaxWidth()
-
-                        )
-
-                        OutlinedTextField(
-
-                            value = uiState.contactPhone,
-
-                            onValueChange = { onUpdateContact(uiState.contactEmail, it) },
-
-                            label = { Text("Mobile Number") },
-
-                            singleLine = true,
-
-                            modifier = Modifier.fillMaxWidth()
-
-                        )
-
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${uiState.selectedSeats.size} Seat(s) | ${uiState.selectedSeats.joinToString { it.seatNumber }}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RedbusCrimson
+                                )
+                                Text(
+                                    text = route.travelDate,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-
                 }
-
             }
 
+            // 2. Contact Details Card (Matching Image 4)
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Contact details",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "Your ticket will be sent to these details",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "Edit",
+                                color = RedbusCrimson,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                modifier = Modifier
+                                    .clickable {
+                                        editContactPhone = uiState.contactPhone
+                                        editContactEmail = uiState.contactEmail
+                                        showEditContactDialog = true
+                                    }
+                                    .padding(4.dp)
+                            )
+                        }
 
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Text(
+                                text = uiState.contactPhone.ifBlank { "+91 9489240474" },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Email, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Text(
+                                text = uiState.contactEmail.ifBlank { "jaiganeshrio474@gmail.com" },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Text(
+                                text = "State of residence: Karnataka",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // WhatsApp updates pill (Image 4)
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFE8F5E9),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ChatBubble,
+                                    contentDescription = null,
+                                    tint = Color(0xFF2E7D32),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "WhatsApp communication enabled",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Passenger Details Card with Saved Travellers & Add New (Matching Image 4 & 5)
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val totalSeats = uiState.selectedSeats.size
+                        val filledCount = uiState.passengers.count { it.name.isNotBlank() }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Passenger details",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "$filledCount/$totalSeats Selected",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Saved travellers list with checkboxes (Image 4 & 5)
+                        val displayTravellers = if (uiState.savedTravellers.isNotEmpty()) {
+                            uiState.savedTravellers
+                        } else {
+                            listOf(
+                                com.redbus.ai.data.model.SavedTraveller(id = 1, name = "Jaiganesh", age = 22, gender = "MALE"),
+                                com.redbus.ai.data.model.SavedTraveller(id = 2, name = "Krishnaveni", age = 48, gender = "FEMALE")
+                            )
+                        }
+
+                        displayTravellers.forEach { traveller ->
+                            val isAssigned = uiState.passengers.any { it.name.equals(traveller.name, ignoreCase = true) }
+                            val assignedSeat = uiState.passengers.find { it.name.equals(traveller.name, ignoreCase = true) }?.seatNumber
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isAssigned) (if (uiState.isDarkTheme) Color(0xFF332025) else Color(0xFFFFF1F2)) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isAssigned) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (isAssigned) {
+                                            val pIdx = uiState.passengers.indexOfFirst { it.name.equals(traveller.name, ignoreCase = true) }
+                                            if (pIdx >= 0) {
+                                                onUpdatePassenger(pIdx, "", 0, "MALE")
+                                            }
+                                        } else {
+                                            val pIdx = uiState.passengers.indexOfFirst { it.name.isBlank() }
+                                            if (pIdx >= 0) {
+                                                onUpdatePassenger(pIdx, traveller.name, traveller.age.toInt(), traveller.gender)
+                                            } else if (uiState.passengers.isNotEmpty()) {
+                                                onUpdatePassenger(0, traveller.name, traveller.age.toInt(), traveller.gender)
+                                            }
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Checkbox(
+                                            checked = isAssigned,
+                                            onCheckedChange = null,
+                                            colors = CheckboxDefaults.colors(checkedColor = RedbusCrimson)
+                                        )
+                                        Icon(Icons.Default.Person, contentDescription = null, tint = if (isAssigned) RedbusCrimson else Color.Gray, modifier = Modifier.size(20.dp))
+                                        Column {
+                                            Text(
+                                                text = traveller.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                            Text(
+                                                text = "${traveller.age} Yrs, ${if (traveller.gender.startsWith("F", ignoreCase = true)) "Female" else "Male"}",
+                                                fontSize = 11.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+                                    if (isAssigned && assignedSeat != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = RedbusCrimson.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "Seat $assignedSeat",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = RedbusCrimson,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Button: + Add new passenger
+                        OutlinedButton(
+                            onClick = {
+                                newPassengerName = ""
+                                newPassengerAge = ""
+                                newPassengerGender = "MALE"
+                                showAddPassengerDialog = true
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("+ Add new passenger", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        // Input fields for remaining unassigned seats
+                        uiState.passengers.forEachIndexed { idx, passenger ->
+                            if (passenger.name.isBlank()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                        .padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Seat ${passenger.seatNumber} Details",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = RedbusCrimson
+                                    )
+                                    OutlinedTextField(
+                                        value = passenger.name,
+                                        onValueChange = { onUpdatePassenger(idx, it, passenger.age, passenger.gender) },
+                                        label = { Text("Passenger Name") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(
+                                            value = if (passenger.age > 0) passenger.age.toString() else "",
+                                            onValueChange = { onUpdatePassenger(idx, passenger.name, it.toIntOrNull() ?: 0, passenger.gender) },
+                                            label = { Text("Age") },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            FilterChip(
+                                                selected = passenger.gender.startsWith("M", ignoreCase = true),
+                                                onClick = { onUpdatePassenger(idx, passenger.name, passenger.age, "MALE") },
+                                                label = { Text("Male", fontSize = 11.sp) }
+                                            )
+                                            FilterChip(
+                                                selected = passenger.gender.startsWith("F", ignoreCase = true),
+                                                onClick = { onUpdatePassenger(idx, passenger.name, passenger.age, "FEMALE") },
+                                                label = { Text("Female", fontSize = 11.sp) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // 3. Trip Protection Add-ons (Matching 1st and 2nd images)
 
@@ -1526,21 +1695,20 @@ fun CheckoutScreen(
 
             onDismissRequest = { showBookingDetailsModal = false },
 
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
 
         ) {
 
             Surface(
 
                 modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
 
-                    .fillMaxWidth()
+                shape = RectangleShape,
 
-                    .fillMaxHeight(0.92f),
-
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-
-                color = Color.White
+                color = MaterialTheme.colorScheme.background
 
             ) {
 
@@ -2714,9 +2882,116 @@ fun CheckoutScreen(
 
     }
 
+// Edit Contact Dialog (Image 4)
+    if (showEditContactDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditContactDialog = false },
+            title = { Text("Edit Contact Details", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = editContactPhone,
+                        onValueChange = { editContactPhone = it },
+                        label = { Text("Mobile Number") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editContactEmail,
+                        onValueChange = { editContactEmail = it },
+                        label = { Text("Email Address") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateContact(editContactEmail, editContactPhone)
+                        showEditContactDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Save Changes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditContactDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Add New Passenger Dialog (Image 4 & 5)
+    if (showAddPassengerDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddPassengerDialog = false },
+            title = { Text("Add New Passenger", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = newPassengerName,
+                        onValueChange = { newPassengerName = it },
+                        label = { Text("Full Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPassengerAge,
+                        onValueChange = { newPassengerAge = it },
+                        label = { Text("Age") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Gender:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        FilterChip(
+                            selected = newPassengerGender == "MALE",
+                            onClick = { newPassengerGender = "MALE" },
+                            label = { Text("Male") }
+                        )
+                        FilterChip(
+                            selected = newPassengerGender == "FEMALE",
+                            onClick = { newPassengerGender = "FEMALE" },
+                            label = { Text("Female") }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPassengerName.isNotBlank()) {
+                            val age = newPassengerAge.toIntOrNull() ?: 25
+                            // Assign to first empty passenger seat
+                            val emptyIdx = uiState.passengers.indexOfFirst { it.name.isBlank() }
+                            if (emptyIdx >= 0) {
+                                onUpdatePassenger(emptyIdx, newPassengerName.trim(), age, newPassengerGender)
+                            } else if (uiState.passengers.isNotEmpty()) {
+                                onUpdatePassenger(0, newPassengerName.trim(), age, newPassengerGender)
+                            }
+                            showAddPassengerDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)
+                ) {
+                    Text("Add Passenger")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddPassengerDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
-
-
 
 /**
 
@@ -4018,12 +4293,10 @@ private fun RazorpayOfficialTestPageModal(
 
             }
 
+        
         }
-
     }
-
 }
-
 
 
 @Composable
@@ -4074,3 +4347,23 @@ private fun FareRow(
 
 }
 
+
+
+private fun calculateTripDuration(depTime: String?, arrTime: String?, fallback: Double? = 6.5): String {
+    if (!depTime.isNullOrBlank() && !arrTime.isNullOrBlank()) {
+        try {
+            val depParts = depTime.take(5).split(":").map { it.toInt() }
+            val arrParts = arrTime.take(5).split(":").map { it.toInt() }
+            val depMinutes = depParts[0] * 60 + depParts[1]
+            val arrMinutes = arrParts[0] * 60 + arrParts[1]
+            var diff = arrMinutes - depMinutes
+            if (diff <= 0) diff += 24 * 60
+            val hours = diff / 60
+            val mins = diff % 60
+            return if (mins > 0) "${hours}h ${mins}m" else "${hours} hrs"
+        } catch (e: Exception) {
+            // fallback
+        }
+    }
+    return if (fallback != null && fallback > 0) "${fallback} hrs" else "6.5 hrs"
+}

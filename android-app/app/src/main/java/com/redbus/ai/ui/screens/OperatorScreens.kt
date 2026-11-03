@@ -6088,7 +6088,10 @@ private fun PublishScheduleModal(
         ScheduleTimePickerDialog(
             title = "Select Departure Time",
             initialTime = departureTime,
-            onTimeSelected = { departureTime = it },
+            onTimeSelected = {
+                departureTime = it
+                boardingPoints = getAiBoardingPoints(sourceCity, it)
+            },
             onDismiss = { showDepartureTimePicker = false }
         )
     }
@@ -6097,7 +6100,10 @@ private fun PublishScheduleModal(
         ScheduleTimePickerDialog(
             title = "Select Arrival Time",
             initialTime = arrivalTime,
-            onTimeSelected = { arrivalTime = it },
+            onTimeSelected = {
+                arrivalTime = it
+                droppingPoints = getAiDroppingPoints(destCity, it)
+            },
             onDismiss = { showArrivalTimePicker = false }
         )
     }
@@ -6319,19 +6325,21 @@ private fun getAiBoardingPoints(city: String, departureTime: String = "22:30"): 
     val t = departureTime.take(5)
     return when {
         lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
-            "Majestic Anand Rao Circle (${offsetTime(t, -90)}), Madiwala (${offsetTime(t, -60)}), Silk Board (${offsetTime(t, -45)}), Electronic City (${offsetTime(t, -15)})"
+            "Majestic Anand Rao Circle (${offsetTime(t, 0)}), Madiwala (${offsetTime(t, 20)}), Silk Board (${offsetTime(t, 35)}), Electronic City (${offsetTime(t, 50)})"
         lower.contains("chennai") || lower == "maa" ->
-            "Koyambedu Omni Bus Stand (${offsetTime(t, -120)}), Guindy (${offsetTime(t, -90)}), Ashok Pillar (${offsetTime(t, -75)}), Tambaram (${offsetTime(t, -45)}), Perungalathur (${offsetTime(t, -30)})"
+            "Koyambedu Omni Bus Stand (${offsetTime(t, 0)}), Guindy (${offsetTime(t, 20)}), Ashok Pillar (${offsetTime(t, 35)}), Tambaram (${offsetTime(t, 50)}), Perungalathur (${offsetTime(t, 65)})"
         lower.contains("dindigul") ->
-            "Dindigul Central Bus Stand (${offsetTime(t, -90)}), Dindigul Bypass Roundana (${offsetTime(t, -60)}), Palani Road Junction (${offsetTime(t, -45)}), Begambur (${offsetTime(t, -30)})"
+            "Dindigul Central Bus Stand (${offsetTime(t, 0)}), Dindigul Bypass Roundana (${offsetTime(t, 15)}), Palani Road Junction (${offsetTime(t, 30)}), Begambur (${offsetTime(t, 45)})"
         lower.contains("tirunelveli") || lower.contains("nellai") ->
-            "Vannarpettai (${offsetTime(t, -90)}), New Bus Stand (${offsetTime(t, -60)}), Kayathar Toll Plaza (${offsetTime(t, -15)})"
+            "Vannarpettai (${offsetTime(t, 0)}), New Bus Stand (${offsetTime(t, 20)}), Kayathar Toll Plaza (${offsetTime(t, 45)})"
+        lower.contains("salem") ->
+            "New Bus Stand (${offsetTime(t, 0)}), AVR Roundana (${offsetTime(t, 20)}), Seelanaickenpatti Bypass (${offsetTime(t, 40)})"
         lower.contains("coimbatore") || lower == "cbe" ->
-            "Gandhipuram (${offsetTime(t, -90)}), Omni Bus Stand (${offsetTime(t, -60)}), Hopes College (${offsetTime(t, -45)}), KMCH (${offsetTime(t, -30)})"
+            "Gandhipuram (${offsetTime(t, 0)}), Omni Bus Stand (${offsetTime(t, 20)}), Hopes College (${offsetTime(t, 35)}), KMCH (${offsetTime(t, 50)})"
         lower.contains("hyderabad") || lower == "hyd" ->
-            "Ameerpet (${offsetTime(t, -90)}), Lakdikapul (${offsetTime(t, -60)}), MGBS CBS (${offsetTime(t, -45)}), LB Nagar (${offsetTime(t, -15)})"
+            "Ameerpet (${offsetTime(t, 0)}), Lakdikapul (${offsetTime(t, 20)}), MGBS CBS (${offsetTime(t, 40)}), LB Nagar (${offsetTime(t, 60)})"
         else ->
-            "$city Central Omni Bus Stand (${offsetTime(t, -90)}), $city City Bypass (${offsetTime(t, -60)}), $city Toll Plaza (${offsetTime(t, -30)})"
+            "$city Central Omni Bus Stand (${offsetTime(t, 0)}), $city City Bypass (${offsetTime(t, 20)}), $city Toll Plaza (${offsetTime(t, 45)})"
     }
 }
 
@@ -6340,19 +6348,21 @@ private fun getAiDroppingPoints(city: String, arrivalTime: String = "06:30"): St
     val t = arrivalTime.take(5)
     return when {
         lower.contains("chennai") || lower == "maa" ->
-            "Perungalathur (${offsetTime(t, -60)}), Guindy (${offsetTime(t, -30)}), Tambaram (${offsetTime(t, 0)})"
+            "Perungalathur (${offsetTime(t, -60)}), Guindy (${offsetTime(t, -35)}), Tambaram (${offsetTime(t, -15)}), Koyambedu (${offsetTime(t, 0)})"
         lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
-            "Electronic City Toll (${offsetTime(t, -90)}), Silk Board (${offsetTime(t, -60)}), Madiwala (${offsetTime(t, -30)}), Majestic Anand Rao Circle (${offsetTime(t, 0)})"
+            "Electronic City Toll (${offsetTime(t, -60)}), Silk Board (${offsetTime(t, -35)}), Madiwala (${offsetTime(t, -15)}), Majestic Anand Rao Circle (${offsetTime(t, 0)})"
         lower.contains("dindigul") ->
-            "Dindigul Bypass Roundana (${offsetTime(t, -60)}), Palani Road Junction (${offsetTime(t, -30)}), Dindigul Central Bus Stand (${offsetTime(t, 0)})"
+            "Dindigul Bypass Roundana (${offsetTime(t, -45)}), Palani Road Junction (${offsetTime(t, -20)}), Dindigul Central Bus Stand (${offsetTime(t, 0)})"
         lower.contains("tirunelveli") || lower.contains("nellai") ->
-            "Kayathar Toll Plaza (${offsetTime(t, -60)}), New Bus Stand (${offsetTime(t, -30)}), Vannarpettai (${offsetTime(t, 0)})"
+            "Kayathar Toll Plaza (${offsetTime(t, -45)}), New Bus Stand (${offsetTime(t, -20)}), Vannarpettai (${offsetTime(t, 0)})"
+        lower.contains("salem") ->
+            "Seelanaickenpatti Bypass (${offsetTime(t, -45)}), AVR Roundana (${offsetTime(t, -20)}), New Bus Stand (${offsetTime(t, 0)})"
         lower.contains("coimbatore") || lower == "cbe" ->
-            "KMCH (${offsetTime(t, -60)}), Hopes College (${offsetTime(t, -30)}), Gandhipuram (${offsetTime(t, 0)})"
+            "KMCH (${offsetTime(t, -45)}), Hopes College (${offsetTime(t, -20)}), Gandhipuram (${offsetTime(t, 0)})"
         lower.contains("hyderabad") || lower == "hyd" ->
-            "Shamshabad (${offsetTime(t, -60)}), Gachibowli (${offsetTime(t, -30)}), Ameerpet (${offsetTime(t, 0)})"
+            "Shamshabad (${offsetTime(t, -60)}), Gachibowli (${offsetTime(t, -35)}), Mehdipatnam (${offsetTime(t, -15)}), MGBS (${offsetTime(t, 0)})"
         else ->
-            "$city Highway Toll (${offsetTime(t, -60)}), $city City Bypass (${offsetTime(t, -30)}), $city Central Terminal (${offsetTime(t, 0)})"
+            "$city Highway Toll (${offsetTime(t, -45)}), $city City Bypass (${offsetTime(t, -20)}), $city Central Terminal (${offsetTime(t, 0)})"
     }
 }
 

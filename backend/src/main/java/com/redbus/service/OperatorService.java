@@ -206,7 +206,7 @@ public class OperatorService {
         }
 
         if (saved.getBus() != null) {
-            List<Route> upcoming = routeRepository.findUpcomingRoutesForSchedule(operatorId, saved.getBus().getId(), LocalDate.now());
+            List<Route> upcoming = routeRepository.findUpcomingRoutesForSchedule(saved.getBus().getId(), LocalDate.now());
             for (Route r : upcoming) {
                 if (saved.getSourceCity() != null) r.setSourceCity(saved.getSourceCity());
                 if (saved.getDestinationCity() != null) r.setDestinationCity(saved.getDestinationCity());

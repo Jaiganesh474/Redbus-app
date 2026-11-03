@@ -45,9 +45,8 @@ public interface RouteRepository extends JpaRepository<Route, Long>, JpaSpecific
             @Param("departureTime") java.time.LocalTime departureTime
     );
 
-    @Query("SELECT r FROM Route r WHERE r.operatorId = :operatorId AND r.bus.id = :busId AND r.travelDate >= :fromDate")
+    @Query("SELECT r FROM Route r WHERE r.bus.id = :busId AND r.travelDate >= :fromDate")
     List<Route> findUpcomingRoutesForSchedule(
-            @Param("operatorId") Long operatorId,
             @Param("busId") Long busId,
             @Param("fromDate") LocalDate fromDate
     );

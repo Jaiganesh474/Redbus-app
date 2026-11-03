@@ -1053,69 +1053,69 @@ public class AiService {
 
         if (lower.contains("chennai") || lower.equals("maa")) {
             boarding = String.format("Koyambedu Omni Bus Stand (%s), Guindy (%s), Ashok Pillar (%s), Tambaram (%s), Perungalathur (%s)",
-                    formatOffset(dep, -120), formatOffset(dep, -90), formatOffset(dep, -75), formatOffset(dep, -45), formatOffset(dep, -30));
-            dropping = String.format("Perungalathur (%s), Guindy (%s), Tambaram (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 35), formatOffset(dep, 50), formatOffset(dep, 65));
+            dropping = String.format("Perungalathur (%s), Guindy (%s), Tambaram (%s), Koyambedu (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -35), formatOffset(arr, -15), formatOffset(arr, 0));
             landmarks = List.of("Koyambedu Omni Stand", "Guindy", "Ashok Pillar", "Tambaram", "Perungalathur", "Chennai Central");
         } else if (lower.contains("bangalore") || lower.contains("bengaluru") || lower.equals("blr")) {
             boarding = String.format("Majestic Anand Rao Circle (%s), Madiwala (%s), Silk Board (%s), Electronic City (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -15));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 35), formatOffset(dep, 50));
             dropping = String.format("Electronic City Toll (%s), Silk Board (%s), Madiwala (%s), Majestic Anand Rao Circle (%s)",
-                    formatOffset(arr, -90), formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -60), formatOffset(arr, -35), formatOffset(arr, -15), formatOffset(arr, 0));
             landmarks = List.of("Majestic Anand Rao Circle", "Madiwala", "Silk Board", "Electronic City", "Kalasipalyam", "Hebbal");
         } else if (lower.contains("dindigul") || lower.contains("dindugal") || lower.equals("dgl")) {
             boarding = String.format("Dindigul Central Bus Stand (%s), Dindigul Bypass Roundana (%s), Palani Road Junction (%s), Begambur (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -30));
+                    formatOffset(dep, 0), formatOffset(dep, 15), formatOffset(dep, 30), formatOffset(dep, 45));
             dropping = String.format("Dindigul Bypass Roundana (%s), Palani Road Junction (%s), Dindigul Central Bus Stand (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("Dindigul Central Bus Stand", "Bypass Roundana", "Palani Road", "Begambur");
         } else if (lower.contains("tirunelveli") || lower.contains("nellai") || lower.equals("tnv")) {
             boarding = String.format("Vannarpettai (%s), New Bus Stand (%s), Kayathar Toll Plaza (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -15));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 45));
             dropping = String.format("Kayathar Toll Plaza (%s), New Bus Stand (%s), Vannarpettai (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("Vannarpettai", "New Bus Stand", "Kayathar Toll Plaza");
         } else if (lower.contains("salem") || lower.equals("sxv")) {
             boarding = String.format("New Bus Stand (%s), AVR Roundana (%s), Seelanaickenpatti Bypass (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -30));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 40));
             dropping = String.format("Seelanaickenpatti Bypass (%s), AVR Roundana (%s), New Bus Stand (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("New Bus Stand", "AVR Roundana", "Seelanaickenpatti Bypass");
         } else if (lower.contains("erode") || lower.equals("ed")) {
             boarding = String.format("Central Bus Stand (%s), Bhavani Bypass (%s), Chithode Toll (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -30));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 40));
             dropping = String.format("Chithode Toll (%s), Bhavani Bypass (%s), Central Bus Stand (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("Central Bus Stand", "Bhavani Bypass", "Chithode Toll");
         } else if (lower.contains("vellore") || lower.equals("krp")) {
             boarding = String.format("New Bus Stand (%s), Katpadi Junction (%s), Bagayam (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 40));
             dropping = String.format("Bagayam (%s), Katpadi Junction (%s), New Bus Stand (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("New Bus Stand", "Katpadi Junction", "Bagayam");
         } else if (lower.contains("hosur")) {
             boarding = String.format("Hosur Bus Stand (%s), Zuzuvadi Checkpost (%s), Sipcot Roundana (%s)",
-                    formatOffset(dep, -60), formatOffset(dep, -30), formatOffset(dep, -15));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 35));
             dropping = String.format("Sipcot Roundana (%s), Zuzuvadi Checkpost (%s), Hosur Bus Stand (%s)",
-                    formatOffset(arr, -45), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -35), formatOffset(arr, -15), formatOffset(arr, 0));
             landmarks = List.of("Hosur Bus Stand", "Zuzuvadi Checkpost", "Sipcot Roundana");
         } else if (lower.contains("coimbatore") || lower.equals("cjb")) {
             boarding = String.format("Gandhipuram (%s), Omni Bus Stand (%s), Hopes College (%s), KMCH (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -30));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 35), formatOffset(dep, 50));
             dropping = String.format("KMCH (%s), Hopes College (%s), Gandhipuram (%s)",
-                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -45), formatOffset(arr, -20), formatOffset(arr, 0));
             landmarks = List.of("Gandhipuram", "Omni Bus Stand", "Hopes College", "KMCH");
         } else if (lower.contains("hyderabad") || lower.contains("secunderabad") || lower.equals("hyd")) {
             boarding = String.format("Ameerpet (%s), Lakdikapul (%s), MGBS CBS (%s), LB Nagar (%s)",
-                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -15));
+                    formatOffset(dep, 0), formatOffset(dep, 20), formatOffset(dep, 40), formatOffset(dep, 60));
             dropping = String.format("Shamshabad (%s), Gachibowli (%s), Mehdipatnam (%s), MGBS (%s)",
-                    formatOffset(arr, -90), formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+                    formatOffset(arr, -60), formatOffset(arr, -35), formatOffset(arr, -15), formatOffset(arr, 0));
             landmarks = List.of("MGBS", "Ameerpet", "Lakdikapul", "LB Nagar", "Gachibowli", "Secunderabad");
         } else {
             boarding = String.format("%s Central Omni Bus Stand (%s), %s City Bypass (%s), %s Highway Toll (%s)",
-                    cleanCity, formatOffset(dep, -90), cleanCity, formatOffset(dep, -60), cleanCity, formatOffset(dep, -30));
+                    cleanCity, formatOffset(dep, 0), cleanCity, formatOffset(dep, 20), cleanCity, formatOffset(dep, 45));
             dropping = String.format("%s Highway Toll (%s), %s City Bypass (%s), %s Central Terminal (%s)",
-                    cleanCity, formatOffset(arr, -60), cleanCity, formatOffset(arr, -30), cleanCity, formatOffset(arr, 0));
+                    cleanCity, formatOffset(arr, -45), cleanCity, formatOffset(arr, -20), cleanCity, formatOffset(arr, 0));
             landmarks = List.of(cleanCity + " Central Omni Bus Stand", cleanCity + " City Bypass", cleanCity + " Highway Junction");
         }
 
