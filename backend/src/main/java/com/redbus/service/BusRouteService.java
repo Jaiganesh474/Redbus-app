@@ -29,6 +29,17 @@ public class BusRouteService {
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
     private final ReviewRepository reviewRepository;
+    private final AiService aiService;
+
+    public static BigDecimal calculateDurationHours(LocalTime dep, LocalTime arr) {
+        if (dep == null || arr == null) return new BigDecimal("6.5");
+        long minutes = java.time.Duration.between(dep, arr).toMinutes();
+        if (minutes <= 0) {
+            minutes += 24 * 60;
+        }
+        double hours = minutes / 60.0;
+        return BigDecimal.valueOf(Math.round(hours * 10.0) / 10.0);
+    }
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
