@@ -1033,11 +1033,11 @@ public class AiService {
     }
 
     // 6. AI Boarding & Dropping Points Recommendation
-    public AiCityPointsDto getAiCityPoints(String city) {
+    public static AiCityPointsDto getAiCityPoints(String city) {
         return getAiCityPoints(city, null, null);
     }
 
-    public AiCityPointsDto getAiCityPoints(String city, String departureTimeStr, String arrivalTimeStr) {
+    public static AiCityPointsDto getAiCityPoints(String city, String departureTimeStr, String arrivalTimeStr) {
         String cleanCity = cleanCityName(city);
         if (cleanCity.isBlank()) {
             cleanCity = "Bangalore";
@@ -1127,7 +1127,7 @@ public class AiService {
                 .build();
     }
 
-    private LocalTime parseTime(String timeStr, LocalTime fallback) {
+    private static LocalTime parseTime(String timeStr, LocalTime fallback) {
         if (timeStr == null || timeStr.isBlank()) return fallback;
         try {
             String trimmed = timeStr.trim();
@@ -1138,7 +1138,7 @@ public class AiService {
         return fallback;
     }
 
-    private String formatOffset(LocalTime base, int offsetMinutes) {
+    private static String formatOffset(LocalTime base, int offsetMinutes) {
         LocalTime t = base.plusMinutes(offsetMinutes);
         return String.format("%02d:%02d", t.getHour(), t.getMinute());
     }
@@ -1166,13 +1166,13 @@ public class AiService {
         return "Tamil Nadu / South India";
     }
 
-    private String cleanCityName(String text) {
+    private static String cleanCityName(String text) {
         if (text == null) return "";
         String cleaned = text.replaceAll("(?i)\\b(bus|buses|ac|sleeper|seater|cheap|luxury|express|volvo|tickets?|from|to|on|for)\\b", "").trim();
         return capitalizeWords(cleaned);
     }
 
-    private String capitalizeWords(String str) {
+    private static String capitalizeWords(String str) {
         if (str == null || str.isBlank()) return "";
         return Arrays.stream(str.split("\\s+"))
                 .map(w -> w.length() > 0 ? Character.toUpperCase(w.charAt(0)) + w.substring(1).toLowerCase() : "")

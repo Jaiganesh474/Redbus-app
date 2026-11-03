@@ -29,7 +29,6 @@ public class BusRouteService {
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
     private final ReviewRepository reviewRepository;
-    private final AiService aiService;
 
     public static BigDecimal calculateDurationHours(LocalTime dep, LocalTime arr) {
         if (dep == null || arr == null) return new BigDecimal("6.5");
@@ -88,10 +87,10 @@ public class BusRouteService {
             String arrStr = schedule.getArrivalTime() != null ? schedule.getArrivalTime().toString() : "06:30";
             String boarding = schedule.getBoardingPoints() != null && !schedule.getBoardingPoints().isBlank()
                     ? schedule.getBoardingPoints()
-                    : aiService.getAiCityPoints(schedule.getSourceCity(), depStr, arrStr).getBoardingPoints();
+                    : AiService.getAiCityPoints(schedule.getSourceCity(), depStr, arrStr).getBoardingPoints();
             String dropping = schedule.getDroppingPoints() != null && !schedule.getDroppingPoints().isBlank()
                     ? schedule.getDroppingPoints()
-                    : aiService.getAiCityPoints(schedule.getDestinationCity(), depStr, arrStr).getDroppingPoints();
+                    : AiService.getAiCityPoints(schedule.getDestinationCity(), depStr, arrStr).getDroppingPoints();
 
             Route route = Route.builder()
                     .operatorId(schedule.getOperator() != null ? schedule.getOperator().getId() : bus.getOperatorId())
