@@ -687,7 +687,7 @@ fun CancelTicketWebsiteModal(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 16.dp),
+                            .padding(top = 10.dp, bottom = 28.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Button(

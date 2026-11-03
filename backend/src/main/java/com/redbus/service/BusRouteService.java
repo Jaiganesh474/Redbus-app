@@ -449,6 +449,10 @@ public class BusRouteService {
             }
         }
 
+        BigDecimal duration = (route.getDepartureTime() != null && route.getArrivalTime() != null)
+                ? computeDurationHours(route.getDepartureTime(), route.getArrivalTime())
+                : (route.getDurationHours() != null ? route.getDurationHours() : new BigDecimal("6.5"));
+
         return RouteResponseDto.builder()
                 .id(route.getId())
                 .busId(route.getBus().getId())
@@ -461,13 +465,21 @@ public class BusRouteService {
                 .departureTime(route.getDepartureTime())
                 .arrivalTime(route.getArrivalTime())
                 .travelDate(route.getTravelDate())
-                .durationHours(route.getDurationHours())
+                .durationHours(duration)
                 .basePrice(route.getBasePrice())
                 .availableSeats(availableSeats)
                 .boardingPoints(boardingPointsList)
                 .droppingPoints(droppingPointsList)
                 .busPhotoUrl(route.getBus() != null ? route.getBus().getPhotoUrls() : null)
                 .build();
+    }
+
+    private BigDecimal computeDurationHours(LocalTime dep, LocalTime arr) {
+        if (dep == null || arr == null) return new BigDecimal("6.5");
+        long diffMinutes = java.time.Duration.between(dep, arr).toMinutes();
+        if (diffMinutes < 0) diffMinutes += 24 * 60;
+        double hours = Math.round((diffMinutes / 60.0) * 10.0) / 10.0;
+        return BigDecimal.valueOf(hours);
     }
 }
 

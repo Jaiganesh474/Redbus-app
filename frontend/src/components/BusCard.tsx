@@ -23,6 +23,21 @@ interface BusCardProps {
   autoOpen?: boolean;
 }
 
+function formatTripDuration(dep?: string, arr?: string, fallbackHours?: number): string {
+  if (dep && arr) {
+    const [depH, depM] = dep.slice(0, 5).split(":").map(Number);
+    const [arrH, arrM] = arr.slice(0, 5).split(":").map(Number);
+    if (!isNaN(depH) && !isNaN(depM) && !isNaN(arrH) && !isNaN(arrM)) {
+      let diff = (arrH * 60 + arrM) - (depH * 60 + depM);
+      if (diff < 0) diff += 24 * 60;
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h} hrs`;
+    }
+  }
+  return fallbackHours ? `${fallbackHours} hrs` : "6.5 hrs";
+}
+
 export default function BusCard({ route, autoOpen = false }: BusCardProps) {
   const dispatch = useAppDispatch();
   const [showModal, setShowModal] = useState(false);
@@ -141,7 +156,7 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
                 {/* Journey Duration Line */}
                 <div className="flex flex-col items-center px-1 sm:px-2">
                   <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 dark:text-slate-500">
-                    {route.durationHours} hrs
+                    {formatTripDuration(route.departureTime, route.arrivalTime, route.durationHours)}
                   </span>
                   <div className="w-14 sm:w-24 h-0.5 bg-gray-300 dark:bg-slate-700 relative my-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-gray-400 absolute left-0 -top-0.5" />

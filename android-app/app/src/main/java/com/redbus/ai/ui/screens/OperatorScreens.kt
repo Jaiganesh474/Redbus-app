@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.RectangleShape
 import com.redbus.ai.data.model.*
 import com.redbus.ai.ui.theme.*
 import com.redbus.ai.ui.viewmodel.RedbusUiState
@@ -831,8 +833,8 @@ fun OperatorHubScreen(
     onCreateBus: (String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
     onUpdateBus: (Long, String, String, String?, Int, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _ -> },
     onDeleteBus: (Long, () -> Unit, (String) -> Unit) -> Unit,
-    onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit,
-    onUpdateSchedule: (Long, Long, String, String, String, String, Double, String, String, String, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
+    onCreateSchedule: (Long, String, String, String, String, Double, String, String, String, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
+    onUpdateSchedule: (Long, Long, String, String, String, String, Double, String, String, String, String?, String?, () -> Unit, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onDeleteSchedule: (Long, () -> Unit, (String) -> Unit) -> Unit = { _, _, _ -> },
     onApproveRefund: (String, () -> Unit, (String) -> Unit) -> Unit,
     onCreateCoupon: (String, Double, Double, Double, String?, String?, () -> Unit, (String) -> Unit) -> Unit,
@@ -1171,15 +1173,15 @@ fun OperatorHubScreen(
                 showPublishScheduleModal = false
                 editingSchedule = null
             },
-            onConfirm = { busId, src, dest, dep, arr, price, days, from, to ->
+            onConfirm = { busId, src, dest, dep, arr, price, days, from, to, board, drop ->
                 val currentEdit = editingSchedule
                 if (currentEdit != null) {
-                    onUpdateSchedule(currentEdit.id, busId, src, dest, dep, arr, price, days, from, to, {
+                    onUpdateSchedule(currentEdit.id, busId, src, dest, dep, arr, price, days, from, to, board, drop, {
                         showPublishScheduleModal = false
                         editingSchedule = null
                     }, {})
                 } else {
-                    onCreateSchedule(busId, src, dest, dep, arr, price, days, from, to, {
+                    onCreateSchedule(busId, src, dest, dep, arr, price, days, from, to, board, drop, {
                         showPublishScheduleModal = false
                         editingSchedule = null
                     }, {})
@@ -2648,13 +2650,14 @@ private fun EditBusModal(
         "Electric AC Luxury Coach"
     )
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RectangleShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f)
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
@@ -4889,13 +4892,14 @@ private fun AddBusModal(
         "Non-AC Seater (2+2)"
     )
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RectangleShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f)
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
@@ -5528,7 +5532,7 @@ private fun PublishScheduleModal(
     editingSchedule: ScheduleResponseDto? = null,
     buses: List<BusResponseDto>,
     onDismiss: () -> Unit,
-    onConfirm: (Long, String, String, String, String, Double, String, String, String) -> Unit
+    onConfirm: (Long, String, String, String, String, Double, String, String, String, String, String) -> Unit
 ) {
     val displayBuses = buses.ifEmpty {
         listOf(
@@ -5574,23 +5578,24 @@ private fun PublishScheduleModal(
     var showToDatePicker by remember { mutableStateOf(false) }
 
     var boardingPoints by remember {
-        mutableStateOf(getAiBoardingPoints(sourceCity))
+        mutableStateOf(editingSchedule?.boardingPoints ?: getAiBoardingPoints(sourceCity, departureTime))
     }
     var droppingPoints by remember {
-        mutableStateOf(getAiDroppingPoints(destCity))
+        mutableStateOf(editingSchedule?.droppingPoints ?: getAiDroppingPoints(destCity, arrivalTime))
     }
     var showDepartureTimePicker by remember { mutableStateOf(false) }
     var showArrivalTimePicker by remember { mutableStateOf(false) }
 
     val isEditing = editingSchedule != null
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RectangleShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f)
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
@@ -5687,7 +5692,7 @@ private fun PublishScheduleModal(
                                 onValueChange = {
                                     sourceCity = it
                                     isSourceMenuExpanded = true
-                                    boardingPoints = getAiBoardingPoints(it)
+                                    boardingPoints = getAiBoardingPoints(it, departureTime)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isSourceMenuExpanded = !isSourceMenuExpanded }) {
@@ -5746,7 +5751,7 @@ private fun PublishScheduleModal(
                                         },
                                         onClick = {
                                             sourceCity = city.name
-                                            boardingPoints = getAiBoardingPoints(city.name)
+                                            boardingPoints = getAiBoardingPoints(city.name, departureTime)
                                             isSourceMenuExpanded = false
                                         }
                                     )
@@ -5768,7 +5773,7 @@ private fun PublishScheduleModal(
                                 onValueChange = {
                                     destCity = it
                                     isDestMenuExpanded = true
-                                    droppingPoints = getAiDroppingPoints(it)
+                                    droppingPoints = getAiDroppingPoints(it, arrivalTime)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isDestMenuExpanded = !isDestMenuExpanded }) {
@@ -5827,7 +5832,7 @@ private fun PublishScheduleModal(
                                         },
                                         onClick = {
                                             destCity = city.name
-                                            droppingPoints = getAiDroppingPoints(city.name)
+                                            droppingPoints = getAiDroppingPoints(city.name, arrivalTime)
                                             isDestMenuExpanded = false
                                         }
                                     )
@@ -6047,7 +6052,7 @@ private fun PublishScheduleModal(
                                 "Weekends only" -> "SAT,SUN"
                                 else -> "DAILY"
                             }
-                            onConfirm(selectedBus.id, sourceCity, destCity, departureTime, arrivalTime, price, operatingDaysCode, validFrom, validTo)
+                            onConfirm(selectedBus.id, sourceCity, destCity, departureTime, arrivalTime, price, operatingDaysCode, validFrom, validTo, boardingPoints, droppingPoints)
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson, contentColor = Color.White)
@@ -6112,13 +6117,14 @@ private fun CreateCouponModal(
     var minBooking by remember { mutableStateOf("800") }
     var expiryDate by remember { mutableStateOf("2026-11-15") }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RectangleShape,
             color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.88f)
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(
                 modifier = Modifier
@@ -6296,43 +6302,57 @@ private fun CreateCouponModal(
 
 
 
-private fun getAiBoardingPoints(city: String): String {
-    val lower = city.trim().lowercase()
-    return when {
-        lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
-            "Majestic Anand Rao Circle (21:00), Madiwala (21:30), Silk Board (21:45), Electronic City (22:15)"
-        lower.contains("chennai") || lower == "maa" ->
-            "Koyambedu Omni Bus Stand (20:30), Guindy (21:00), Ashok Pillar (21:15), Tambaram (21:45), Perungalathur (22:00)"
-        lower.contains("dindigul") ->
-            "Dindigul Central Bus Stand (21:00), Dindigul Bypass Roundana (21:30), Palani Road Junction (21:45)"
-        lower.contains("tirunelveli") || lower.contains("nellai") ->
-            "Vannarpettai (20:30), New Bus Stand (21:00), Kayathar Toll Plaza (21:45)"
-        lower.contains("coimbatore") || lower == "cbe" ->
-            "Gandhipuram (21:00), Omni Bus Stand (21:30), Hopes College (21:45), KMCH (22:00)"
-        lower.contains("hyderabad") || lower == "hyd" ->
-            "Ameerpet (20:30), Lakdikapul (21:00), Gachibowli (21:30), Shamshabad (22:15)"
-        else ->
-            "$city Central Omni Bus Stand (21:00), $city Toll Plaza (21:45)"
+private fun offsetTime(timeStr: String, offsetMins: Int): String {
+    return try {
+        val parts = timeStr.take(5).split(":").map { it.toInt() }
+        var total = parts[0] * 60 + parts[1] + offsetMins
+        while (total < 0) total += 24 * 60
+        total %= (24 * 60)
+        String.format(java.util.Locale.US, "%02d:%02d", total / 60, total % 60)
+    } catch (e: Exception) {
+        timeStr
     }
 }
 
-private fun getAiDroppingPoints(city: String): String {
+private fun getAiBoardingPoints(city: String, departureTime: String = "22:30"): String {
     val lower = city.trim().lowercase()
+    val t = departureTime.take(5)
+    return when {
+        lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
+            "Majestic Anand Rao Circle (${offsetTime(t, -90)}), Madiwala (${offsetTime(t, -60)}), Silk Board (${offsetTime(t, -45)}), Electronic City (${offsetTime(t, -15)})"
+        lower.contains("chennai") || lower == "maa" ->
+            "Koyambedu Omni Bus Stand (${offsetTime(t, -120)}), Guindy (${offsetTime(t, -90)}), Ashok Pillar (${offsetTime(t, -75)}), Tambaram (${offsetTime(t, -45)}), Perungalathur (${offsetTime(t, -30)})"
+        lower.contains("dindigul") ->
+            "Dindigul Central Bus Stand (${offsetTime(t, -90)}), Dindigul Bypass Roundana (${offsetTime(t, -60)}), Palani Road Junction (${offsetTime(t, -45)}), Begambur (${offsetTime(t, -30)})"
+        lower.contains("tirunelveli") || lower.contains("nellai") ->
+            "Vannarpettai (${offsetTime(t, -90)}), New Bus Stand (${offsetTime(t, -60)}), Kayathar Toll Plaza (${offsetTime(t, -15)})"
+        lower.contains("coimbatore") || lower == "cbe" ->
+            "Gandhipuram (${offsetTime(t, -90)}), Omni Bus Stand (${offsetTime(t, -60)}), Hopes College (${offsetTime(t, -45)}), KMCH (${offsetTime(t, -30)})"
+        lower.contains("hyderabad") || lower == "hyd" ->
+            "Ameerpet (${offsetTime(t, -90)}), Lakdikapul (${offsetTime(t, -60)}), MGBS CBS (${offsetTime(t, -45)}), LB Nagar (${offsetTime(t, -15)})"
+        else ->
+            "$city Central Omni Bus Stand (${offsetTime(t, -90)}), $city City Bypass (${offsetTime(t, -60)}), $city Toll Plaza (${offsetTime(t, -30)})"
+    }
+}
+
+private fun getAiDroppingPoints(city: String, arrivalTime: String = "06:30"): String {
+    val lower = city.trim().lowercase()
+    val t = arrivalTime.take(5)
     return when {
         lower.contains("chennai") || lower == "maa" ->
-            "Perungalathur (04:30), Guindy (05:00), Tambaram (05:30)"
+            "Perungalathur (${offsetTime(t, -60)}), Guindy (${offsetTime(t, -30)}), Tambaram (${offsetTime(t, 0)})"
         lower.contains("bangalore") || lower.contains("bengaluru") || lower == "blr" ->
-            "Electronic City Toll (04:30), Silk Board (04:45), Madiwala (05:00), Majestic Anand Rao Circle (05:30)"
+            "Electronic City Toll (${offsetTime(t, -90)}), Silk Board (${offsetTime(t, -60)}), Madiwala (${offsetTime(t, -30)}), Majestic Anand Rao Circle (${offsetTime(t, 0)})"
         lower.contains("dindigul") ->
-            "Dindigul Bypass Roundana (04:30), Palani Road Junction (05:00), Dindigul Central Bus Stand (05:30)"
+            "Dindigul Bypass Roundana (${offsetTime(t, -60)}), Palani Road Junction (${offsetTime(t, -30)}), Dindigul Central Bus Stand (${offsetTime(t, 0)})"
         lower.contains("tirunelveli") || lower.contains("nellai") ->
-            "Kayathar Toll Plaza (05:00), New Bus Stand (05:30), Vannarpettai (06:00)"
+            "Kayathar Toll Plaza (${offsetTime(t, -60)}), New Bus Stand (${offsetTime(t, -30)}), Vannarpettai (${offsetTime(t, 0)})"
         lower.contains("coimbatore") || lower == "cbe" ->
-            "KMCH (04:30), Hopes College (04:45), Gandhipuram (05:15)"
+            "KMCH (${offsetTime(t, -60)}), Hopes College (${offsetTime(t, -30)}), Gandhipuram (${offsetTime(t, 0)})"
         lower.contains("hyderabad") || lower == "hyd" ->
-            "Shamshabad (04:30), Gachibowli (05:15), Ameerpet (05:45)"
+            "Shamshabad (${offsetTime(t, -60)}), Gachibowli (${offsetTime(t, -30)}), Ameerpet (${offsetTime(t, 0)})"
         else ->
-            "$city Bypass Roundana (04:30), $city Central Terminal (05:15)"
+            "$city Highway Toll (${offsetTime(t, -60)}), $city City Bypass (${offsetTime(t, -30)}), $city Central Terminal (${offsetTime(t, 0)})"
     }
 }
 

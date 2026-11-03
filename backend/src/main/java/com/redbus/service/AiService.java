@@ -1034,10 +1034,17 @@ public class AiService {
 
     // 6. AI Boarding & Dropping Points Recommendation
     public AiCityPointsDto getAiCityPoints(String city) {
+        return getAiCityPoints(city, null, null);
+    }
+
+    public AiCityPointsDto getAiCityPoints(String city, String departureTimeStr, String arrivalTimeStr) {
         String cleanCity = cleanCityName(city);
         if (cleanCity.isBlank()) {
             cleanCity = "Bangalore";
         }
+
+        LocalTime dep = parseTime(departureTimeStr, LocalTime.of(22, 30));
+        LocalTime arr = parseTime(arrivalTimeStr, LocalTime.of(6, 30));
 
         String lower = cleanCity.toLowerCase();
         String boarding;
@@ -1045,92 +1052,70 @@ public class AiService {
         List<String> landmarks;
 
         if (lower.contains("chennai") || lower.equals("maa")) {
-            boarding = "Koyambedu Omni Bus Stand (20:30), Guindy (21:00), Ashok Pillar (21:15), Tambaram (21:45), Perungalathur (22:00)";
-            dropping = "Perungalathur (04:30), Guindy (05:00), Tambaram (05:30)";
+            boarding = String.format("Koyambedu Omni Bus Stand (%s), Guindy (%s), Ashok Pillar (%s), Tambaram (%s), Perungalathur (%s)",
+                    formatOffset(dep, -120), formatOffset(dep, -90), formatOffset(dep, -75), formatOffset(dep, -45), formatOffset(dep, -30));
+            dropping = String.format("Perungalathur (%s), Guindy (%s), Tambaram (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Koyambedu Omni Stand", "Guindy", "Ashok Pillar", "Tambaram", "Perungalathur", "Chennai Central");
         } else if (lower.contains("bangalore") || lower.contains("bengaluru") || lower.equals("blr")) {
-            boarding = "Majestic Anand Rao Circle (21:00), Madiwala (21:30), Silk Board (21:45), Electronic City (22:15)";
-            dropping = "Electronic City Toll (04:30), Silk Board (04:45), Madiwala (05:00), Majestic Anand Rao Circle (05:30), Kalasipalyam (06:00)";
+            boarding = String.format("Majestic Anand Rao Circle (%s), Madiwala (%s), Silk Board (%s), Electronic City (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -15));
+            dropping = String.format("Electronic City Toll (%s), Silk Board (%s), Madiwala (%s), Majestic Anand Rao Circle (%s)",
+                    formatOffset(arr, -90), formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Majestic Anand Rao Circle", "Madiwala", "Silk Board", "Electronic City", "Kalasipalyam", "Hebbal");
         } else if (lower.contains("dindigul") || lower.contains("dindugal") || lower.equals("dgl")) {
-            boarding = "Dindigul Central Bus Stand (21:00), Dindigul Bypass Roundana (21:30), Palani Road Junction (21:45), Begambur (22:00)";
-            dropping = "Dindigul Bypass Roundana (04:30), Palani Road Junction (05:00), Dindigul Central Bus Stand (05:30)";
+            boarding = String.format("Dindigul Central Bus Stand (%s), Dindigul Bypass Roundana (%s), Palani Road Junction (%s), Begambur (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -30));
+            dropping = String.format("Dindigul Bypass Roundana (%s), Palani Road Junction (%s), Dindigul Central Bus Stand (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Dindigul Central Bus Stand", "Bypass Roundana", "Palani Road", "Begambur");
         } else if (lower.contains("tirunelveli") || lower.contains("nellai") || lower.equals("tnv")) {
-            boarding = "Vannarpettai (20:30), New Bus Stand (21:00), Kayathar Toll Plaza (21:45)";
-            dropping = "Kayathar Toll Plaza (05:00), New Bus Stand (05:30), Vannarpettai (06:00)";
+            boarding = String.format("Vannarpettai (%s), New Bus Stand (%s), Kayathar Toll Plaza (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -15));
+            dropping = String.format("Kayathar Toll Plaza (%s), New Bus Stand (%s), Vannarpettai (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Vannarpettai", "New Bus Stand", "Kayathar Toll Plaza");
         } else if (lower.contains("salem") || lower.equals("sxv")) {
-            boarding = "New Bus Stand (21:00), AVR Roundana (21:30), Seelanaickenpatti Bypass (22:00)";
-            dropping = "Seelanaickenpatti Bypass (04:30), AVR Roundana (05:00), New Bus Stand (05:30)";
+            boarding = String.format("New Bus Stand (%s), AVR Roundana (%s), Seelanaickenpatti Bypass (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -30));
+            dropping = String.format("Seelanaickenpatti Bypass (%s), AVR Roundana (%s), New Bus Stand (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("New Bus Stand", "AVR Roundana", "Seelanaickenpatti Bypass");
         } else if (lower.contains("erode") || lower.equals("ed")) {
-            boarding = "Central Bus Stand (21:00), Bhavani Bypass (21:30), Chithode Toll (22:00)";
-            dropping = "Chithode Toll (05:00), Bhavani Bypass (05:30), Central Bus Stand (06:00)";
+            boarding = String.format("Central Bus Stand (%s), Bhavani Bypass (%s), Chithode Toll (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -30));
+            dropping = String.format("Chithode Toll (%s), Bhavani Bypass (%s), Central Bus Stand (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Central Bus Stand", "Bhavani Bypass", "Chithode Toll");
         } else if (lower.contains("vellore") || lower.equals("krp")) {
-            boarding = "New Bus Stand (21:00), Katpadi Junction (21:30), Bagayam (21:45)";
-            dropping = "Bagayam (05:00), Katpadi Junction (05:15), New Bus Stand (05:30)";
+            boarding = String.format("New Bus Stand (%s), Katpadi Junction (%s), Bagayam (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45));
+            dropping = String.format("Bagayam (%s), Katpadi Junction (%s), New Bus Stand (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("New Bus Stand", "Katpadi Junction", "Bagayam");
         } else if (lower.contains("hosur")) {
-            boarding = "Hosur Bus Stand (21:30), Zuzuvadi Checkpost (22:00), Sipcot Roundana (22:15)";
-            dropping = "Sipcot Roundana (04:30), Zuzuvadi Checkpost (04:45), Hosur Bus Stand (05:00)";
+            boarding = String.format("Hosur Bus Stand (%s), Zuzuvadi Checkpost (%s), Sipcot Roundana (%s)",
+                    formatOffset(dep, -60), formatOffset(dep, -30), formatOffset(dep, -15));
+            dropping = String.format("Sipcot Roundana (%s), Zuzuvadi Checkpost (%s), Hosur Bus Stand (%s)",
+                    formatOffset(arr, -45), formatOffset(arr, -30), formatOffset(arr, 0));
             landmarks = List.of("Hosur Bus Stand", "Zuzuvadi Checkpost", "Sipcot Roundana");
-        } else if (lower.contains("nagercoil") || lower.contains("kanyakumari") || lower.equals("ncj")) {
-            boarding = "Vadasery Omni Bus Stand (20:00), Christopher Bus Stand (20:30), Kanyakumari Zero Point (21:00)";
-            dropping = "Kanyakumari Zero Point (05:00), Christopher Bus Stand (05:30), Vadasery Omni Bus Stand (06:00)";
-            landmarks = List.of("Vadasery Omni Bus Stand", "Christopher Bus Stand", "Kanyakumari Zero Point");
-        } else if (lower.contains("thanjavur") || lower.contains("tanjore") || lower.equals("tj")) {
-            boarding = "New Bus Stand (21:00), Old Bus Stand (21:30), Vallam Bypass (22:00)";
-            dropping = "Vallam Bypass (05:00), Old Bus Stand (05:30), New Bus Stand (06:00)";
-            landmarks = List.of("New Bus Stand", "Old Bus Stand", "Vallam Bypass");
-        } else if (lower.contains("hyderabad") || lower.contains("secunderabad") || lower.equals("hyd")) {
-            boarding = "Ameerpet (20:30), Lakdikapul (21:00), MGBS CBS (21:30), LB Nagar (22:00), Miyapur (22:30)";
-            dropping = "Gachibowli (05:00), Mehdipatnam (05:30), MGBS (06:00), Secunderabad (06:30), KPHB (07:00)";
-            landmarks = List.of("MGBS", "Ameerpet", "Lakdikapul", "LB Nagar", "Gachibowli", "Secunderabad");
-        } else if (lower.contains("mumbai") || lower.contains("bombay") || lower.equals("bom")) {
-            boarding = "Borivali West (20:00), Andheri East (20:30), Sion Circle (21:00), Chembur (21:20), Vashi Toll Plaza (21:45)";
-            dropping = "Vashi Toll Plaza (05:00), Chembur (05:30), Sion Circle (06:00), Dadar (06:15), Borivali (06:45)";
-            landmarks = List.of("Borivali West", "Andheri East", "Sion Circle", "Chembur", "Vashi");
-        } else if (lower.contains("pune") || lower.equals("pnq")) {
-            boarding = "Swargate (21:00), Shivajinagar (21:30), Wakad Bridge (22:00), Hinjewadi Bridge (22:15), Nigdi (22:30)";
-            dropping = "Katraj (04:30), Swargate (05:00), Shivajinagar (05:30), Wakad Bridge (06:00), Hinjewadi (06:15)";
-            landmarks = List.of("Swargate", "Shivajinagar", "Wakad", "Hinjewadi", "Katraj");
-        } else if (lower.contains("delhi") || lower.equals("del")) {
-            boarding = "Kashmere Gate ISBT (21:00), Majnu Ka Tilla (21:30), Anand Vihar ISBT (22:00), Dhaula Kuan (22:30)";
-            dropping = "Dhaula Kuan (05:00), Kashmere Gate ISBT (05:30), Anand Vihar (06:00), Karol Bagh (06:30)";
-            landmarks = List.of("Kashmere Gate ISBT", "Majnu Ka Tilla", "Anand Vihar ISBT", "Dhaula Kuan");
-        } else if (lower.contains("jaipur") || lower.equals("jai")) {
-            boarding = "Sindhi Camp (21:00), 200 Feet Bypass (21:30), Transport Nagar (22:00), Narayan Singh Circle (22:15)";
-            dropping = "Transport Nagar (05:00), Narayan Singh Circle (05:15), Sindhi Camp (05:30), 200 Feet Bypass (06:00)";
-            landmarks = List.of("Sindhi Camp", "200 Feet Bypass", "Transport Nagar", "Narayan Singh Circle");
         } else if (lower.contains("coimbatore") || lower.equals("cjb")) {
-            boarding = "Gandhipuram (21:00), Omni Bus Stand (21:30), Hopes College (21:45), KMCH (22:00), Neelambur (22:15)";
-            dropping = "Neelambur Toll (05:00), KMCH (05:15), Hopes College (05:30), Gandhipuram (05:45), Omni Bus Stand (06:00)";
-            landmarks = List.of("Gandhipuram", "Omni Bus Stand", "Hopes College", "KMCH", "Neelambur");
-        } else if (lower.contains("madurai") || lower.equals("ixm")) {
-            boarding = "Mattuthavani Omni Bus Stand (21:00), Periyar Bus Stand (21:30), Thirumangalam Toll (22:00)";
-            dropping = "Thirumangalam (05:00), Periyar (05:30), Mattuthavani Omni Bus Stand (06:00)";
-            landmarks = List.of("Mattuthavani", "Periyar Bus Stand", "Thirumangalam");
-        } else if (lower.contains("trichy") || lower.equals("trz")) {
-            boarding = "Central Bus Stand (21:00), Chatram Bus Stand (21:30), Samayapuram Toll (22:00)";
-            dropping = "Samayapuram Toll (05:00), Chatram (05:30), Central Bus Stand (06:00)";
-            landmarks = List.of("Central Bus Stand", "Chatram", "Samayapuram Toll");
-        } else if (lower.contains("kochi") || lower.contains("cochin") || lower.equals("cok")) {
-            boarding = "Vytilla Mobility Hub (20:30), Edappally Toll (21:00), Aluva Bypass (21:30), Angamaly (22:00)";
-            dropping = "Angamaly (05:00), Aluva Bypass (05:30), Edappally (06:00), Vytilla Mobility Hub (06:30)";
-            landmarks = List.of("Vytilla Mobility Hub", "Edappally", "Aluva", "Angamaly");
-        } else if (lower.contains("goa") || lower.equals("goi")) {
-            boarding = "Panaji KTC Bus Stand (20:00), Mapusa KTC (20:30), Margao KTC (21:15)";
-            dropping = "Margao KTC (06:00), Panaji KTC (06:45), Mapusa KTC (07:15)";
-            landmarks = List.of("Panaji KTC", "Mapusa", "Margao");
-        } else if (lower.contains("ahmedabad") || lower.equals("amd")) {
-            boarding = "Geeta Mandir (21:00), Paldi (21:30), Iscon Cross Road (22:00), CTM Cross Road (22:30)";
-            dropping = "CTM Cross Road (05:00), Paldi (05:30), Geeta Mandir (06:00), Iscon (06:30)";
-            landmarks = List.of("Geeta Mandir", "Paldi", "Iscon", "CTM Cross Road");
+            boarding = String.format("Gandhipuram (%s), Omni Bus Stand (%s), Hopes College (%s), KMCH (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -30));
+            dropping = String.format("KMCH (%s), Hopes College (%s), Gandhipuram (%s)",
+                    formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+            landmarks = List.of("Gandhipuram", "Omni Bus Stand", "Hopes College", "KMCH");
+        } else if (lower.contains("hyderabad") || lower.contains("secunderabad") || lower.equals("hyd")) {
+            boarding = String.format("Ameerpet (%s), Lakdikapul (%s), MGBS CBS (%s), LB Nagar (%s)",
+                    formatOffset(dep, -90), formatOffset(dep, -60), formatOffset(dep, -45), formatOffset(dep, -15));
+            dropping = String.format("Shamshabad (%s), Gachibowli (%s), Mehdipatnam (%s), MGBS (%s)",
+                    formatOffset(arr, -90), formatOffset(arr, -60), formatOffset(arr, -30), formatOffset(arr, 0));
+            landmarks = List.of("MGBS", "Ameerpet", "Lakdikapul", "LB Nagar", "Gachibowli", "Secunderabad");
         } else {
-            boarding = cleanCity + " Central Omni Bus Stand (21:00), " + cleanCity + " City Bypass (21:30), " + cleanCity + " Highway Toll Plaza (22:00)";
-            dropping = cleanCity + " Highway Toll Plaza (05:00), " + cleanCity + " City Bypass (05:30), " + cleanCity + " Main Terminal (06:00)";
+            boarding = String.format("%s Central Omni Bus Stand (%s), %s City Bypass (%s), %s Highway Toll (%s)",
+                    cleanCity, formatOffset(dep, -90), cleanCity, formatOffset(dep, -60), cleanCity, formatOffset(dep, -30));
+            dropping = String.format("%s Highway Toll (%s), %s City Bypass (%s), %s Central Terminal (%s)",
+                    cleanCity, formatOffset(arr, -60), cleanCity, formatOffset(arr, -30), cleanCity, formatOffset(arr, 0));
             landmarks = List.of(cleanCity + " Central Omni Bus Stand", cleanCity + " City Bypass", cleanCity + " Highway Junction");
         }
 
@@ -1140,6 +1125,22 @@ public class AiService {
                 .droppingPoints(dropping)
                 .majorLandmarks(landmarks)
                 .build();
+    }
+
+    private LocalTime parseTime(String timeStr, LocalTime fallback) {
+        if (timeStr == null || timeStr.isBlank()) return fallback;
+        try {
+            String trimmed = timeStr.trim();
+            if (trimmed.length() >= 5) {
+                return LocalTime.parse(trimmed.substring(0, 5));
+            }
+        } catch (Exception ignored) {}
+        return fallback;
+    }
+
+    private String formatOffset(LocalTime base, int offsetMinutes) {
+        LocalTime t = base.plusMinutes(offsetMinutes);
+        return String.format("%02d:%02d", t.getHour(), t.getMinute());
     }
 
     private String inferStateFromCity(String raw) {

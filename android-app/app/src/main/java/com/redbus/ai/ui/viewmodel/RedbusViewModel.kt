@@ -1702,6 +1702,8 @@ class RedbusViewModel(
         operatingDays: String = "DAILY",
         validFrom: String,
         validTo: String,
+        boardingPoints: String? = null,
+        droppingPoints: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -1715,6 +1717,8 @@ class RedbusViewModel(
                     arrivalTime = arrivalTime.trim(),
                     basePrice = basePrice,
                     operatingDays = operatingDays,
+                    boardingPoints = boardingPoints?.trim(),
+                    droppingPoints = droppingPoints?.trim(),
                     validFrom = validFrom,
                     validTo = validTo
                 )
@@ -1748,6 +1752,8 @@ class RedbusViewModel(
         operatingDays: String = "DAILY",
         validFrom: String,
         validTo: String,
+        boardingPoints: String? = null,
+        droppingPoints: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -1762,6 +1768,8 @@ class RedbusViewModel(
                     arrivalTime = arrivalTime.trim(),
                     basePrice = basePrice,
                     operatingDays = operatingDays,
+                    boardingPoints = boardingPoints?.trim(),
+                    droppingPoints = droppingPoints?.trim(),
                     validFrom = validFrom,
                     validTo = validTo
                 )

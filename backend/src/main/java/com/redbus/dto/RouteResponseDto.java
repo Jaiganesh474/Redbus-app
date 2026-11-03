@@ -20,6 +20,7 @@ public class RouteResponseDto {
     private String operatorName;
     private String busType;
     private BigDecimal rating;
+    private Integer totalRatings;
     private List<String> amenities;
     private String sourceCity;
     private String destinationCity;

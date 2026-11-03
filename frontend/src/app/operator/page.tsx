@@ -91,6 +91,10 @@ import {
 
 export default function OperatorPortalPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  React.useEffect(() => {
+    document.title = "redBus Operator";
+  }, []);
   const [activeTab, setActiveTab] = useState<"analytics" | "pricing-ai" | "refunds" | "wallet" | "fleet" | "schedules" | "manifest" | "coupons" | "profile">("analytics");
 
 
@@ -550,12 +554,12 @@ export default function OperatorPortalPage() {
     }
   };
 
-  const handleSourceCityChange = async (city: string) => {
+  const handleSourceCityChange = async (city: string, depTime = departureTime, arrTime = arrivalTime) => {
     setSourceCity(city);
     if (!city) return;
     try {
       setIsAiBoardingLoading(true);
-      const res = await triggerGetCityPoints({ city }).unwrap();
+      const res = await triggerGetCityPoints({ city, departureTime: depTime, arrivalTime: arrTime }).unwrap();
       if (res && res.boardingPoints) {
         setBoardingPoints(res.boardingPoints);
       }
@@ -566,12 +570,12 @@ export default function OperatorPortalPage() {
     }
   };
 
-  const handleDestinationCityChange = async (city: string) => {
+  const handleDestinationCityChange = async (city: string, depTime = departureTime, arrTime = arrivalTime) => {
     setDestinationCity(city);
     if (!city) return;
     try {
       setIsAiDroppingLoading(true);
-      const res = await triggerGetCityPoints({ city }).unwrap();
+      const res = await triggerGetCityPoints({ city, departureTime: depTime, arrivalTime: arrTime }).unwrap();
       if (res && res.droppingPoints) {
         setDroppingPoints(res.droppingPoints);
       }
@@ -579,6 +583,26 @@ export default function OperatorPortalPage() {
       console.error("AI dropping points fetch failed:", err);
     } finally {
       setIsAiDroppingLoading(false);
+    }
+  };
+
+  const handleDepartureTimeChange = async (time: string) => {
+    setDepartureTime(time);
+    if (sourceCity) {
+      try {
+        const res = await triggerGetCityPoints({ city: sourceCity, departureTime: time, arrivalTime }).unwrap();
+        if (res && res.boardingPoints) setBoardingPoints(res.boardingPoints);
+      } catch (e) {}
+    }
+  };
+
+  const handleArrivalTimeChange = async (time: string) => {
+    setArrivalTime(time);
+    if (destinationCity) {
+      try {
+        const res = await triggerGetCityPoints({ city: destinationCity, departureTime, arrivalTime: time }).unwrap();
+        if (res && res.droppingPoints) setDroppingPoints(res.droppingPoints);
+      } catch (e) {}
     }
   };
 
@@ -873,7 +897,7 @@ export default function OperatorPortalPage() {
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/30 transition-all flex items-center space-x-1.5 cursor-pointer"
               >
                 <Tag className="w-4 h-4" />
-                <span>Create Live Coupon</span>
+                <span>Create Coupon</span>
               </button>
 
               <Link
@@ -3178,7 +3202,7 @@ export default function OperatorPortalPage() {
                     type="time"
                     required
                     value={departureTime}
-                    onChange={(e) => setDepartureTime(e.target.value)}
+                    onChange={(e) => handleDepartureTimeChange(e.target.value)}
                     className="w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>
@@ -3189,7 +3213,7 @@ export default function OperatorPortalPage() {
                     type="time"
                     required
                     value={arrivalTime}
-                    onChange={(e) => setArrivalTime(e.target.value)}
+                    onChange={(e) => handleArrivalTimeChange(e.target.value)}
                     className="w-full px-3 py-2.5 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                   />
                 </div>

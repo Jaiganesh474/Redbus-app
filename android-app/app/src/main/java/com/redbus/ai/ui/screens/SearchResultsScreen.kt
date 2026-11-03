@@ -1601,7 +1601,7 @@ private fun BusRouteCard3D(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "${route.durationHours} hrs",
+                        text = calculateTripDuration(route.departureTime, route.arrivalTime, route.durationHours),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2167,4 +2167,21 @@ fun AskRayFloatingPillButton(
             }
         }
     }
+}
+
+private fun calculateTripDuration(depTime: String?, arrTime: String?, fallback: Double? = 6.5): String {
+    if (!depTime.isNullOrBlank() && !arrTime.isNullOrBlank()) {
+        try {
+            val depParts = depTime.take(5).split(":").map { it.toInt() }
+            val arrParts = arrTime.take(5).split(":").map { it.toInt() }
+            val depMinutes = depParts[0] * 60 + depParts[1]
+            val arrMinutes = arrParts[0] * 60 + arrParts[1]
+            var diff = arrMinutes - depMinutes
+            if (diff < 0) diff += 24 * 60
+            val hrs = diff / 60
+            val mins = diff % 60
+            return if (mins > 0) "${hrs}h ${mins}m" else "$hrs hrs"
+        } catch (_: Exception) {}
+    }
+    return "${fallback ?: 6.5} hrs"
 }

@@ -231,6 +231,8 @@ data class ScheduleResponseDto(
     val arrivalTime: String = "",
     val operatingDays: String = "DAILY",
     val basePrice: Double = 0.0,
+    val boardingPoints: String? = null,
+    val droppingPoints: String? = null,
     val validFrom: String? = null,
     val validTo: String? = null,
     val status: String = "ACTIVE",

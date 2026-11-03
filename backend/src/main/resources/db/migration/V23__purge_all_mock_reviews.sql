@@ -11,3 +11,4 @@ SET b.rating = COALESCE(
     (SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.bus_id = b.id),
     0.0
 );
+

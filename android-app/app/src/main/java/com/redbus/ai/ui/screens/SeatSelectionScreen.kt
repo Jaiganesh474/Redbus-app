@@ -107,6 +107,7 @@ fun SeatSelectionScreen(
 
 
     var currentStep by remember { mutableStateOf(SeatModalStep.SELECT_SEATS) }
+    var boardDropSubTab by remember { mutableStateOf("boarding") }
 
     var activeDetailTab by remember { mutableStateOf("cancellation") }
 
@@ -624,19 +625,15 @@ fun SeatSelectionScreen(
 
                             if (currentStep == SeatModalStep.SELECT_SEATS) {
 
-                                if (uiState.selectedBoardingPoint.isBlank()) {
-
-                                    onUpdateBoardingDropping(
-
-                                        boardingStops.first(),
-
-                                        droppingStops.first()
-
-                                    )
-
-                                }
-
                                 currentStep = SeatModalStep.BOARD_DROP
+
+                            } else if (uiState.selectedBoardingPoint.isBlank()) {
+
+                                boardDropSubTab = "boarding"
+
+                            } else if (uiState.selectedDroppingPoint.isBlank()) {
+
+                                boardDropSubTab = "dropping"
 
                             } else {
 
@@ -675,6 +672,14 @@ fun SeatSelectionScreen(
                             else if (uiState.isLoading)
 
                                 "Locking Seats..."
+
+                            else if (uiState.selectedBoardingPoint.isBlank())
+
+                                "Select Boarding Point"
+
+                            else if (uiState.selectedDroppingPoint.isBlank())
+
+                                "Select Dropping Point"
 
                             else
 

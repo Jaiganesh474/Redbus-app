@@ -31,7 +31,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "redBus - Online Bus Ticket Booking, Sleeper & Volvo Buses",
+  title: "redBus - Online Ticket Booking Sleeper or Volvo Buses",
   description:
     "Book bus tickets online with redBus. AI-powered search, live seat tracking, instant refunds, and 30,000+ routes across India.",
   keywords: "bus tickets, redbus, online bus booking, sleeper bus, volvo bus, ticket booking, razorpay",

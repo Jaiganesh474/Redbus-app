@@ -393,9 +393,7 @@ function CheckoutContent() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateCheckoutForm()) {
-      setShowBookingDetailsModal(true);
-    }
+    executeProceedToPay();
   };
 
   const executeProceedToPay = async () => {
@@ -1352,10 +1350,19 @@ function CheckoutContent() {
             transition={{ duration: 0.45, ease: "easeOut" }}
             className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xs space-y-4"
           >
-            <h3 className="font-bold text-base text-gray-900 pb-3 border-b border-gray-100 flex items-center space-x-2">
-              <Bus className="w-4 h-4 text-[#d84e55]" />
-              <span>Trip Summary</span>
-            </h3>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="font-bold text-base text-gray-900 flex items-center space-x-2">
+                <Bus className="w-4 h-4 text-[#d84e55]" />
+                <span>Trip Summary</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowBookingDetailsModal(true)}
+                className="text-xs font-bold text-[#d84e55] hover:underline cursor-pointer"
+              >
+                View details
+              </button>
+            </div>
 
             <div>
               <div className="flex items-center justify-between text-sm font-black text-gray-900">
@@ -1477,7 +1484,7 @@ function CheckoutContent() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
-                  <span>Proceed to Booking Details</span>
+                  <span>Proceed to Pay (₹{finalTotalAmount.toFixed(2)})</span>
                   <ArrowRight className="w-5 h-5" />
                 </div>
               )}
@@ -1494,13 +1501,13 @@ function CheckoutContent() {
       {/* SLIDE-UP MODAL: BUS BOOKING DETAILS (Matching Images 3, 4, 5) */}
       <AnimatePresence>
         {showBookingDetailsModal && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
+          <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#0f172a] overflow-hidden">
             <motion.div
-              initial={{ opacity: 0, y: 100 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-              className="bg-white dark:bg-[#0f172a] rounded-t-3xl sm:rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden"
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="flex-1 w-full flex flex-col overflow-hidden"
             >
               {/* Top Sub-Bar: Pay ₹XXX with Back Arrow & Lock Countdown Timer (Images 3, 4, 5) */}
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-slate-850 border-b border-gray-200 dark:border-slate-800">

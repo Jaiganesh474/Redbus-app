@@ -29,6 +29,8 @@ public class ScheduleResponseDto {
     private LocalDate validFrom;
     private LocalDate validTo;
     private String status;
+    private String boardingPoints;
+    private String droppingPoints;
     private Integer materializedTripsCount;
     private LocalDateTime createdAt;
 }

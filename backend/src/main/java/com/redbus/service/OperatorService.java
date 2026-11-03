@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -188,6 +189,40 @@ public class OperatorService {
         }
 
         Schedule saved = scheduleRepository.save(schedule);
+
+        // Instantly synchronize updated boarding points, dropping points, timings, and fares across all upcoming live trips
+        BigDecimal computedDuration = calculateDurationHours(saved.getDepartureTime(), saved.getArrivalTime());
+        if (saved.getRoute() != null) {
+            Route r = saved.getRoute();
+            if (saved.getSourceCity() != null) r.setSourceCity(saved.getSourceCity());
+            if (saved.getDestinationCity() != null) r.setDestinationCity(saved.getDestinationCity());
+            if (saved.getDepartureTime() != null) r.setDepartureTime(saved.getDepartureTime());
+            if (saved.getArrivalTime() != null) r.setArrivalTime(saved.getArrivalTime());
+            if (saved.getBasePrice() != null) r.setBasePrice(saved.getBasePrice());
+            if (saved.getBoardingPoints() != null) r.setBoardingPoints(saved.getBoardingPoints());
+            if (saved.getDroppingPoints() != null) r.setDroppingPoints(saved.getDroppingPoints());
+            r.setDurationHours(computedDuration);
+            routeRepository.save(r);
+        }
+
+        if (saved.getBus() != null) {
+            List<Route> upcoming = routeRepository.findUpcomingRoutesForSchedule(operatorId, saved.getBus().getId(), LocalDate.now());
+            for (Route r : upcoming) {
+                if (saved.getSourceCity() != null) r.setSourceCity(saved.getSourceCity());
+                if (saved.getDestinationCity() != null) r.setDestinationCity(saved.getDestinationCity());
+                if (saved.getDepartureTime() != null) r.setDepartureTime(saved.getDepartureTime());
+                if (saved.getArrivalTime() != null) r.setArrivalTime(saved.getArrivalTime());
+                if (saved.getBasePrice() != null) r.setBasePrice(saved.getBasePrice());
+                if (saved.getBoardingPoints() != null) r.setBoardingPoints(saved.getBoardingPoints());
+                if (saved.getDroppingPoints() != null) r.setDroppingPoints(saved.getDroppingPoints());
+                r.setDurationHours(computedDuration);
+            }
+            if (!upcoming.isEmpty()) {
+                routeRepository.saveAll(upcoming);
+                log.info("Updated {} upcoming routes with new schedule changes (Boarding/Dropping/Times)", upcoming.size());
+            }
+        }
+
         return mapToScheduleDto(saved);
     }
 
@@ -270,7 +305,7 @@ public class OperatorService {
                         .arrivalTime(req.getArrivalTime())
                         .travelDate(current)
                         .basePrice(req.getBasePrice())
-                        .durationHours(new BigDecimal("6.5"))
+                        .durationHours(calculateDurationHours(req.getDepartureTime(), req.getArrivalTime()))
                         .boardingPoints(boarding)
                         .droppingPoints(dropping)
                         .build();
@@ -351,11 +386,21 @@ public class OperatorService {
                 .arrivalTime(schedule.getArrivalTime())
                 .operatingDays(schedule.getOperatingDays())
                 .basePrice(schedule.getBasePrice())
+                .boardingPoints(schedule.getBoardingPoints())
+                .droppingPoints(schedule.getDroppingPoints())
                 .validFrom(schedule.getValidFrom())
                 .validTo(schedule.getValidTo())
                 .status(schedule.getStatus())
                 .createdAt(schedule.getCreatedAt())
                 .build();
+    }
+
+    private BigDecimal calculateDurationHours(LocalTime dep, LocalTime arr) {
+        if (dep == null || arr == null) return new BigDecimal("6.5");
+        long diffMinutes = java.time.Duration.between(dep, arr).toMinutes();
+        if (diffMinutes < 0) diffMinutes += 24 * 60;
+        double hours = Math.round((diffMinutes / 60.0) * 10.0) / 10.0;
+        return BigDecimal.valueOf(hours);
     }
 
     @Transactional

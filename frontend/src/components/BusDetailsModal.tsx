@@ -1104,7 +1104,7 @@ export default function BusDetailsModal({
                                   Operator Commitment
                                 </h4>
                                 <p className="text-xs text-red-800 dark:text-red-200 mt-1">
-                                  {route.operatorName} is rated {route.rating.toFixed(1)}/5 for comfort, timing, and cleanliness.
+                                  {totalReviewsCount > 0 ? `${route.operatorName} is rated ${avgBusRating.toFixed(1)}/5 for comfort, timing, and cleanliness.` : `${route.operatorName} welcomes you to review your journey experience.`}
                                 </p>
                               </div>
 
