@@ -104,7 +104,7 @@ fun CheckoutScreen(
 
     onUpdatePassenger: (Int, String, Int, String) -> Unit,
 
-    onUpdateContact: (String, String) -> Unit,
+    onUpdateContact: (String, String, String) -> Unit,
 
     onToggleFreeCancellation: (Boolean) -> Unit,
 
@@ -150,6 +150,7 @@ fun CheckoutScreen(
     var newPassengerGender by remember { mutableStateOf("MALE") }
     var editContactPhone by remember { mutableStateOf(uiState.contactPhone) }
     var editContactEmail by remember { mutableStateOf(uiState.contactEmail) }
+    var editStateOfResidence by remember { mutableStateOf(uiState.stateOfResidence.ifBlank { "Karnataka" }) }
 
 
 
@@ -636,6 +637,7 @@ fun CheckoutScreen(
                                     .clickable {
                                         editContactPhone = uiState.contactPhone
                                         editContactEmail = uiState.contactEmail
+                                        editStateOfResidence = uiState.stateOfResidence.ifBlank { "Karnataka" }
                                         showEditContactDialog = true
                                     }
                                     .padding(4.dp)
@@ -660,10 +662,19 @@ fun CheckoutScreen(
                             )
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.clickable {
+                                editContactPhone = uiState.contactPhone
+                                editContactEmail = uiState.contactEmail
+                                editStateOfResidence = uiState.stateOfResidence.ifBlank { "Karnataka" }
+                                showEditContactDialog = true
+                            }
+                        ) {
                             Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                             Text(
-                                text = "State of residence: Karnataka",
+                                text = "State of residence: " + uiState.stateOfResidence.ifBlank { "Karnataka" },
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -2480,7 +2491,11 @@ fun CheckoutScreen(
 
                                                     (1..10).forEach { s ->
 
-                                                        val isSelected = uiState.selectedSeats.any { it.seatNumber.contains(s.toString()) }
+                                                        val isSelected = uiState.selectedSeats.any { seat ->
+                                                            val numStr = seat.seatNumber.filter { it.isDigit() }
+                                                            val isLower = seat.deck.equals("LOWER", ignoreCase = true) || seat.seatNumber.uppercase().startsWith("L") || (!seat.deck.equals("UPPER", ignoreCase = true) && !seat.seatNumber.uppercase().startsWith("U"))
+                                                            isLower && numStr == s.toString()
+                                                        }
 
                                                         Box(
 
@@ -2530,7 +2545,11 @@ fun CheckoutScreen(
 
                                                     (1..10).forEach { s ->
 
-                                                        val isSelected = uiState.selectedSeats.any { it.seatNumber.startsWith("U$s") || it.seatNumber.contains("U$s") }
+                                                        val isSelected = uiState.selectedSeats.any { seat ->
+                                                            val numStr = seat.seatNumber.filter { it.isDigit() }
+                                                            val isUpper = seat.deck.equals("UPPER", ignoreCase = true) || seat.seatNumber.uppercase().startsWith("U")
+                                                            isUpper && numStr == s.toString()
+                                                        }
 
                                                         Box(
 
@@ -2903,12 +2922,19 @@ fun CheckoutScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    OutlinedTextField(
+                        value = editStateOfResidence,
+                        onValueChange = { editStateOfResidence = it },
+                        label = { Text("State of Residence") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onUpdateContact(editContactEmail, editContactPhone)
+                        onUpdateContact(editContactEmail, editContactPhone, editStateOfResidence)
                         showEditContactDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson)

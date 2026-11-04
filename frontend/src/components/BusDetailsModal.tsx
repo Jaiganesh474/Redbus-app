@@ -487,6 +487,8 @@ export default function BusDetailsModal({
       setActiveStep("SEATS");
       setBoardDropSubTab("boarding");
       setAreaSearchTerm("");
+      dispatch(setBoardingPoint(""));
+      dispatch(setDroppingPoint(""));
       const timer = setTimeout(() => {
         setIsMinSeatLoading(false);
       }, 1000);

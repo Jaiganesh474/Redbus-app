@@ -304,7 +304,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         fareBreakdown = viewModel.calculateFareBreakdown(),
                         availableCoupons = uiState.availableCoupons,
                         onUpdatePassenger = viewModel::updatePassenger,
-                        onUpdateContact = viewModel::updateContactDetails,
+                        onUpdateContact = { email, phone, stateOfResidence -> viewModel.updateContactDetails(email, phone, stateOfResidence) },
                         onToggleFreeCancellation = viewModel::toggleFreeCancellation,
                         onToggleTripGuarantee = viewModel::toggleTripGuarantee,
                         onToggleUseWallet = viewModel::toggleUseWallet,

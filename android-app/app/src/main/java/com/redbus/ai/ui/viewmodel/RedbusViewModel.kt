@@ -81,6 +81,7 @@ data class RedbusUiState(
     val passengers: List<PassengerInput> = emptyList(),
     val contactEmail: String = "",
     val contactPhone: String = "",
+    val stateOfResidence: String = "Karnataka",
     val appliedCoupon: CouponValidationResponse? = null,
     val couponMessage: String? = null,
     val isValidatingCoupon: Boolean = false,
@@ -749,8 +750,8 @@ class RedbusViewModel(
                             seatLayout = layout,
                             selectedSeats = emptyList(),
                             lockedSeatIds = emptyList(),
-                            selectedBoardingPoint = route.boardingPoints?.firstOrNull().orEmpty(),
-                            selectedDroppingPoint = route.droppingPoints?.firstOrNull().orEmpty(),
+                            selectedBoardingPoint = "",
+                            selectedDroppingPoint = "",
                             appliedCoupon = null,
                             couponMessage = null,
                             pendingRazorpayPayment = null
@@ -1022,8 +1023,8 @@ class RedbusViewModel(
         }
     }
 
-    fun updateContactDetails(email: String, phone: String) {
-        _uiState.update { it.copy(contactEmail = email, contactPhone = phone) }
+    fun updateContactDetails(email: String, phone: String, stateOfResidence: String = "Karnataka") {
+        _uiState.update { it.copy(contactEmail = email, contactPhone = phone, stateOfResidence = stateOfResidence) }
     }
 
     fun toggleFreeCancellation(enabled: Boolean) {
