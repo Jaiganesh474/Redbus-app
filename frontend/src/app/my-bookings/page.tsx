@@ -2230,7 +2230,7 @@ export default function MyBookingsPage() {
       {selectedBookingForChangeDate && (() => {
         const booking = selectedBookingForChangeDate;
         const datesList = availableDatesData?.dates || [];
-        const selectedDateInfo = datesList.find((d) => d.date === newJourneyDate);
+        const selectedDateInfo = datesList.find((d: any) => d.date === newJourneyDate);
         const bookedSeats = availableDatesData?.bookedSeats || booking.passengers.map((p) => p.seatNumber);
         const requiredSeatCount = bookedSeats.length || 1;
         const needsSeatSelection = selectedDateInfo && selectedDateInfo.busAvailable && !selectedDateInfo.sameSeatsAvailable;
@@ -2331,7 +2331,7 @@ export default function MyBookingsPage() {
 
                 {datesList.length > 0 ? (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1">
-                    {datesList.slice(0, 28).map((item) => {
+                    {datesList.slice(0, 28).map((item: any) => {
                       const isCurrent = item.date === booking.travelDate;
                       const isSelected = item.date === newJourneyDate;
                       const isAvailable = item.busAvailable;
@@ -2442,7 +2442,7 @@ export default function MyBookingsPage() {
                     </Link>
                   </div>
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pt-1">
-                    {selectedDateInfo.availableSeatNumbers.map((seatNo) => {
+                    {selectedDateInfo.availableSeatNumbers.map((seatNo: string) => {
                       const picked = selectedNewSeats.includes(seatNo);
                       return (
                         <button
