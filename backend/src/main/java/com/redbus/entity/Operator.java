@@ -48,6 +48,10 @@ public class Operator {
     @Builder.Default
     private String status = "APPROVED"; // 'PENDING_APPROVAL', 'APPROVED', 'SUSPENDED'
 
+    @Column(name = "primo_certified")
+    @Builder.Default
+    private Boolean primoCertified = false;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

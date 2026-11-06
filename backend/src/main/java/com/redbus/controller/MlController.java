@@ -1,18 +1,15 @@
 package com.redbus.controller;
 
 import com.redbus.dto.*;
-import com.redbus.service.AiService;
 import com.redbus.service.MlService;
 import com.redbus.service.UserActivityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping({"/api", "/api/v1"})
@@ -21,7 +18,6 @@ public class MlController {
 
     private final MlService mlService;
     private final UserActivityService userActivityService;
-    private final AiService aiService;
 
     // 1. Client User Activity Logging
     @PostMapping("/activity/track")
@@ -83,30 +79,5 @@ public class MlController {
     ) {
         List<AiBusPhotoDto> photos = mlService.generateAiBusPhotos(busType, busName, category);
         return ResponseEntity.ok(photos);
-    }
-
-    // 6. Admin AI & MLOps Monitoring Dashboard
-    @GetMapping("/admin/ml/ai-monitoring")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
-    public ResponseEntity<AiMonitoringStatsDto> getAiMonitoringStats() {
-        AiMonitoringStatsDto stats = aiService.getAiMonitoringStats();
-        return ResponseEntity.ok(stats);
-    }
-
-    // 7. Admin User Activity & Fraud Shield Dashboard
-    @GetMapping("/admin/ml/user-activity")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
-    public ResponseEntity<UserActivityStatsDto> getUserActivityStats() {
-        UserActivityStatsDto stats = userActivityService.getUserActivityStats();
-        return ResponseEntity.ok(stats);
-    }
-
-    // 8. Admin AI Simulation Playground
-    @PostMapping("/admin/ml/simulate-query")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
-    public ResponseEntity<Map<String, Object>> simulateAiQuery(@RequestBody Map<String, String> payload) {
-        String testQuery = payload.getOrDefault("query", "AC sleeper bus from Bangalore to Chennai tomorrow");
-        Map<String, Object> result = aiService.simulateAiQuery(testQuery);
-        return ResponseEntity.ok(result);
     }
 }

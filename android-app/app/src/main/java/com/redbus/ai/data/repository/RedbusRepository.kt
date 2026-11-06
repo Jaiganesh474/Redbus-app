@@ -327,4 +327,57 @@ class RedbusRepository(
             }
         }
     }
+
+    // Master Admin Endpoints
+    suspend fun getAdminStats(): Result<AdminStatsDto> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminStats() }
+    }
+
+    suspend fun getAdminOperators(): Result<List<OperatorDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminOperators() }
+    }
+
+    suspend fun getAdminPrimoBuses(): Result<List<BusResponseDto>> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminPrimoBuses() }
+    }
+
+    suspend fun verifyOperator(id: Long): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.verifyOperator(id) }
+    }
+
+    suspend fun suspendOperator(id: Long): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.suspendOperator(id) }
+    }
+
+    suspend fun updateOperatorCommission(id: Long, commissionRate: Double): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.updateOperatorCommission(id, mapOf("commissionRate" to commissionRate)) }
+    }
+
+    suspend fun togglePrimoOperator(id: Long, primoCertified: Boolean): Result<OperatorDto> = withContext(Dispatchers.IO) {
+        runCatching { api.togglePrimoOperator(id, mapOf("primoCertified" to primoCertified)) }
+    }
+
+    suspend fun getAdminOperatorEarnings(): Result<AdminOperatorEarningsDto> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminOperatorEarnings() }
+    }
+
+    suspend fun getAdminBookings(page: Int = 0, size: Int = 20): Result<List<BookingDetails>> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminBookings(page, size).content.orEmpty() }
+    }
+
+    suspend fun getAdminBanners(): Result<List<Banner>> = withContext(Dispatchers.IO) {
+        runCatching { api.getAdminBanners() }
+    }
+
+    suspend fun createAdminBanner(request: CreateBannerRequest): Result<Banner> = withContext(Dispatchers.IO) {
+        runCatching { api.createAdminBanner(request) }
+    }
+
+    suspend fun deleteAdminBanner(id: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching { api.deleteAdminBanner(id); Unit }
+    }
+
+    suspend fun generateAiBanner(request: GenerateAiBannerRequest): Result<Banner> = withContext(Dispatchers.IO) {
+        runCatching { api.generateAiBanner(request) }
+    }
 }

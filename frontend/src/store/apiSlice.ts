@@ -574,7 +574,19 @@ export const apiSlice = createApi({
         method: "PUT",
         body: { commissionRate },
       }),
-      invalidatesTags: ["AdminOperators", "Admin"],
+      invalidatesTags: ["AdminOperators", "Admin", "OperatorProfile"],
+    }),
+    togglePrimoOperator: builder.mutation<Operator, { id: number; primoCertified: boolean }>({
+      query: ({ id, primoCertified }) => ({
+        url: `/admin/operators/${id}/primo`,
+        method: "PUT",
+        body: { primoCertified },
+      }),
+      invalidatesTags: ["AdminOperators", "Admin", "Route", "OperatorProfile", "OperatorBuses"],
+    }),
+    getAdminPrimoBuses: builder.query<BusResponse[], void>({
+      query: () => "/admin/primo-buses",
+      providesTags: ["AdminOperators", "Admin", "Route", "OperatorBuses"],
     }),
     getAdminOperatorEarnings: builder.query<AdminOperatorEarnings, void>({
       query: () => "/admin/operator-earnings",
@@ -694,25 +706,6 @@ export const apiSlice = createApi({
         body: { photoUrls },
       }),
       invalidatesTags: ["OperatorBuses", "Route", "BusPhotos"],
-    }),
-    getAdminAiMonitoring: builder.query<AiMonitoringStats, void>({
-      query: () => "/admin/ml/ai-monitoring",
-      providesTags: ["AiMonitoring"],
-    }),
-    getAdminUserActivity: builder.query<UserActivityStats, void>({
-      query: () => "/admin/ml/user-activity",
-      providesTags: ["UserActivity"],
-    }),
-    simulateAdminAiQuery: builder.mutation<
-      { query: string; latencyMs: number; parsedResult: any; modelUsed: string; confidenceScore: number; safetyStatus: string },
-      { query: string }
-    >({
-      query: (body) => ({
-        url: "/admin/ml/simulate-query",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["AiMonitoring"],
     }),
     // Banners
     getBanners: builder.query<Banner[], void>({
@@ -846,6 +839,8 @@ export const {
   useVerifyOperatorMutation,
   useSuspendOperatorMutation,
   useUpdateOperatorCommissionMutation,
+  useTogglePrimoOperatorMutation,
+  useGetAdminPrimoBusesQuery,
   useGetPublicFaqsQuery,
   useGetAvailableCouponsQuery,
   useGetOperatorCouponsQuery,
@@ -862,9 +857,6 @@ export const {
   useGetSmartSeatRecommendationsQuery,
   useGetAiBusPhotosQuery,
   useUpdateBusPhotosMutation,
-  useGetAdminAiMonitoringQuery,
-  useGetAdminUserActivityQuery,
-  useSimulateAdminAiQueryMutation,
   useGetBannersQuery,
   useGetAdminBannersQuery,
   useCreateBannerMutation,

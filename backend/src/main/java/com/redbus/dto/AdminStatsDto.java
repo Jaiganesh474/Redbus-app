@@ -19,5 +19,9 @@ public class AdminStatsDto {
     private double occupancyRate;
     private long totalRoutes;
     private long totalBuses;
+    private long primoOperatorsCount;
+    private long primoBusesCount;
+    private long activeSchedulesCount;
+    private long approvedOperatorsCount;
     private List<CityPairDto> topRoutes;
 }

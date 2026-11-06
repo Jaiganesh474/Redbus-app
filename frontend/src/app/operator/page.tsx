@@ -87,6 +87,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   HelpCircle,
+  Star,
 } from "lucide-react";
 
 export default function OperatorPortalPage() {
@@ -835,7 +836,7 @@ export default function OperatorPortalPage() {
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 {user.operatorStatus === "PENDING" ? (
                   <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-300 font-bold text-xs uppercase tracking-wider rounded-full flex items-center gap-1.5 animate-pulse">
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -846,6 +847,18 @@ export default function OperatorPortalPage() {
                     <ShieldCheck className="w-3.5 h-3.5 text-red-400" />
                     Verified Bus Operator Portal
                   </span>
+                )}
+                {operatorProfile?.primoCertified && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#192857] to-[#111b3d] border border-amber-400/60 shadow-md">
+                    <span className="inline-flex items-center gap-1 text-amber-300 font-black italic text-xs tracking-wide">
+                      <span>Primo</span>
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    </span>
+                    <span className="h-3 w-[1px] bg-amber-400/40" />
+                    <span className="text-[10px] font-extrabold text-white uppercase tracking-wider">
+                      On Time Guarantee • 0% Commission
+                    </span>
+                  </div>
                 )}
                 <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-semibold rounded-full flex items-center gap-1">
                   <Activity className="w-3 h-3 animate-pulse" /> Live DB Sync
@@ -2578,7 +2591,16 @@ export default function OperatorPortalPage() {
                   Manage your public brand identity, contact person, passenger support numbers, and payout bank details.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {operatorProfile?.primoCertified && (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#192857] to-[#111b3d] border border-amber-400/60 shadow-sm">
+                    <span className="inline-flex items-center gap-1 text-amber-300 font-black italic text-xs">
+                      <span>Primo</span>
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    </span>
+                    <span className="text-[11px] font-bold text-white">On Time Guarantee • Primo Bus Operator</span>
+                  </div>
+                )}
                 <span className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <span>Status: {operatorProfile?.status || "APPROVED"}</span>
@@ -2796,6 +2818,24 @@ export default function OperatorPortalPage() {
                     </div>
                   </div>
 
+                  {operatorProfile?.primoCertified && (
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#192857] via-[#1e326b] to-[#111b3d] border border-amber-400/50 shadow-md flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="px-2.5 py-1 rounded-lg bg-amber-400/15 border border-amber-400/40 flex items-center gap-1">
+                          <span className="text-amber-300 font-black italic text-sm tracking-wide">Primo</span>
+                          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-white leading-tight">Primo Bus Operator</p>
+                          <p className="text-[10px] font-bold text-amber-300">On Time Guarantee Certified</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black">
+                        0% FEE
+                      </span>
+                    </div>
+                  )}
+
                   <div className="border-t border-white/10 pt-4 space-y-3">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-gray-400">Verification Status</span>
@@ -2806,9 +2846,15 @@ export default function OperatorPortalPage() {
 
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-gray-400">Platform Commission</span>
-                      <span className="font-bold text-white">
-                        {operatorProfile?.commissionRate || "10.00"}% Standard Tier
-                      </span>
+                      {operatorProfile?.primoCertified ? (
+                        <span className="font-black text-amber-300">
+                          0% Commission (Primo Certified)
+                        </span>
+                      ) : (
+                        <span className="font-bold text-white">
+                          {operatorProfile?.commissionRate ?? "10.00"}% Standard Tier
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex justify-between items-center text-xs">

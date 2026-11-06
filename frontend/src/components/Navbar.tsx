@@ -186,7 +186,7 @@ export default function Navbar() {
                   <HelpCircle className="w-4 h-4" />
                   <span>Help & FAQs</span>
                 </Link>
-                {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
+                {activeUser?.role === "ROLE_OPERATOR" && (
                   <Link
                     href="/operator"
                     className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-1.5 ${
@@ -373,7 +373,7 @@ export default function Navbar() {
                           <Settings className="w-4 h-4 text-gray-400 dark:text-slate-400" />
                           <span className="font-medium">Account Settings</span>
                         </Link>
-                        {(activeUser.role === "ROLE_OPERATOR" || activeUser.role === "ROLE_ADMIN" || activeUser.roles?.includes("ROLE_OPERATOR") || activeUser.roles?.includes("ROLE_ADMIN")) && (
+                        {(activeUser.role === "ROLE_OPERATOR" || (activeUser.roles?.includes("ROLE_OPERATOR") && activeUser.role !== "ROLE_ADMIN")) && (
                           <Link
                             href="/operator"
                             onClick={() => setUserDropdownOpen(false)}
@@ -612,7 +612,7 @@ export default function Navbar() {
                     <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                   </Link>
 
-                  {(activeUser?.role === "ROLE_OPERATOR" || activeUser?.role === "ROLE_ADMIN") && (
+                  {activeUser?.role === "ROLE_OPERATOR" && (
                     <Link
                       href="/operator"
                       onClick={() => setMobileMenuOpen(false)}

@@ -30,6 +30,12 @@ public class OperatorService {
 
     @Transactional
     public Operator getOrCreateOperatorForUser(User user) {
+        if (user.getRole() != null && user.getRole().toUpperCase().contains("ADMIN")) {
+            return operatorRepository.findAll().stream()
+                    .filter(op -> "APPROVED".equalsIgnoreCase(op.getStatus()))
+                    .findFirst()
+                    .orElseGet(() -> operatorRepository.findAll().stream().findFirst().orElse(null));
+        }
         return operatorRepository.findByUserId(user.getId())
                 .orElseGet(() -> {
                     Operator newOp = Operator.builder()
@@ -39,6 +45,7 @@ public class OperatorService {
                             .email(user.getEmail())
                             .phone(user.getPhone() != null ? user.getPhone() : "+91 9876543210")
                             .commissionRate(new BigDecimal("10.00"))
+                            .primoCertified(false)
                             .status("APPROVED")
                             .build();
                     return operatorRepository.save(newOp);
@@ -379,6 +386,12 @@ public class OperatorService {
     }
 
     private BusResponseDto mapToBusDto(Bus bus) {
+        boolean isPrimo = false;
+        if (bus.getOperatorId() != null) {
+            isPrimo = operatorRepository.findById(bus.getOperatorId())
+                    .map(op -> Boolean.TRUE.equals(op.getPrimoCertified()))
+                    .orElse(false);
+        }
         return BusResponseDto.builder()
                 .id(bus.getId())
                 .operatorId(bus.getOperatorId())
@@ -390,6 +403,7 @@ public class OperatorService {
                 .photoUrls(bus.getPhotoUrls())
                 .active(bus.getActive())
                 .rating(bus.getRating())
+                .primoCertified(isPrimo)
                 .createdAt(bus.getCreatedAt())
                 .build();
     }
@@ -526,6 +540,8 @@ public class OperatorService {
         int totalBuses = busRepository.findByOperatorId(op.getId()).size();
         int totalSchedules = scheduleRepository.findByOperatorId(op.getId()).size();
 
+        boolean isPrimo = Boolean.TRUE.equals(op.getPrimoCertified());
+        BigDecimal commRate = isPrimo ? BigDecimal.ZERO : (op.getCommissionRate() != null ? op.getCommissionRate() : new BigDecimal("10.00"));
         return OperatorDto.builder()
                 .id(op.getId())
                 .userId(op.getUser() != null ? op.getUser().getId() : null)
@@ -535,7 +551,8 @@ public class OperatorService {
                 .phone(op.getPhone())
                 .kycDocUrl(op.getKycDocUrl())
                 .bankAccountRef(op.getBankAccountRef())
-                .commissionRate(op.getCommissionRate())
+                .commissionRate(commRate)
+                .primoCertified(isPrimo)
                 .status(op.getStatus())
                 .createdAt(op.getCreatedAt())
                 .totalBuses(totalBuses)

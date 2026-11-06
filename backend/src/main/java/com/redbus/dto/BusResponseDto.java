@@ -22,5 +22,6 @@ public class BusResponseDto {
     private String photoUrls;
     private Boolean active;
     private BigDecimal rating;
+    private Boolean primoCertified;
     private LocalDateTime createdAt;
 }

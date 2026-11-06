@@ -128,8 +128,12 @@ data class RedbusUiState(
     val selectedLanguage: String = SessionManager.getLanguage(),
     val isBookingForWomen: Boolean = false,
     // Operator Portal State
+    val isAdmin: Boolean = user?.let {
+        it.role.contains("ADMIN", ignoreCase = true) || (it.roles?.any { r -> r.contains("ADMIN", ignoreCase = true) } == true)
+    } ?: false,
     val isOperator: Boolean = user?.let {
-        it.role.contains("OPERATOR", ignoreCase = true) || it.role.contains("ADMIN", ignoreCase = true)
+        val adminRole = it.role.contains("ADMIN", ignoreCase = true) || (it.roles?.any { r -> r.contains("ADMIN", ignoreCase = true) } == true)
+        !adminRole && (it.role.contains("OPERATOR", ignoreCase = true) || (it.roles?.any { r -> r.contains("OPERATOR", ignoreCase = true) } == true))
     } ?: false,
     val operatorProfile: OperatorDto? = null,
     val operatorAnalytics: OperatorAnalyticsDto? = null,
@@ -144,6 +148,16 @@ data class RedbusUiState(
     val isOperatorLoading: Boolean = false,
     val operatorActionMessage: String? = null,
     val operatorErrorMessage: String? = null,
+    // Master Admin Portal State
+    val adminStats: AdminStatsDto? = null,
+    val adminOperators: List<OperatorDto> = emptyList(),
+    val adminPrimoBuses: List<BusResponseDto> = emptyList(),
+    val adminOperatorEarnings: AdminOperatorEarningsDto? = null,
+    val adminBanners: List<Banner> = emptyList(),
+    val adminBookings: List<BookingDetails> = emptyList(),
+    val isAdminLoading: Boolean = false,
+    val adminActionMessage: String? = null,
+    val adminErrorMessage: String? = null,
     // Cross-Tab Persistent Notifications State
     val readNotificationIds: Set<String> = SessionManager.getReadNotificationIds(),
     val dismissedNotificationIds: Set<String> = SessionManager.getDismissedNotificationIds()
@@ -272,13 +286,15 @@ class RedbusViewModel(
         viewModelScope.launch {
             repository.getMe().onSuccess { freshUser ->
                 SessionManager.updateUser(freshUser)
-                val isOp = freshUser.role.contains("OPERATOR", ignoreCase = true) || freshUser.role.contains("ADMIN", ignoreCase = true)
+                val isAdminRole = freshUser.role.contains("ADMIN", ignoreCase = true) || (freshUser.roles?.any { r -> r.contains("ADMIN", ignoreCase = true) } == true)
+                val isOp = !isAdminRole && (freshUser.role.contains("OPERATOR", ignoreCase = true) || (freshUser.roles?.any { r -> r.contains("OPERATOR", ignoreCase = true) } == true))
                 val isDifferentUser = lastObservedUserId != null && lastObservedUserId != freshUser.id
                 lastObservedUserId = freshUser.id
                 _uiState.update {
                     it.copy(
                         user = freshUser,
                         isAuthenticated = true,
+                        isAdmin = isAdminRole,
                         isOperator = isOp,
                         contactEmail = freshUser.email,
                         contactPhone = freshUser.phone.orEmpty(),
@@ -286,7 +302,9 @@ class RedbusViewModel(
                         chatMessages = if (isDifferentUser) getDefaultChatMessages() else it.chatMessages
                     )
                 }
-                if (isOp) {
+                if (isAdminRole) {
+                    fetchAdminDashboardData()
+                } else if (isOp) {
                     fetchOperatorDashboardData()
                 }
             }
@@ -338,7 +356,8 @@ class RedbusViewModel(
             repository.login(email, password)
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
-                    val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
+                    val isAdminRole = res.user.role.contains("ADMIN", ignoreCase = true) || (res.user.roles?.any { r -> r.contains("ADMIN", ignoreCase = true) } == true)
+                    val isOp = !isAdminRole && (res.user.role.contains("OPERATOR", ignoreCase = true) || (res.user.roles?.any { r -> r.contains("OPERATOR", ignoreCase = true) } == true))
                     lastObservedUserId = res.user.id
                     _uiState.update {
                         it.copy(
@@ -346,6 +365,7 @@ class RedbusViewModel(
                             user = res.user,
                             token = res.token,
                             isAuthenticated = true,
+                            isAdmin = isAdminRole,
                             isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
@@ -356,7 +376,9 @@ class RedbusViewModel(
                         )
                     }
                     refreshAuthenticatedAccountData()
-                    if (isOp) {
+                    if (isAdminRole) {
+                        fetchAdminDashboardData()
+                    } else if (isOp) {
                         fetchOperatorDashboardData()
                     }
                     onSuccess()
@@ -451,7 +473,8 @@ class RedbusViewModel(
             repository.loginWithMobileOtp(formattedPhone, otp)
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
-                    val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
+                    val isAdminRole = res.user.role.contains("ADMIN", ignoreCase = true) || (res.user.roles?.any { r -> r.contains("ADMIN", ignoreCase = true) } == true)
+                    val isOp = !isAdminRole && (res.user.role.contains("OPERATOR", ignoreCase = true) || (res.user.roles?.any { r -> r.contains("OPERATOR", ignoreCase = true) } == true))
                     lastObservedUserId = res.user.id
                     _uiState.update {
                         it.copy(
@@ -460,6 +483,7 @@ class RedbusViewModel(
                             user = res.user,
                             token = res.token,
                             isAuthenticated = true,
+                            isAdmin = isAdminRole,
                             isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
@@ -470,7 +494,9 @@ class RedbusViewModel(
                         )
                     }
                     refreshAuthenticatedAccountData()
-                    if (isOp) {
+                    if (isAdminRole) {
+                        fetchAdminDashboardData()
+                    } else if (isOp) {
                         fetchOperatorDashboardData()
                     }
                     onSuccess()
@@ -494,6 +520,7 @@ class RedbusViewModel(
                 user = null,
                 token = null,
                 isAuthenticated = false,
+                isAdmin = false,
                 isOperator = false,
                 operatorProfile = null,
                 operatorAnalytics = null,
@@ -505,6 +532,12 @@ class RedbusViewModel(
                 operatorPricingIntelligence = emptyList(),
                 operatorWalletLedger = null,
                 operatorCoupons = emptyList(),
+                adminStats = null,
+                adminOperators = emptyList(),
+                adminPrimoBuses = emptyList(),
+                adminOperatorEarnings = null,
+                adminBanners = emptyList(),
+                adminBookings = emptyList(),
                 savedTravellers = emptyList(),
                 myBookings = emptyList(),
                 pnrSearchResult = null,
@@ -699,7 +732,7 @@ class RedbusViewModel(
         val state = _uiState.value
         return when (state.activeFilter) {
             RouteFilter.ALL -> state.routes
-            RouteFilter.PRIMO -> state.routes.filter { it.rating >= 4.4 }.sortedByDescending { it.rating }
+            RouteFilter.PRIMO -> state.routes.filter { it.primoCertified == true }.sortedByDescending { it.rating }
             RouteFilter.SLEEPER -> state.routes.filter { it.busType.contains("Sleeper", ignoreCase = true) }
             RouteFilter.SEATER -> state.routes.filter { it.busType.contains("Seater", ignoreCase = true) }
             RouteFilter.AC -> state.routes.filter {
@@ -2115,6 +2148,184 @@ class RedbusViewModel(
                 onFailure = { err ->
                     val msg = extractErrorMessage(err, "Failed to update profile")
                     onError(msg)
+                }
+            )
+        }
+    }
+
+    // ==========================================
+    // MASTER ADMIN PORTAL ACTIONS
+    // ==========================================
+
+    fun fetchAdminDashboardData() {
+        if (!_uiState.value.isAdmin) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAdminLoading = true, adminErrorMessage = null) }
+
+            repository.getAdminStats().onSuccess { stats ->
+                _uiState.update { it.copy(adminStats = stats) }
+            }
+
+            repository.getAdminOperators().onSuccess { ops ->
+                _uiState.update { it.copy(adminOperators = ops) }
+            }
+
+            repository.getAdminPrimoBuses().onSuccess { buses ->
+                _uiState.update { it.copy(adminPrimoBuses = buses) }
+            }
+
+            repository.getAdminOperatorEarnings().onSuccess { earnings ->
+                _uiState.update { it.copy(adminOperatorEarnings = earnings) }
+            }
+
+            repository.getAdminBanners().onSuccess { banners ->
+                _uiState.update { it.copy(adminBanners = banners) }
+            }
+
+            repository.getAdminBookings(0, 25).onSuccess { bookings ->
+                _uiState.update { it.copy(adminBookings = bookings) }
+            }
+
+            _uiState.update { it.copy(isAdminLoading = false) }
+        }
+    }
+
+    fun clearAdminMessages() {
+        _uiState.update { it.copy(adminActionMessage = null, adminErrorMessage = null) }
+    }
+
+    fun verifyAdminOperator(id: Long, companyName: String) {
+        viewModelScope.launch {
+            repository.verifyOperator(id).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(adminActionMessage = "Operator \"$companyName\" approved & verified!")
+                    }
+                    fetchAdminDashboardData()
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to verify operator."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun suspendAdminOperator(id: Long, companyName: String) {
+        viewModelScope.launch {
+            repository.suspendOperator(id).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(adminActionMessage = "Operator \"$companyName\" suspended.")
+                    }
+                    fetchAdminDashboardData()
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to suspend operator."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun updateAdminOperatorCommission(id: Long, commissionRate: Double) {
+        viewModelScope.launch {
+            repository.updateOperatorCommission(id, commissionRate).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(adminActionMessage = "Commission updated to ${commissionRate.toInt()}%")
+                    }
+                    fetchAdminDashboardData()
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to update commission."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun toggleAdminPrimoOperator(id: Long, primoCertified: Boolean, companyName: String) {
+        viewModelScope.launch {
+            repository.togglePrimoOperator(id, primoCertified).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            adminActionMessage = if (primoCertified) {
+                                "★ \"$companyName\" certified as Primo Bus Operator (0% Commission-Free)!"
+                            } else {
+                                "\"$companyName\" Primo Certification removed."
+                            }
+                        )
+                    }
+                    fetchAdminDashboardData()
+                    performSearch()
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to update Primo status."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun generateAdminAiBanner(prompt: String, onGenerated: (Banner) -> Unit) {
+        if (prompt.isBlank()) return
+        viewModelScope.launch {
+            repository.generateAiBanner(GenerateAiBannerRequest(prompt = prompt.trim())).fold(
+                onSuccess = { generated ->
+                    _uiState.update {
+                        it.copy(adminActionMessage = "AI Banner generated! Review & publish below.")
+                    }
+                    onGenerated(generated)
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to generate AI banner."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun publishAdminBanner(request: CreateBannerRequest, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.createAdminBanner(request).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(adminActionMessage = "Banner \"${request.title}\" published live!")
+                    }
+                    fetchAdminDashboardData()
+                    repository.getBanners().onSuccess { b -> _uiState.update { s -> s.copy(banners = b) } }
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to publish banner."))
+                    }
+                }
+            )
+        }
+    }
+
+    fun deleteAdminBanner(id: Int, title: String) {
+        viewModelScope.launch {
+            repository.deleteAdminBanner(id).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(adminActionMessage = "Banner \"$title\" deleted.")
+                    }
+                    fetchAdminDashboardData()
+                    repository.getBanners().onSuccess { b -> _uiState.update { s -> s.copy(banners = b) } }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(adminErrorMessage = extractErrorMessage(err, "Failed to delete banner."))
+                    }
                 }
             )
         }

@@ -37,4 +37,6 @@ public class RouteResponseDto {
     private String busRoute;
     private String restStop;
     private String busSafety;
+    private String busNumber;
+    private Boolean primoCertified;
 }

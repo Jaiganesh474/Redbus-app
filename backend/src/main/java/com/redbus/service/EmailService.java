@@ -474,12 +474,12 @@ public class EmailService {
         }
 
         if (booking.getWalletAmountUsed() != null && booking.getWalletAmountUsed().compareTo(java.math.BigDecimal.ZERO) > 0) {
-            invoiceRows.append("<tr><td class='label'>redBus Wallet Deducted</td><td class='value' style='color:#059669;font-weight:700;'>-₹").append(booking.getWalletAmountUsed()).append("</td></tr>");
+            invoiceRows.append("<tr><td class='label'>redBus Wallet Deducted</td><td class='value' style='color:#059669;font-weight:700;'>₹").append(booking.getWalletAmountUsed()).append("</td></tr>");
         }
 
         java.math.BigDecimal opFee = booking.getServiceFee() != null ? booking.getServiceFee() : java.math.BigDecimal.ZERO;
         if (opFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
-            invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#111827;font-weight:700;'>+₹").append(opFee).append("</td></tr>");
+            invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#111827;font-weight:700;'>₹").append(opFee).append("</td></tr>");
         } else {
             invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#059669;'>FREE (₹0.00)</td></tr>");
         }
@@ -495,7 +495,7 @@ public class EmailService {
             paymentModeText = "Online Payment (Razorpay Card/UPI)";
         }
         invoiceRows.append("<tr><td class='label'>Payment Method</td><td class='value' style='color:#1e40af;'>").append(paymentModeText).append("</td></tr>");
-        invoiceRows.append("<tr><td class='label' style='font-size:15px;font-weight:800;color:#111827;'>Final Gateway Paid</td><td class='value' style='color:#e23744;font-size:20px;font-weight:900;'>₹").append(booking.getTotalAmount()).append("</td></tr>");
+        invoiceRows.append("<tr><td class='label' style='font-size:15px;font-weight:800;color:#111827;'>Total Amount Paid</td><td class='value' style='color:#e23744;font-size:20px;font-weight:900;'>₹").append(booking.getTotalAmount()).append("</td></tr>");
 
         return """
             <!DOCTYPE html>
@@ -645,7 +645,7 @@ public class EmailService {
                   <div class="pnr-box">
                     <div class="pnr-label">Booking PNR</div>
                     <div class="pnr-num">%s</div>
-                    <div class="pnr-badge">● CONFIRMED WITH OPERATOR</div>
+                    <div class="pnr-badge">✅ CONFIRMED WITH OPERATOR</div>
                   </div>
 
                   <div class="section-title">Journey & Bus Details</div>
@@ -665,7 +665,7 @@ public class EmailService {
 
                   <div class="pdf-callout">
                     <p style="margin:0;font-size:12px;color:#166534;line-height:1.5;font-weight:600;">
-                      📎 <strong>Your Official E-Ticket with QR Code is attached as a PDF to this email.</strong> Present this digital ticket or PDF during bus boarding.
+                      📎 <strong>Your Official E-Ticket with QR Code is attached as a PDF to this email.</strong> Present this digital ticket or PDF during bus boarding. Wishing you a happy and safe journey.
                     </p>
                   </div>
                 </div>

@@ -182,11 +182,11 @@ fun SearchResultsScreen(
         }
     }
 
-    // Live Filter Counts derived from rawRoutes (matching website search/page.tsx lines 530-550)
+    // Live Filter Counts derived from rawRoutes (matching website search/page.tsx)
     val filterCounts = remember(rawRoutes) {
         LiveFilterCounts(
             total = rawRoutes.size,
-            primo = rawRoutes.count { it.rating >= 4.4 },
+            primo = rawRoutes.count { it.primoCertified == true },
             freeCancel = rawRoutes.count { it.rating >= 4.0 || it.basePrice >= 600 },
             ac = rawRoutes.count {
                 it.busType.contains("ac", ignoreCase = true) && !it.busType.contains("non", ignoreCase = true)
@@ -280,7 +280,7 @@ fun SearchResultsScreen(
             }
 
             if (q.contains("primo") || q.contains("top rated")) {
-                result = result.filter { it.rating >= 4.4 }
+                result = result.filter { it.primoCertified == true }
             }
 
             if (q.contains("single")) {
@@ -296,7 +296,7 @@ fun SearchResultsScreen(
 
         // 2. Quick Filter Toggles
         if (isPrimoFilter) {
-            result = result.filter { it.rating >= 4.4 }
+            result = result.filter { it.primoCertified == true }
         }
         if (isFreeCancelFilter) {
             result = result.filter { it.rating >= 4.0 || it.basePrice >= 600 }
@@ -1488,6 +1488,23 @@ private fun BusRouteCard3D(
     val displayRatingStr = if (route.rating > 0.0) String.format(Locale.ENGLISH, "%.1f", route.rating) else "4.0"
     val displayTotalRatings = if (route.totalRatings > 0) route.totalRatings else 608
 
+    // Build top header strip data matching Image 4
+    val licensePlate = remember(route.busNumber, route.busId) {
+        route.busNumber?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "TN12BB${String.format(Locale.ENGLISH, "%04d", ((route.busId * 37 + 4466) % 9000) + 1000)}"
+    }
+    val parsedBoardingStops = remember(route.boardingPoints, route.sourceCity) {
+        val raw = route.boardingPoints.orEmpty()
+            .split(",")
+            .map { it.replace(Regex("\\([^)]*\\)"), "").trim() }
+            .filter { it.isNotEmpty() }
+        if (raw.isNotEmpty()) raw else listOf(route.sourceCity, "${route.sourceCity} Bypass", "${route.sourceCity} Toll")
+    }
+    val stop1 = parsedBoardingStops.getOrNull(0) ?: route.sourceCity
+    val stop2 = parsedBoardingStops.getOrNull(1) ?: "${route.sourceCity} Bypass"
+    val extraStopCount = (parsedBoardingStops.size - 2).coerceAtLeast(2)
+    val isDark = MaterialTheme.colorScheme.background == DarkBackground
+
     Card(
         onClick = onSelect,
         shape = RoundedCornerShape(18.dp),
@@ -1503,29 +1520,132 @@ private fun BusRouteCard3D(
             }
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Direct Bus Pill Badge
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = Color(0xFFEEF2FF)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Top Bus Number & Starting Stops Strip (Matching Image 4 on ALL bus cards)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF2F3F8))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Text(
-                    text = "Direct Bus",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4F46E5),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Yellow License Plate Badge: [• TN12BB4466 •]
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0xFFFACC15),
+                        border = BorderStroke(1.2.dp, Color(0xFF1E293B))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(3.5.dp).clip(CircleShape).background(Color(0xFF334155)))
+                            Text(
+                                text = licensePlate,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF0F172A),
+                                letterSpacing = 0.4.sp
+                            )
+                            Box(modifier = Modifier.size(3.5.dp).clip(CircleShape).background(Color(0xFF334155)))
+                        }
+                    }
+
+                    // STARTING Pill
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (isDark) Color(0xFF312E81).copy(alpha = 0.65f) else Color(0xFFE0E4FA)
+                    ) {
+                        Text(
+                            text = "STARTING",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF283593),
+                            letterSpacing = 0.4.sp,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                // From: Stop 1 ▸ Stop 2 ▸ N Other Stops
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "From: ",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF1E293B)
+                    )
+                    Text(
+                        text = "$stop1  ▸  $stop2  ▸  $extraStopCount Other Stops",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Card 1 Style: Primo Certified Operator Banner Row (Image 4 1st card)
+                if (route.primoCertified == true) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PrimoOnTimeBadge()
 
-            // Main Content Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(5.dp),
+                                color = if (isDark) Color(0xFF78350F).copy(alpha = 0.45f) else Color(0xFFFCE8B2)
+                            ) {
+                                Text(
+                                    text = "Exclusive ₹100 OFF",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFFFDE68A) else Color(0xFF5C3D04),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(5.dp),
+                                color = if (isDark) Color(0xFF312E81).copy(alpha = 0.45f) else Color(0xFFE5DEFF)
+                            ) {
+                                Text(
+                                    text = "Group 15% OFF",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFFC4B5FD) else Color(0xFF3B1E77),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), thickness = 0.8.dp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // Main Content Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
                 // Left Column: Times, Duration, Seats, Operator, Bus Type, Amenity
                 Column(modifier = Modifier.weight(1f)) {
                     // 22:20 — 05:25
@@ -1735,6 +1855,7 @@ private fun BusRouteCard3D(
                         )
                     }
                 }
+            }
             }
         }
     }

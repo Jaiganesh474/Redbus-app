@@ -50,6 +50,7 @@ export interface OperatorProfile {
   bankAccountRef?: string;
   commissionRate?: number;
   status: string;
+  primoCertified?: boolean;
   createdAt?: string;
   totalBuses?: number;
   totalSchedules?: number;
@@ -66,9 +67,11 @@ export interface RouteItem {
   id: number;
   busId: number;
   operatorName: string;
+  busNumber?: string;
   busType: string;
   rating: number;
   totalRatings?: number;
+  primoCertified?: boolean;
   amenities: string[];
   sourceCity: string;
   destinationCity: string;
@@ -256,6 +259,10 @@ export interface AdminStats {
   occupancyRate: number;
   totalRoutes: number;
   totalBuses: number;
+  primoOperatorsCount?: number;
+  primoBusesCount?: number;
+  activeSchedulesCount?: number;
+  approvedOperatorsCount?: number;
   topRoutes: CityPair[];
 }
 
@@ -269,6 +276,7 @@ export interface Operator {
   phone: string;
   commissionRate: number;
   status: string;
+  primoCertified?: boolean;
   createdAt?: string;
   totalBuses?: number;
   totalSchedules?: number;
@@ -289,6 +297,7 @@ export interface BusResponse {
   photoUrls?: string;
   active: boolean;
   rating: number;
+  primoCertified?: boolean;
   createdAt?: string;
 }
 

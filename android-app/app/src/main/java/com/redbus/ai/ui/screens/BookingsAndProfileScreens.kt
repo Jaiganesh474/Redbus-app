@@ -2526,7 +2526,8 @@ private fun ChangeTripPointsBottomSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .navigationBarsPadding()
+                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Header (Image 1)
@@ -2578,6 +2579,7 @@ private fun ChangeTripPointsBottomSheet(
                                         }
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(36.dp))
                             }
                         }
 
@@ -2606,6 +2608,7 @@ private fun ChangeTripPointsBottomSheet(
                                         }
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(36.dp))
                             }
                         }
 
@@ -4956,6 +4959,36 @@ fun ProfileAndWalletScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Edit Profile", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+
+                    // If Operator is certified as Primo Bus Operator by Admin, display Primo On Time Guarantee badge in Profile
+                    if (uiState.isOperator && uiState.operatorProfile?.primoCertified == true) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                PrimoOnTimeBadge()
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFFEF3C7)
+                                ) {
+                                    Text(
+                                        text = "Primo Bus Operator • 0% Comm.",
+                                        color = Color(0xFF92400E),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

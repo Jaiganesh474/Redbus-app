@@ -29,6 +29,7 @@ public class BusRouteService {
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
     private final ReviewRepository reviewRepository;
+    private final OperatorRepository operatorRepository;
     private final BookingRepository bookingRepository;
 
     public static BigDecimal calculateDurationHours(LocalTime dep, LocalTime arr) {
@@ -573,6 +574,39 @@ public class BusRouteService {
                 ? route.getBusSafety()
                 : AiService.generateBusSafety(route.getBus().getBusType());
 
+        String busNumber = "TN12BB4466";
+        boolean primoCertified = false;
+        if (route.getBus() != null) {
+            String rawReg = route.getBus().getRegistrationNumber();
+            long bId = route.getBus().getId() != null ? route.getBus().getId() : 1L;
+            if (rawReg != null && !rawReg.isBlank()) {
+                if (rawReg.toUpperCase().startsWith("IND-")) {
+                    String digits = rawReg.substring(4).replaceAll("[^0-9]", "");
+                    if (digits.length() < 4) digits = String.valueOf(3300 + bId * 41);
+                    busNumber = (bId % 2 == 0 ? "TN12BB" : "TN10CA") + digits;
+                } else {
+                    busNumber = rawReg.toUpperCase().replace("-", "").replace(" ", "");
+                }
+            } else {
+                busNumber = (bId % 2 == 0 ? "TN12BB" : "TN10CA") + (3300 + bId * 41);
+            }
+
+            Long opId = route.getBus().getOperatorId() != null ? route.getBus().getOperatorId() : route.getOperatorId();
+            if (opId != null) {
+                Operator op = operatorRepository.findById(opId).orElse(null);
+                if (op != null) {
+                    primoCertified = Boolean.TRUE.equals(op.getPrimoCertified());
+                }
+            }
+            if (!primoCertified && route.getBus().getOperatorName() != null) {
+                String opName = route.getBus().getOperatorName().trim();
+                primoCertified = operatorRepository.findAll().stream()
+                        .anyMatch(op -> Boolean.TRUE.equals(op.getPrimoCertified())
+                                && ((op.getCompanyName() != null && op.getCompanyName().equalsIgnoreCase(opName))
+                                || (op.getContactPerson() != null && op.getContactPerson().equalsIgnoreCase(opName))));
+            }
+        }
+
         return RouteResponseDto.builder()
                 .id(route.getId())
                 .busId(route.getBus().getId())
@@ -596,6 +630,8 @@ public class BusRouteService {
                 .busRoute(bRoute)
                 .restStop(rStop)
                 .busSafety(bSafety)
+                .busNumber(busNumber)
+                .primoCertified(primoCertified)
                 .build();
     }
 

@@ -935,12 +935,43 @@ fun OperatorHubScreen(
                             ?: uiState.operatorAnalytics?.companyName
                             ?: uiState.user?.name
                             ?: "Intercity Smartbus"
+                        val isPrimoOperator = uiState.operatorProfile?.primoCertified == true
                         Text(
                             text = companyTitle,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
                         )
+
+                        if (isPrimoOperator) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.White.copy(alpha = 0.96f)
+                                ) {
+                                    Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        PrimoOnTimeBadge()
+                                    }
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFEF3C7),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A))
+                                ) {
+                                    Text(
+                                        text = "Primo Bus Operator • 0% Commission",
+                                        color = Color(0xFF92400E),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(4.dp))
 
@@ -4540,19 +4571,56 @@ private fun AgencyProfileTabContent(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFF38BDF8).copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = "10% Standard Tier",
-                                    color = Color(0xFF38BDF8),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                            if (profile?.primoCertified == true) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFFEF3C7)
+                                ) {
+                                    Text(
+                                        text = "⭐ PRIMO BUS OPERATOR • 0% COMMISSION",
+                                        color = Color(0xFF92400E),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            } else {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFF38BDF8).copy(alpha = 0.2f)
+                                ) {
+                                    Text(
+                                        text = "${(profile?.commissionRate ?: 10.0).toInt()}% Standard Tier",
+                                        color = Color(0xFF38BDF8),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
+                        if (profile?.primoCertified == true) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color.White
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    PrimoOnTimeBadge()
+                                    Text(
+                                        text = "• Certified by Admin (Commission-Free)",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF059669)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Bangalore Urban Transport Hub • Partner ID: RB-OP-77291",
                             color = Color(0xFF94A3B8),

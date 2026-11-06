@@ -27,6 +27,7 @@ data class OperatorDto(
     val bankAccountRef: String? = null,
     val commissionRate: Double? = 10.0,
     val status: String? = "APPROVED",
+    val primoCertified: Boolean? = false,
     val totalBuses: Int = 0,
     val totalSchedules: Int = 0,
     val totalBookings: Long = 0,
@@ -201,6 +202,7 @@ data class BusResponseDto(
     val photoUrls: String? = null,
     val active: Boolean? = true,
     val rating: Double? = 4.5,
+    val primoCertified: Boolean? = false,
     val createdAt: String? = null
 )
 
@@ -248,4 +250,63 @@ data class CreateCouponRequest(
     val validFrom: String? = null,
     val validTo: String? = null,
     val usageLimit: Int = 1000
+)
+
+data class AdminStatsDto(
+    val totalBookings: Long = 0,
+    val confirmedBookings: Long = 0,
+    val cancelledBookings: Long = 0,
+    val totalRevenue: Double = 0.0,
+    val occupancyRate: Double = 0.0,
+    val totalRoutes: Long = 0,
+    val totalBuses: Long = 0,
+    val primoOperatorsCount: Long? = 0,
+    val primoBusesCount: Long? = 0,
+    val activeSchedulesCount: Long? = 0,
+    val approvedOperatorsCount: Long? = 0,
+    val topRoutes: List<CityPair>? = emptyList()
+)
+
+data class AdminOperatorEarningItem(
+    val operatorId: Long = 0,
+    val companyName: String = "",
+    val email: String = "",
+    val status: String = "APPROVED",
+    val totalConfirmedBookings: Long = 0,
+    val grossRevenue: Double = 0.0,
+    val commissionPaid: Double = 0.0,
+    val netEarnings: Double = 0.0,
+    val totalRefundsApproved: Double = 0.0,
+    val walletBalance: Double = 0.0
+)
+
+data class AdminOperatorEarningsDto(
+    val systemGrossRevenue: Double = 0.0,
+    val systemCommissionsCollected: Double = 0.0,
+    val systemNetOperatorPayouts: Double = 0.0,
+    val systemTotalRefundsProcessed: Double = 0.0,
+    val operatorEarnings: List<AdminOperatorEarningItem> = emptyList()
+)
+
+data class CreateBannerRequest(
+    val title: String,
+    val subtitle: String? = null,
+    val tag: String? = "EXCLUSIVE OFFER",
+    val promoCode: String? = null,
+    val discountPercentage: Int? = 20,
+    val bgGradient: String? = "from-slate-950 via-red-950/80 to-slate-900",
+    val badgeColor: String? = "bg-red-500/20 text-red-300 border-red-500/30",
+    val routeInfo: String? = "All India Routes",
+    val imageUrl: String? = "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80",
+    val ctaText: String? = "Book Now",
+    val ctaLink: String? = "/search",
+    val active: Boolean = true,
+    val sortOrder: Int = 1,
+    val isAiGenerated: Boolean = true
+)
+
+data class GenerateAiBannerRequest(
+    val prompt: String,
+    val targetRoute: String? = null,
+    val targetDiscount: Int? = 25
 )

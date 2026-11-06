@@ -44,6 +44,7 @@ sealed class ScreenRoute(val route: String, val label: String, val icon: ImageVe
     data object SearchResults : ScreenRoute("search_results", "Buses", Icons.Default.DirectionsBus)
     data object MyTrips : ScreenRoute("my_trips", "Bookings", Icons.Default.ConfirmationNumber)
     data object OperatorHub : ScreenRoute("operator_hub", "Operator Hub", Icons.Default.Storefront)
+    data object AdminHub : ScreenRoute("admin_hub", "Admin", Icons.Default.AdminPanelSettings)
     data object AiCopilot : ScreenRoute("ai_copilot", "Ask Ray", Icons.Default.AutoAwesome)
     data object Profile : ScreenRoute("profile", "Account", Icons.Default.Person)
     data object SeatSelection : ScreenRoute("seat_selection", "Select Seats")
@@ -80,17 +81,26 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
         }
     }
 
-    // Dynamic Navigation Tabs: Replaces Bookings (MyTrips) with Operator Hub when role is Operator
-    val bottomNavTabs = if (uiState.isOperator) {
-        listOf(
+    // Dynamic Navigation Tabs:
+    // - Admin role -> "Admin" tab replaces "Bookings" (and no Operator Hub tab)
+    // - Operator role -> "Operator Hub" tab replaces "Bookings"
+    // - Passenger role -> "Bookings" tab
+    val bottomNavTabs = when {
+        uiState.isAdmin -> listOf(
+            ScreenRoute.Home,
+            ScreenRoute.SearchResults,
+            ScreenRoute.AdminHub,
+            ScreenRoute.AiCopilot,
+            ScreenRoute.Profile
+        )
+        uiState.isOperator -> listOf(
             ScreenRoute.Home,
             ScreenRoute.SearchResults,
             ScreenRoute.OperatorHub,
             ScreenRoute.AiCopilot,
             ScreenRoute.Profile
         )
-    } else {
-        listOf(
+        else -> listOf(
             ScreenRoute.Home,
             ScreenRoute.SearchResults,
             ScreenRoute.MyTrips,
@@ -154,6 +164,7 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                         ScreenRoute.SearchResults -> AppStrings.get("nav_buses", uiState.selectedLanguage)
                                         ScreenRoute.MyTrips -> AppStrings.get("nav_bookings", uiState.selectedLanguage)
                                         ScreenRoute.OperatorHub -> AppStrings.get("nav_operator_hub", uiState.selectedLanguage)
+                                        ScreenRoute.AdminHub -> "Admin"
                                         ScreenRoute.AiCopilot -> AppStrings.get("nav_ask_ray", uiState.selectedLanguage)
                                         ScreenRoute.Profile -> AppStrings.get("nav_account", uiState.selectedLanguage)
                                         else -> tab.label
@@ -474,6 +485,21 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             }
                         )
                     }
+                }
+
+                composable(ScreenRoute.AdminHub.route) {
+                    AdminHubScreen(
+                        uiState = uiState,
+                        onRefresh = viewModel::fetchAdminDashboardData,
+                        onVerifyOperator = viewModel::verifyAdminOperator,
+                        onSuspendOperator = viewModel::suspendAdminOperator,
+                        onUpdateCommission = viewModel::updateAdminOperatorCommission,
+                        onTogglePrimoOperator = viewModel::toggleAdminPrimoOperator,
+                        onGenerateAiBanner = viewModel::generateAdminAiBanner,
+                        onPublishBanner = viewModel::publishAdminBanner,
+                        onDeleteBanner = viewModel::deleteAdminBanner,
+                        onClearMessages = viewModel::clearAdminMessages
+                    )
                 }
 
                 composable(ScreenRoute.OperatorLogin.route) {

@@ -27,4 +27,5 @@ public class OperatorDto {
     private int totalSchedules;
     private long totalBookings;
     private BigDecimal totalRevenue;
+    private Boolean primoCertified;
 }

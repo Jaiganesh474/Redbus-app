@@ -11,6 +11,7 @@ import {
   useAddSavedTravellerMutation,
   useDeleteSavedTravellerMutation,
   useGetMeQuery,
+  useGetOperatorProfileQuery,
 } from "@/store/apiSlice";
 import {
   User as UserIcon,
@@ -30,6 +31,7 @@ import {
   KeyRound,
   Shield,
   Wallet,
+  Star,
 } from "lucide-react";
 import AvatarSelectorModal from "@/components/AvatarSelectorModal";
 import RedbusWalletModal from "@/components/RedbusWalletModal";
@@ -40,6 +42,8 @@ export default function ProfilePage() {
   const { data: latestUser } = useGetMeQuery(undefined, { skip: !isAuthenticated });
   const activeUser = latestUser || user;
   const walletBalance = Number(activeUser?.walletBalance || 0);
+  const isOperatorRole = activeUser?.role === "ROLE_OPERATOR" || activeUser?.roles?.includes("ROLE_OPERATOR");
+  const { data: operatorProfile } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated || !isOperatorRole });
 
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
@@ -288,11 +292,29 @@ export default function ProfilePage() {
                     <AlertCircle className="w-3.5 h-3.5" /> Unverified
                   </span>
                 )}
+                {operatorProfile?.primoCertified && (
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-gradient-to-r from-[#192857] to-[#111b3d] border border-amber-400/60 shadow-sm">
+                    <span className="inline-flex items-center gap-1 text-amber-300 font-black italic text-xs tracking-wide">
+                      <span>Primo</span>
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    </span>
+                    <span className="h-3 w-[1px] bg-amber-400/40" />
+                    <span className="text-[11px] font-bold text-white">
+                      Primo Bus Operator • On Time Guarantee
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-gray-500 dark:text-slate-400 font-medium">
                 <span className="font-semibold text-gray-700 dark:text-slate-300">
-                  {user.role === "ROLE_ADMIN" ? "System Administrator" : "redBus Verified Traveler"}
+                  {user.role === "ROLE_ADMIN"
+                    ? "System Administrator"
+                    : operatorProfile?.primoCertified
+                    ? "Primo Certified Bus Operator (0% Commission Free)"
+                    : user.role === "ROLE_OPERATOR"
+                    ? "Verified Bus Operator"
+                    : "redBus Verified Traveler"}
                 </span>
                 {user.gender && (
                   <>

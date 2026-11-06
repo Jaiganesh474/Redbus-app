@@ -71,15 +71,80 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
     setShowModal(true);
   };
 
+  const isPrimo = Boolean(route.primoCertified);
+  const licensePlate =
+    route.busNumber && route.busNumber.trim().length > 0
+      ? route.busNumber.trim().toUpperCase()
+      : `TN${String(10 + ((route.busId || route.id || 1) % 75)).padStart(2, "0")}BB${String(1000 + ((route.id || 1) * 37) % 8999)}`;
+
+  const cleanStops = (route.boardingPoints || [])
+    .map((bp) => bp.replace(/\s*\([^)]*\)/g, "").trim())
+    .filter(Boolean);
+  const firstStop = cleanStops[0] || route.sourceCity || "Main Bus Stand";
+  const secondStop = cleanStops[1] || `${route.sourceCity || "City"} Bypass`;
+  const remainingStopsCount = cleanStops.length > 2 ? cleanStops.length - 2 : 4;
+
   return (
     <>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all mb-3.5 p-4 sm:p-5">
-        {/* Direct Bus Pill Badge */}
-        <div className="mb-2">
-          <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#eef2ff] dark:bg-indigo-950/60 text-[#4338ca] dark:text-indigo-300 text-xs font-semibold">
-            Direct Bus
-          </span>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-2xs hover:shadow-md transition-all mb-4 p-3.5 sm:p-4">
+        {/* Top Bus Number & Starting Stops Strip (Image 4) */}
+        <div className="bg-[#f2f3f8] dark:bg-slate-800/80 rounded-xl px-3 py-2.5 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] bg-[#f5cb39] text-slate-950 border border-slate-900 text-xs font-extrabold tracking-wide shadow-2xs">
+              <span>•</span>
+              <span>{licensePlate}</span>
+              <span>•</span>
+            </span>
+            <span className="inline-block px-2 py-0.5 rounded-[5px] bg-[#e0e4fa] dark:bg-indigo-950/80 text-slate-900 dark:text-indigo-200 text-[11px] font-bold uppercase tracking-wide">
+              STARTING
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 dark:text-slate-300 mt-1.5 truncate font-medium">
+            <span>From: </span>
+            <span className="text-gray-700 dark:text-slate-200">{firstStop}</span>
+            <span className="mx-1 text-gray-500">▸</span>
+            <span className="text-gray-700 dark:text-slate-200">{secondStop}</span>
+            <span className="mx-1 text-gray-500">▸</span>
+            <span className="text-gray-600 dark:text-slate-400">{remainingStopsCount} Other Stops</span>
+          </p>
         </div>
+
+        {/* Primo Certified Row (shown ONLY for Primo Certified Operators - Card 1 in Image 4) */}
+        {isPrimo && (
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3 px-0.5">
+            {/* Left: Primo On Time Guarantee Logo */}
+            <div className="inline-flex items-center gap-1.5">
+              <div className="relative inline-flex items-center">
+                <span className="text-base sm:text-lg font-black italic tracking-tight text-[#14265c] dark:text-amber-300">
+                  Primo
+                </span>
+                <svg
+                  className="w-5 h-5 text-[#e5b842] -ml-1 -mt-1"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
+              <div className="leading-[1.05] text-[10px] font-bold text-[#14265c] dark:text-slate-200">
+                <div>On Time</div>
+                <div>Guarantee</div>
+              </div>
+            </div>
+
+            {/* Right: Promo Badges */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gradient-to-r from-[#fde8a8] to-[#f8d377] text-slate-900 text-[11px] font-medium shadow-2xs">
+                Exclusive <strong className="font-extrabold ml-1">₹100 OFF</strong>
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[#efe8fc] dark:bg-purple-950/70 text-slate-900 dark:text-purple-200 text-[11px] font-medium shadow-2xs">
+                Group <strong className="font-extrabold ml-1">15% OFF</strong>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Main Content: Left & Right Columns */}
         <div className="flex items-start justify-between gap-4">

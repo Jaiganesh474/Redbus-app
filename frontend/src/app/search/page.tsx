@@ -395,7 +395,7 @@ function SearchResultsContent() {
       }
 
       if (aiQuery.includes("primo") || aiQuery.includes("top rated") || aiQuery.includes("best rating")) {
-        result = result.filter((r) => r.rating >= 4.4);
+        result = result.filter((r) => Boolean(r.primoCertified));
       }
 
       if (aiQuery.includes("single seat") || aiQuery.includes("single")) {
@@ -413,7 +413,7 @@ function SearchResultsContent() {
 
     // 2. Quick Filter Pills
     if (isPrimoFilter) {
-      result = result.filter((r) => r.rating >= 4.4);
+      result = result.filter((r) => Boolean(r.primoCertified));
     }
     if (isFreeCancellationFilter) {
       result = result.filter((r) => r.rating >= 4.0 || r.basePrice >= 600);

@@ -84,8 +84,11 @@ public class OperatorAnalyticsService {
                 .map(b -> b.getCommissionAmount() != null ? b.getCommissionAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Fallback: If commission was 0, compute 10%
-        if (commissionPaid.compareTo(BigDecimal.ZERO) == 0 && totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
+        boolean isPrimoOp = Boolean.TRUE.equals(operator.getPrimoCertified())
+                || (operator.getCommissionRate() != null && operator.getCommissionRate().compareTo(BigDecimal.ZERO) == 0);
+        if (isPrimoOp) {
+            commissionPaid = BigDecimal.ZERO;
+        } else if (commissionPaid.compareTo(BigDecimal.ZERO) == 0 && totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
             commissionPaid = totalRevenue.multiply(new BigDecimal("0.10")).setScale(2, RoundingMode.HALF_UP);
         }
 
@@ -447,7 +450,9 @@ public class OperatorAnalyticsService {
                     .map(Booking::getTotalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            BigDecimal opComm = opBookings.stream()
+            boolean isPrimoOp = Boolean.TRUE.equals(op.getPrimoCertified())
+                    || (op.getCommissionRate() != null && op.getCommissionRate().compareTo(BigDecimal.ZERO) == 0);
+            BigDecimal opComm = isPrimoOp ? BigDecimal.ZERO : opBookings.stream()
                     .filter(b -> "CONFIRMED".equalsIgnoreCase(b.getStatus()))
                     .map(b -> b.getCommissionAmount() != null ? b.getCommissionAmount() : b.getTotalAmount().multiply(new BigDecimal("0.10")))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);

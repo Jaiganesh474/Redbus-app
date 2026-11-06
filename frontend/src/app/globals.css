@@ -231,13 +231,33 @@ html[data-theme="dark"] .bg-gray-200\/80 {
   border-color: #334155 !important;
 }
 
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-50\/50:hover,
+html.dark .hover\:bg-gray-50\/60:hover,
+html.dark .hover\:bg-gray-50\/70:hover,
+html.dark .hover\:bg-gray-50\/80:hover,
+html.dark .hover\:bg-gray-50\/90:hover,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/50:hover,
+html.dark .hover\:bg-slate-50\/80:hover,
 html.dark .hover\:bg-gray-100:hover,
 html.dark .hover\:bg-gray-200:hover,
 html.dark .hover\:bg-gray-200\/80:hover,
+html.dark tbody tr:hover,
+html[data-theme="dark"] .hover\:bg-gray-50:hover,
+html[data-theme="dark"] .hover\:bg-gray-50\/50:hover,
+html[data-theme="dark"] .hover\:bg-gray-50\/60:hover,
+html[data-theme="dark"] .hover\:bg-gray-50\/70:hover,
+html[data-theme="dark"] .hover\:bg-gray-50\/80:hover,
+html[data-theme="dark"] .hover\:bg-gray-50\/90:hover,
+html[data-theme="dark"] .hover\:bg-slate-50:hover,
+html[data-theme="dark"] .hover\:bg-slate-50\/50:hover,
+html[data-theme="dark"] .hover\:bg-slate-50\/80:hover,
 html[data-theme="dark"] .hover\:bg-gray-100:hover,
 html[data-theme="dark"] .hover\:bg-gray-200:hover,
-html[data-theme="dark"] .hover\:bg-gray-200\/80:hover {
-  background-color: #334155 !important;
+html[data-theme="dark"] .hover\:bg-gray-200\/80:hover,
+html[data-theme="dark"] tbody tr:hover {
+  background-color: #1e293b !important;
   color: #ffffff !important;
 }
 

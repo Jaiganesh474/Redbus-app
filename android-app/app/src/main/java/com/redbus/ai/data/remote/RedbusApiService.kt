@@ -250,6 +250,49 @@ interface RedbusApiService {
     @DELETE("coupons/{id}")
     suspend fun deleteCoupon(@Path("id") id: Long)
 
+    // 12. Master Administrator Endpoints
+    @GET("admin/stats")
+    suspend fun getAdminStats(): AdminStatsDto
+
+    @GET("admin/operators")
+    suspend fun getAdminOperators(): List<OperatorDto>
+
+    @GET("admin/primo-buses")
+    suspend fun getAdminPrimoBuses(): List<BusResponseDto>
+
+    @PUT("admin/operators/{id}/verify")
+    suspend fun verifyOperator(@Path("id") id: Long): OperatorDto
+
+    @PUT("admin/operators/{id}/suspend")
+    suspend fun suspendOperator(@Path("id") id: Long): OperatorDto
+
+    @PUT("admin/operators/{id}/commission")
+    suspend fun updateOperatorCommission(@Path("id") id: Long, @Body body: Map<String, Double>): OperatorDto
+
+    @PUT("admin/operators/{id}/primo")
+    suspend fun togglePrimoOperator(@Path("id") id: Long, @Body body: Map<String, Boolean>): OperatorDto
+
+    @GET("admin/operator-earnings")
+    suspend fun getAdminOperatorEarnings(): AdminOperatorEarningsDto
+
+    @GET("admin/bookings")
+    suspend fun getAdminBookings(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20
+    ): PaginatedBookingsResponse
+
+    @GET("banners/admin")
+    suspend fun getAdminBanners(): List<Banner>
+
+    @POST("banners/admin")
+    suspend fun createAdminBanner(@Body request: CreateBannerRequest): Banner
+
+    @DELETE("banners/admin/{id}")
+    suspend fun deleteAdminBanner(@Path("id") id: Int): Map<String, Any>
+
+    @POST("banners/admin/ai-generate")
+    suspend fun generateAiBanner(@Body request: GenerateAiBannerRequest): Banner
+
 
     companion object {
         fun create(): RedbusApiService {
