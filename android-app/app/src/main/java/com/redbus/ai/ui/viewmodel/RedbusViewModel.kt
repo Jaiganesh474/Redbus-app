@@ -156,6 +156,33 @@ class RedbusViewModel(
     val uiState: StateFlow<RedbusUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var lastObservedUserId: Long? = SessionManager.getUser()?.id
+
+    fun getDefaultChatMessages(): List<ChatMessageItem> {
+        return listOf(
+            ChatMessageItem(
+                id = "welcome-${System.currentTimeMillis()}",
+                role = "assistant",
+                content = "Welcome to Ray Travel Assistant! Ask me about live bus schedules, seat availability, active coupons, or your bookings.",
+                suggestedPrompts = listOf(
+                    "Show AC Sleeper buses from Bangalore to Chennai today",
+                    "What coupons are active right now?",
+                    "How does redBus Free Cancellation work?"
+                ),
+                timestamp = "Live"
+            )
+        )
+    }
+
+    fun resetChatSession() {
+        _uiState.update {
+            it.copy(
+                aiSessionId = null,
+                isAiTyping = false,
+                chatMessages = getDefaultChatMessages()
+            )
+        }
+    }
 
     init {
         refreshAllLiveBackendData()
