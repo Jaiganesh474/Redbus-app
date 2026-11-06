@@ -490,8 +490,21 @@ class RedbusViewModel(
     }
 
     fun addTraveller(name: String, age: Int, gender: String) {
+        val tempId = (System.currentTimeMillis() % 100000).toInt()
+        val optimisticTraveller = SavedTraveller(
+            id = tempId,
+            name = name.trim(),
+            age = age,
+            gender = gender.uppercase(),
+            userId = _uiState.value.user?.id ?: 0
+        )
+        // Optimistically update savedTravellers so it instantly appears in checkout list & account list
+        _uiState.update { state ->
+            val updated = state.savedTravellers.filter { !it.name.equals(name.trim(), ignoreCase = true) } + optimisticTraveller
+            state.copy(savedTravellers = updated)
+        }
         viewModelScope.launch {
-            repository.addSavedTraveller(name, age, gender).onSuccess {
+            repository.addSavedTraveller(name.trim(), age, gender.uppercase()).onSuccess {
                 repository.getSavedTravellers().onSuccess { list ->
                     _uiState.update { it.copy(savedTravellers = list, authSuccessMessage = "Traveller saved!") }
                 }

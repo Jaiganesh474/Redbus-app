@@ -103,6 +103,7 @@ fun CheckoutScreen(
     availableCoupons: List<Coupon>,
 
     onUpdatePassenger: (Int, String, Int, String) -> Unit,
+    onAddTraveller: (String, Int, String) -> Unit = { _, _, _ -> },
 
     onUpdateContact: (String, String, String) -> Unit,
 
@@ -2447,141 +2448,10 @@ fun CheckoutScreen(
 
 
 
-                                    // Dynamic Mini Seat Map Visual (Image 4)
+                                    // Realistic Landscape Seat Map Visual matching Image 4
+                                    LandscapeSeatMapVisual(selectedSeats = uiState.selectedSeats)
 
-                                    Surface(
-
-                                        shape = RoundedCornerShape(12.dp),
-
-                                        color = Color(0xFFF8FAFC),
-
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
-
-                                        modifier = Modifier.fillMaxWidth()
-
-                                    ) {
-
-                                        Column(
-
-                                            modifier = Modifier.padding(12.dp),
-
-                                            verticalArrangement = Arrangement.spacedBy(10.dp)
-
-                                        ) {
-
-                                            // Lower Deck Grid
-
-                                            Row(
-
-                                                modifier = Modifier.fillMaxWidth(),
-
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-
-                                                verticalAlignment = Alignment.CenterVertically
-
-                                            ) {
-
-                                                Row(
-
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-
-                                                    modifier = Modifier.weight(1f)
-
-                                                ) {
-
-                                                    (1..10).forEach { s ->
-
-                                                        val isSelected = uiState.selectedSeats.any { seat ->
-                                                            val numStr = seat.seatNumber.filter { it.isDigit() }
-                                                            val isLower = seat.deck.equals("LOWER", ignoreCase = true) || seat.seatNumber.uppercase().startsWith("L") || (!seat.deck.equals("UPPER", ignoreCase = true) && !seat.seatNumber.uppercase().startsWith("U"))
-                                                            isLower && numStr == s.toString()
-                                                        }
-
-                                                        Box(
-
-                                                            modifier = Modifier
-
-                                                                .size(width = 22.dp, height = 18.dp)
-
-                                                                .background(
-
-                                                                    if (isSelected) Color(0xFFEC4899) else Color(0xFFE2E8F0),
-
-                                                                    RoundedCornerShape(3.dp)
-
-                                                                )
-
-                                                        )
-
-                                                    }
-
-                                                }
-
-                                                Text("Lower", fontSize = 9.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(start = 4.dp))
-
-                                            }
-
-
-
-                                            // Upper Deck Grid
-
-                                            Row(
-
-                                                modifier = Modifier.fillMaxWidth(),
-
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-
-                                                verticalAlignment = Alignment.CenterVertically
-
-                                            ) {
-
-                                                Row(
-
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-
-                                                    modifier = Modifier.weight(1f)
-
-                                                ) {
-
-                                                    (1..10).forEach { s ->
-
-                                                        val isSelected = uiState.selectedSeats.any { seat ->
-                                                            val numStr = seat.seatNumber.filter { it.isDigit() }
-                                                            val isUpper = seat.deck.equals("UPPER", ignoreCase = true) || seat.seatNumber.uppercase().startsWith("U")
-                                                            isUpper && numStr == s.toString()
-                                                        }
-
-                                                        Box(
-
-                                                            modifier = Modifier
-
-                                                                .size(width = 22.dp, height = 18.dp)
-
-                                                                .background(
-
-                                                                    if (isSelected) Color(0xFFEC4899) else Color(0xFFE2E8F0),
-
-                                                                    RoundedCornerShape(3.dp)
-
-                                                                )
-
-                                                        )
-
-                                                    }
-
-                                                }
-
-                                                Text("Upper", fontSize = 9.sp, color = Color(0xFF94A3B8), modifier = Modifier.padding(start = 4.dp))
-
-                                            }
-
-                                        }
-
-                                    }
-
-
-
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
 
 
 
@@ -2995,12 +2865,14 @@ fun CheckoutScreen(
                     onClick = {
                         if (newPassengerName.isNotBlank()) {
                             val age = newPassengerAge.toIntOrNull() ?: 25
+                            val trimmedName = newPassengerName.trim()
+                            onAddTraveller(trimmedName, age, newPassengerGender)
                             // Assign to first empty passenger seat
                             val emptyIdx = uiState.passengers.indexOfFirst { it.name.isBlank() }
                             if (emptyIdx >= 0) {
-                                onUpdatePassenger(emptyIdx, newPassengerName.trim(), age, newPassengerGender)
+                                onUpdatePassenger(emptyIdx, trimmedName, age, newPassengerGender)
                             } else if (uiState.passengers.isNotEmpty()) {
-                                onUpdatePassenger(0, newPassengerName.trim(), age, newPassengerGender)
+                                onUpdatePassenger(0, trimmedName, age, newPassengerGender)
                             }
                             showAddPassengerDialog = false
                         }
@@ -4392,4 +4264,220 @@ private fun calculateTripDuration(depTime: String?, arrTime: String?, fallback: 
         }
     }
     return if (fallback != null && fallback > 0) "${fallback} hrs" else "6.5 hrs"
+}
+
+/**
+ * Realistic Landscape 2-Deck Sleeper Seat Map matching Image 4 / Web Version
+ */
+@Composable
+private fun LandscapeSeatMapVisual(selectedSeats: List<SeatItem>) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Header & Legend matching Image 4
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Selected seat layout",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFFE91E63), RoundedCornerShape(2.dp))
+                    )
+                    Text("Your Seat", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(Color(0xFFE2E8F0), RoundedCornerShape(2.dp))
+                    )
+                    Text("Other", fontSize = 10.sp, color = Color.Gray)
+                }
+            }
+        }
+
+        // Side-by-side Decks Container (Matching Web Image 4)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Lower Deck
+            DeckCard(
+                title = "Lower deck",
+                headerBadge = "✇",
+                rows = listOf(
+                    Triple("L1", "L2", "L3"),
+                    Triple("L4", "L5", "L6"),
+                    Triple("L7", "L8", "L9"),
+                    Triple("L10", "L11", "L12"),
+                    Triple("L13", "L14", "L15")
+                ),
+                selectedSeats = selectedSeats,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Upper Deck
+            DeckCard(
+                title = "Upper deck",
+                headerBadge = "UP",
+                rows = listOf(
+                    Triple("U1", "U2", "U3"),
+                    Triple("U4", "U5", "U6"),
+                    Triple("U7", "U8", "U9"),
+                    Triple("U10", "U11", "U12"),
+                    Triple("U13", "U14", "U15")
+                ),
+                selectedSeats = selectedSeats,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeckCard(
+    title: String,
+    headerBadge: String,
+    rows: List<Triple<String, String, String>>,
+    selectedSeats: List<SeatItem>,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF334155)
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFFF1F5F9)
+                ) {
+                    Text(
+                        text = headerBadge,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Seat Rows (2+1 Layout with Aisle matching Image 4)
+            rows.forEach { r ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Single Berth
+                    val isLeftSel = selectedSeats.any { it.seatNumber.equals(r.first, ignoreCase = true) }
+                    SleeperBerthItem(seatNumber = r.first, isSelected = isLeftSel)
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Right Double Berths
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val isR1Sel = selectedSeats.any { it.seatNumber.equals(r.second, ignoreCase = true) }
+                        SleeperBerthItem(seatNumber = r.second, isSelected = isR1Sel)
+
+                        val isR2Sel = selectedSeats.any { it.seatNumber.equals(r.third, ignoreCase = true) }
+                        SleeperBerthItem(seatNumber = r.third, isSelected = isR2Sel)
+                    }
+                }
+            }
+
+            Text(
+                text = "▼ EMERGENCY EXIT",
+                fontSize = 7.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF94A3B8),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SleeperBerthItem(
+    seatNumber: String,
+    isSelected: Boolean
+) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = if (isSelected) Color(0xFFE91E63) else Color(0xFFF8FAFC),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (isSelected) Color(0xFFBE185D) else Color(0xFFE2E8F0)
+        ),
+        modifier = Modifier
+            .width(26.dp)
+            .height(34.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Pillow Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(
+                        if (isSelected) Color.White.copy(alpha = 0.5f) else Color(0xFFCBD5E1),
+                        RoundedCornerShape(1.dp)
+                    )
+            )
+            // Seat Number
+            Text(
+                text = seatNumber,
+                fontSize = 8.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) Color.White else Color(0xFF64748B)
+            )
+            Spacer(modifier = Modifier.height(1.dp))
+        }
+    }
 }

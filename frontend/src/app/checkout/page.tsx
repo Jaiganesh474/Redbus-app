@@ -757,151 +757,106 @@ function CheckoutContent() {
       <form onSubmit={handleFormSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Passenger, Contact, Free Cancellation & Promo */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Passenger Information Cards with bottom-to-top lazy loading */}
+          {/* Passenger Details Section (Strictly matches Image 2) */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-30px" }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xs space-y-6"
+            className="bg-white rounded-3xl p-6 border border-gray-200 shadow-xs space-y-5"
           >
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h3 className="font-bold text-lg text-gray-900 flex items-center space-x-2">
+            {/* Header: Passenger details + Counter matching Image 2 */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="font-extrabold text-lg text-gray-900 flex items-center space-x-2">
                 <UserIcon className="w-5 h-5 text-[#d84e55]" />
-                <span>Passenger Details</span>
+                <span>Passenger details</span>
               </h3>
-              <div className="flex items-center space-x-3">
-                <span className="text-xs font-semibold text-gray-500">
-                  {Math.max(selectedSeats.length, passengers.length, 1)} Passenger{Math.max(selectedSeats.length, passengers.length, 1) > 1 ? "s" : ""}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextNum = passengers.length + 1;
-                    const newSeat: SeatItem = {
-                      id: Date.now(),
-                      seatId: Date.now(),
-                      seatNumber: `${nextNum}A`,
-                      seatType: "SEATER",
-                      deck: "LOWER",
-                      rowNum: nextNum,
-                      colNum: 1,
-                      genderRestriction: "NONE",
-                      status: "AVAILABLE",
-                      price: activeRoute?.basePrice || 750,
-                    };
-                    const updatedSeats = [...selectedSeats, newSeat];
-                    const updatedPassengers = [
-                      ...passengers,
-                      {
-                        seatId: newSeat.seatId,
-                        seatNumber: newSeat.seatNumber,
-                        name: "",
-                        age: 25,
-                        gender: "MALE" as const,
-                      },
-                    ];
-                    dispatch(hydrateBookingState({ selectedSeats: updatedSeats, passengers: updatedPassengers }));
-                  }}
-                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-[#d84e55] font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                >
-                  + Add Passenger
-                </button>
-              </div>
+              <span className="text-xs font-bold text-gray-500">
+                {filledCount}/{totalSeats} Selected
+              </span>
             </div>
 
-            {(passengers.length === 0 ? [{ seatId: 1, seatNumber: "1A", name: user?.name || "", age: 25, gender: "MALE" }] : passengers).map((passenger, idx) => (
-              <div
-                key={passenger.seatId}
-                className="p-4 bg-gray-50/80 rounded-2xl border border-gray-200/80 space-y-4"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2.5 py-1 bg-[#d84e55] text-white text-xs font-bold rounded-lg">
-                      Seat {passenger.seatNumber}
-                    </span>
-                    <span className="text-xs font-bold text-gray-700">Passenger {idx + 1}</span>
-                    {selectedSeats.find((s) => s.seatId === passenger.seatId)?.genderRestriction === "FEMALE" && (
-                      <span className="px-2 py-0.5 bg-pink-100 text-pink-700 font-bold text-[10px] rounded-md flex items-center gap-1">
-                        👩 Ladies-Only Seat
+            {/* List of saved passenger cards with checkboxes (Matching Image 2) */}
+            <div className="space-y-3">
+              {savedTravellers.map((traveller) => {
+                const assignedIdx = passengers.findIndex(
+                  (p) => p.name.trim().toLowerCase() === traveller.name.trim().toLowerCase()
+                );
+                const isSelected = assignedIdx >= 0;
+                const assignedSeatNumber = isSelected ? passengers[assignedIdx]?.seatNumber : null;
+
+                return (
+                  <div
+                    key={traveller.id}
+                    onClick={() => handleToggleSavedTraveller(traveller)}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-red-50/50 border-[#d84e55] shadow-xs"
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3.5">
+                      <input
+                        type="checkbox"
+                        readOnly
+                        checked={isSelected}
+                        className="w-5 h-5 rounded text-[#d84e55] focus:ring-[#d84e55] cursor-pointer"
+                      />
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                        <UserIcon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900 leading-tight">
+                          {traveller.name}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                          {traveller.age} Yrs, {traveller.gender === "FEMALE" ? "Female" : "Male"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isSelected && assignedSeatNumber && (
+                      <span className="px-2.5 py-1 bg-red-100/80 text-[#d84e55] text-xs font-bold rounded-lg">
+                        Seat {assignedSeatNumber}
                       </span>
                     )}
                   </div>
+                );
+              })}
 
-                  {savedTravellers.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
-                        <Users className="w-3 h-3 text-[#d84e55]" /> Fill:
-                      </span>
-                      {savedTravellers.map((traveller) => (
-                        <button
-                          key={traveller.id}
-                          type="button"
-                          onClick={() => {
-                            handlePassengerChange(idx, "name", traveller.name);
-                            handlePassengerChange(idx, "age", traveller.age);
-                            handlePassengerChange(idx, "gender", traveller.gender);
-                          }}
-                          className="px-2 py-0.5 bg-white hover:bg-red-50 hover:border-red-300 border border-gray-200 rounded-lg text-[10px] font-semibold text-gray-700 transition-colors flex items-center space-x-1 cursor-pointer shadow-2xs"
-                        >
-                          <span>{traveller.gender === "FEMALE" ? "👩" : "👨"}</span>
-                          <span>{traveller.name.split(" ")[0]} ({traveller.age})</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {/* + + Add new passenger Button (Matching Image 2) */}
+              <button
+                type="button"
+                onClick={handleOpenAddPassenger}
+                className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-red-200 hover:border-[#d84e55] bg-red-50/40 hover:bg-red-50 text-[#d84e55] font-extrabold text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99]"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ Add new passenger</span>
+              </button>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                  {/* Name */}
-                  <div className="sm:col-span-6">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={passenger.name}
-                      onChange={(e) => handlePassengerChange(idx, "name", e.target.value)}
-                      placeholder="e.g. Rahul Sharma"
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
-
-                  {/* Age */}
-                  <div className="sm:col-span-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Age *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      max={120}
-                      value={passenger.age}
-                      onChange={(e) => handlePassengerChange(idx, "age", Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
-                    />
-                  </div>
-
-                  {/* Gender */}
-                  <div className="sm:col-span-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Gender *
-                    </label>
-                    <select
-                      value={passenger.gender}
-                      onChange={(e) => handlePassengerChange(idx, "gender", e.target.value)}
-                      className="w-full px-3 py-2 bg-white rounded-xl border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+            {/* If seats are selected, display summary assignment */}
+            {selectedSeats.length > 0 && (
+              <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2 text-xs font-semibold text-gray-500">
+                <span>Selected Seats:</span>
+                {selectedSeats.map((s, idx) => {
+                  const p = passengers.find((pass) => pass.seatId === s.seatId) || passengers[idx];
+                  const hasAssigned = p && p.name && p.name.trim().length > 0;
+                  return (
+                    <span
+                      key={s.seatId || idx}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                        hasAssigned
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}
                     >
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="OTHER">Other</option>
-                    </select>
-                  </div>
-                </div>
+                      Seat {s.seatNumber}: {hasAssigned ? p.name : "Not assigned"}
+                    </span>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </motion.div>
 
           {/* TRIP GUARANTEE CARD with dynamic fare & cashback logic */}
