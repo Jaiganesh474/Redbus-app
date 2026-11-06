@@ -495,8 +495,7 @@ class RedbusViewModel(
             id = tempId,
             name = name.trim(),
             age = age,
-            gender = gender.uppercase(),
-            userId = _uiState.value.user?.id ?: 0
+            gender = gender.uppercase()
         )
         // Optimistically update savedTravellers so it instantly appears in checkout list & account list
         _uiState.update { state ->

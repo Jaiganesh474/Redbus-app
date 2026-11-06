@@ -74,7 +74,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.RectangleShape
 import kotlinx.coroutines.delay
 
-import com.redbus.ai.data.model.Coupon
+import com.redbus.ai.data.model.*
 
 import com.redbus.ai.ui.theme.*
 
