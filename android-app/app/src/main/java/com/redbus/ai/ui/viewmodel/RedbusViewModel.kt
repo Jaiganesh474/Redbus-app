@@ -156,7 +156,7 @@ class RedbusViewModel(
     val uiState: StateFlow<RedbusUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
-    private var lastObservedUserId: Long? = SessionManager.getUser()?.id
+    private var lastObservedUserId: Int? = SessionManager.getUser()?.id
 
     fun getDefaultChatMessages(): List<ChatMessageItem> {
         return listOf(
