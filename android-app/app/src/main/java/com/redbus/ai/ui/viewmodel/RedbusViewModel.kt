@@ -87,6 +87,7 @@ data class RedbusUiState(
     val isValidatingCoupon: Boolean = false,
     val hasFreeCancellation: Boolean = false,
     val hasTripGuarantee: Boolean = false,
+    val tripGuaranteeBuyers: Long = 0L,
     val useWalletBalance: Boolean = false,
     val isCreatingBooking: Boolean = false,
     val pendingRazorpayPayment: PendingRazorpayPayment? = null,

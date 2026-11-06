@@ -114,6 +114,9 @@ interface RedbusApiService {
         @Query("size") size: Int = 20
     ): PaginatedBookingsResponse
 
+    @GET("bookings/trip-guarantee-stats")
+    suspend fun getTripGuaranteeStats(): Map<String, Any>
+
     @GET("bookings/{pnr}")
     suspend fun getBookingByPnr(@Path("pnr") pnr: String): BookingDetails
 
