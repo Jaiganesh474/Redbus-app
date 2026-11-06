@@ -482,13 +482,17 @@ public class BusRouteService {
         }
 
         BigDecimal busRating = BigDecimal.ZERO;
+        int totalRatings = 0;
         if (route.getBus() != null && route.getBus().getId() != null) {
             List<Review> busReviews = reviewRepository.findByBusIdOrderByCreatedAtDesc(route.getBus().getId()).stream()
                     .filter(r -> !ReviewService.isMockReview(r))
                     .collect(Collectors.toList());
+            totalRatings = busReviews.size();
             if (!busReviews.isEmpty()) {
                 double avg = busReviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
                 busRating = BigDecimal.valueOf(Math.round(avg * 10.0) / 10.0);
+            } else if (route.getBus().getRating() != null && route.getBus().getRating().compareTo(BigDecimal.ZERO) > 0) {
+                busRating = route.getBus().getRating();
             }
         }
 
@@ -514,6 +518,7 @@ public class BusRouteService {
                 .operatorName(route.getBus().getOperatorName())
                 .busType(route.getBus().getBusType())
                 .rating(busRating)
+                .totalRatings(totalRatings)
                 .amenities(amenitiesList)
                 .sourceCity(route.getSourceCity())
                 .destinationCity(route.getDestinationCity())

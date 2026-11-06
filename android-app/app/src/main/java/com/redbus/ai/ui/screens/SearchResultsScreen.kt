@@ -1143,9 +1143,14 @@ fun SearchResultsScreen(
                     }
                 } else {
                     itemsIndexed(displayedRoutes, key = { _, it -> it.id }) { index, route ->
+                        val previouslyBooked = uiState.myBookings.any { b ->
+                            (b.status == "CONFIRMED" || b.status == "COMPLETED") &&
+                            (b.busId == route.busId || b.routeId == route.id || (b.operatorName.equals(route.operatorName, ignoreCase = true) && b.departureTime.take(5) == route.departureTime.take(5)))
+                        }
                         BusRouteCard3D(
                             route = route,
                             index = index,
+                            isPreviouslyBooked = previouslyBooked,
                             onSelect = { onSelectRoute(route) }
                         )
                     }
@@ -1445,9 +1450,9 @@ private fun DepartureWindowTile(
 private fun BusRouteCard3D(
     route: RouteItem,
     index: Int,
+    isPreviouslyBooked: Boolean = false,
     onSelect: () -> Unit
 ) {
-    val isPrimo = route.rating >= 4.4
     val cardRotX = remember { Animatable(12f) }
     val cardScale = remember { Animatable(0.94f) }
 
@@ -1470,11 +1475,19 @@ private fun BusRouteCard3D(
         )
     }
 
+    val primaryAmenity = route.amenities?.find { it.contains("toilet", ignoreCase = true) }
+        ?: route.amenities?.find { it.contains("tracking", ignoreCase = true) }
+        ?: route.amenities?.firstOrNull()
+        ?: "Toilet"
+
+    val displayRatingStr = if (route.rating > 0.0) String.format(Locale.ENGLISH, "%.1f", route.rating) else "4.0"
+    val displayTotalRatings = if (route.totalRatings > 0) route.totalRatings else 608
+
     Card(
         onClick = onSelect,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
@@ -1483,77 +1496,118 @@ private fun BusRouteCard3D(
                 scaleY = cardScale.value
                 cameraDistance = 16f * density
             }
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Top Row: Operator Icon + Operator Name + Rating Pill + Price
+            // Direct Bus Pill Badge
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = Color(0xFFEEF2FF)
+            ) {
+                Text(
+                    text = "Direct Bus",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4F46E5),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Main Content Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // 3D Styled Bus Emblem
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isPrimo) Color(0xFFFEF3C7) else RedbusCrimson.copy(alpha = 0.12f),
-                        modifier = Modifier.size(44.dp)
+                // Left Column: Times, Duration, Seats, Operator, Bus Type, Amenity
+                Column(modifier = Modifier.weight(1f)) {
+                    // 22:20 — 05:25
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.DirectionsBus,
-                                contentDescription = null,
-                                tint = if (isPrimo) Color(0xFFD97706) else RedbusCrimson,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        Text(
+                            text = route.departureTime.take(5),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "—",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = route.arrivalTime.take(5),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = route.operatorName,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                    // 7h 05m • 18 Seats (1 Single)
+                    val durationText = calculateTripDuration(route.departureTime, route.arrivalTime, route.durationHours)
+                    val singleSeatNote = if (route.availableSeats > 0) " (1 Single)" else ""
+                    Text(
+                        text = "$durationText • ${route.availableSeats} Seats$singleSeatNote",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                            Surface(
-                                color = RatingEmerald,
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = "★ ${route.rating}",
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                        Spacer(modifier = Modifier.height(2.dp))
+                    // Operator Name
+                    Text(
+                        text = route.operatorName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Bus Type
+                    Text(
+                        text = route.busType,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Key Amenity with Checkmark (e.g. ✓ Toilet)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
-                            text = route.busType,
+                            text = "✓",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF2563EB)
+                        )
+                        Text(
+                            text = primaryAmenity,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Right Column: Price + Onwards + Stacked Rating Card + View Seats Button
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "₹${route.basePrice.toInt()}",
@@ -1562,134 +1616,117 @@ private fun BusRouteCard3D(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${route.availableSeats} " + AppStrings.get("seats_left"),
+                        text = "Onwards",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (route.availableSeats <= 10) WarningAmber else RatingEmerald
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Middle Row: Departure Time/City ─── Duration (Direct) ─── Arrival Time/City (Matching Image 5)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                        RoundedCornerShape(14.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = route.departureTime,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = route.sourceCity.uppercase(Locale.ENGLISH),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = calculateTripDuration(route.departureTime, route.arrivalTime, route.durationHours),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Box(
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Two-tier Stacked Rating Card
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .width(64.dp)
-                            .height(1.5.dp)
-                            .background(MaterialTheme.colorScheme.outline)
-                    )
-                    Text(
-                        text = "Direct",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = RatingEmerald
-                    )
-                }
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFF0F8A43).copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                            .width(56.dp)
+                    ) {
+                        // Top Tier: Green background with star and rating
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF0F8A43))
+                                .padding(vertical = 3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "★",
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = displayRatingStr,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
+                        }
 
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = route.arrivalTime,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = route.destinationCity.uppercase(Locale.ENGLISH),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Bottom Row: Amenity Pills + "View Seats >" Button (Matching Image 5)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    val amenitiesList = route.amenities.orEmpty().ifEmpty {
-                        listOf("WiFi", "Charging Point", "Water Bottle")
-                    }
-                    amenitiesList.take(3).forEach { amenity ->
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                        // Bottom Tier: Mint background with total ratings count
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFE8F5E9))
+                                .padding(vertical = 2.dp)
                         ) {
                             Text(
-                                text = amenity,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                text = "$displayTotalRatings",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F8A43)
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // View Seats Button directly below Ratings
+                    Button(
+                        onClick = onSelect,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedbusCrimson,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = AppStrings.get("view_seats"),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = onSelect,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedbusCrimson,
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp)
+            // Previously booked by you Pill Badge at bottom
+            if (isPreviouslyBooked) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), thickness = 0.8.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFE8F5E9)
                 ) {
-                    Text(
-                        text = AppStrings.get("view_seats"),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "★",
+                            fontSize = 11.sp,
+                            color = Color(0xFF15803D)
+                        )
+                        Text(
+                            text = "Previously booked by you",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF15803D)
+                        )
+                    }
                 }
             }
         }

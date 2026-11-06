@@ -68,6 +68,7 @@ export interface RouteItem {
   operatorName: string;
   busType: string;
   rating: number;
+  totalRatings?: number;
   amenities: string[];
   sourceCity: string;
   destinationCity: string;

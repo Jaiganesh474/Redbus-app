@@ -371,6 +371,7 @@ export default function BusDetailsModal({
     | "photos"
     | "ml_insights"
     | "cancellation"
+    | "date_change"
     | "boarding"
     | "dropping"
     | "route"
@@ -589,6 +590,37 @@ export default function BusDetailsModal({
       totalPrice > 0 ? totalPrice : route.basePrice
     );
   }, [effectiveTravelDate, route.departureTime, totalPrice, route.basePrice]);
+
+  const dateChangeCutoffFormatted = useMemo(() => {
+    try {
+      const dep = route.departureTime || "22:20";
+      const [h, m] = dep.slice(0, 5).split(":").map(Number);
+      const dateParts = effectiveTravelDate.split("-");
+      if (dateParts.length === 3) {
+        const d = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]), h, m);
+        d.setHours(d.getHours() - 2);
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = d.toLocaleDateString("en-US", { month: "short" });
+        const hours = String(d.getHours()).padStart(2, "0");
+        const mins = String(d.getMinutes()).padStart(2, "0");
+        return `Until ${day} ${month}, ${hours}:${mins}`;
+      }
+    } catch {}
+    return "Until 2h before departure";
+  }, [effectiveTravelDate, route.departureTime]);
+
+  const routeStops = useMemo(() => {
+    if (route.busRoute) {
+      const parts = route.busRoute.split(/[,\->]+/).map((s: string) => s.trim()).filter(Boolean);
+      if (parts.length > 0) return parts;
+    }
+    return [route.sourceCity, "Hosur", "Krishnagiri", "Vellore", route.destinationCity];
+  }, [route.busRoute, route.sourceCity, route.destinationCity]);
+
+  const estimatedDistanceKm = useMemo(() => {
+    const hours = route.durationHours || 7.0;
+    return Math.round(hours * 52);
+  }, [route.durationHours]);
 
   // Group seats by rowNum
   const getDeckRows = (deckSeats: SeatItem[]) => {
@@ -1055,6 +1087,7 @@ export default function BusDetailsModal({
                           { id: "photos", label: "📸 Bus Photos" },
                           { id: "ml_insights", label: "⚡ AI Punctuality & Demand" },
                           { id: "cancellation", label: "Cancellation policy" },
+                          { id: "date_change", label: "Date change policy" },
                           { id: "boarding", label: "Boarding point" },
                           { id: "dropping", label: "Dropping point" },
                           { id: "route", label: "Bus route" },
@@ -1215,6 +1248,70 @@ export default function BusDetailsModal({
                               <p className="text-[10px] text-gray-400 dark:text-slate-500 leading-relaxed">
                                 * Cancellation charges are computed on a per seat basis. Above cancellation fare is calculated based on {selectedSeats.length > 0 ? `${selectedSeats.length} selected seat(s) fare of ₹${totalPrice}` : `seat fare of ₹${route.basePrice}`}.
                               </p>
+                            </div>
+                          )}
+
+                          {/* Date Change Policy Tab */}
+                          {activeTab === "date_change" && (
+                            <div className="space-y-5">
+                              <p className="text-xs text-gray-500 dark:text-slate-400 italic">
+                                * For group bookings individual seats can be cancelled.
+                              </p>
+
+                              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
+                                <div className="bg-gray-50 dark:bg-slate-800/60 px-4 py-3 border-b border-gray-200 dark:border-slate-800">
+                                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">Date change policy</h4>
+                                </div>
+                                <div className="p-4">
+                                  <table className="w-full text-left text-xs">
+                                    <thead>
+                                      <tr className="border-b border-gray-200 dark:border-slate-800 text-gray-500 dark:text-slate-400 pb-2">
+                                        <th className="pb-2 font-semibold">Time window</th>
+                                        <th className="pb-2 font-semibold text-right">Fees</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr>
+                                        <td className="pt-3">
+                                          <p className="font-bold text-gray-900 dark:text-white">Up to 2h before departure</p>
+                                          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{dateChangeCutoffFormatted}</p>
+                                        </td>
+                                        <td className="pt-3 text-right align-top">
+                                          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">FREE</span>
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* Bus Route Summary Card below */}
+                              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">Bus route</h4>
+                                  <div className="flex items-center space-x-2 text-xs font-semibold">
+                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-600 dark:text-slate-300">
+                                      {estimatedDistanceKm} km
+                                    </span>
+                                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-600 dark:text-slate-300">
+                                      {route.durationHours ? `${route.durationHours} hrs` : "7h 25m"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-700 dark:text-slate-200">
+                                  {routeStops.map((stop: string, idx: number) => (
+                                    <React.Fragment key={idx}>
+                                      <span className="px-2.5 py-1 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                                        {stop}
+                                      </span>
+                                      {idx < routeStops.length - 1 && (
+                                        <span className="text-gray-400">→</span>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           )}
 

@@ -988,25 +988,17 @@ fun SeatSelectionScreen(
                                 ) {
 
                                     val tabs = listOf(
-
                                         "highlights" to "Highlights",
-
                                         "photos" to "📸 Bus Photos",
-
                                         "ai_demand" to "⚡ AI Punctuality & Demand",
-
                                         "cancellation" to "Cancellation policy",
-
-                                        "boarding" to "Boarding & Dropping",
-
+                                        "date_change" to "Date change policy",
+                                        "boarding" to "Boarding points",
+                                        "dropping" to "Dropping points",
                                         "route" to "Bus route",
-
                                         "rest_stop" to "Rest stop",
-
                                         "safety" to "Bus Safety",
-
                                         "reviews" to "⭐ Customer Reviews (${uiState.currentBusReviews.size})"
-
                                     )
 
                                     tabs.forEach { (id, label) ->
@@ -1105,18 +1097,22 @@ fun SeatSelectionScreen(
 
                                     "cancellation" -> CancellationPolicyPanel(route = route)
 
+                                    "date_change" -> DateChangePolicyPanel(route = route)
+
                                     "highlights" -> HighlightsPanel(route = route)
 
                                     "ai_demand" -> AiPunctualityPanel(route = route)
 
                                     "photos" -> BusPhotosPanel(route = route)
 
-                                    "boarding" -> BoardingPreviewPanel(
+                                    "boarding" -> BoardingPointsPreviewPanel(
+                                        stops = boardingStops,
+                                        cityName = route.sourceCity
+                                    )
 
-                                        boardingStops = boardingStops,
-
-                                        droppingStops = droppingStops
-
+                                    "dropping" -> DroppingPointsPreviewPanel(
+                                        stops = droppingStops,
+                                        cityName = route.destinationCity
                                     )
 
                                     "route" -> BusRouteTimelinePanel(route = route)
@@ -2953,37 +2949,305 @@ private fun BusPhotosPanel(route: RouteItem) {
 
 
 @Composable
-
-private fun BoardingPreviewPanel(
-
-    boardingStops: List<String>,
-
-    droppingStops: List<String>
-
-) {
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-        Text("Boarding Points", fontWeight = FontWeight.Black, fontSize = 14.sp, color = RedbusCrimson)
-
-        boardingStops.forEach { stop ->
-
-            Text("• $stop", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
+private fun DateChangePolicyPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+    val cutoffText = remember(route.travelDate, route.departureTime) {
+        try {
+            val dep = route.departureTime.take(5)
+            val parts = dep.split(":")
+            val depH = parts.getOrNull(0)?.toIntOrNull() ?: 22
+            val depM = parts.getOrNull(1)?.toIntOrNull() ?: 20
+            val dateParts = route.travelDate.split("-")
+            val cal = java.util.Calendar.getInstance()
+            if (dateParts.size == 3) {
+                cal.set(java.util.Calendar.YEAR, dateParts[0].toInt())
+                cal.set(java.util.Calendar.MONTH, dateParts[1].toInt() - 1)
+                cal.set(java.util.Calendar.DAY_OF_MONTH, dateParts[2].toInt())
+            }
+            cal.set(java.util.Calendar.HOUR_OF_DAY, depH)
+            cal.set(java.util.Calendar.MINUTE, depM)
+            cal.set(java.util.Calendar.SECOND, 0)
+            cal.add(java.util.Calendar.HOUR_OF_DAY, -2)
+            val sdf = java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.ENGLISH)
+            "Until " + sdf.format(cal.time)
+        } catch (e: Exception) {
+            "Until 2h before departure"
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text("Dropping Points", fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF15803D))
-
-        droppingStops.forEach { stop ->
-
-            Text("• $stop", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        }
-
     }
 
+    val routeStops = remember(route.busRoute, route.sourceCity, route.destinationCity) {
+        if (!route.busRoute.isNullOrBlank()) {
+            route.busRoute.split(",", "->", "-").map { it.trim() }.filter { it.isNotBlank() }
+        } else {
+            listOf(route.sourceCity, "Hosur", "Krishnagiri", "Vellore", route.destinationCity)
+        }
+    }
+
+    val estimatedDist = remember(route.durationHours) {
+        val h = route.durationHours ?: 7.0
+        (h * 52).toInt()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            text = "* For group bookings individual seats can be cancelled.",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Date Change Policy Card
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "Date change policy",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), thickness = 0.8.dp)
+
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Time window",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Fees",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), thickness = 0.8.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column {
+                            Text(
+                                text = "Up to 2h before departure",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = cutoffText,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Text(
+                            text = "FREE",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF15803D)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Bus Route Summary Card below
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Bus route",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "$estimatedDist km",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "${route.durationHours ?: 6.5} hrs",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    routeStops.forEachIndexed { idx, stop ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = stop,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        if (idx < routeStops.size - 1) {
+                            Text(
+                                text = "➔",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoardingPointsPreviewPanel(
+    stops: List<String>,
+    cityName: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "Boarding Points in $cityName",
+            fontWeight = FontWeight.Black,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (stops.isEmpty()) {
+            Text(
+                text = "No boarding points listed.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            stops.forEach { stop ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(RedbusCrimson, CircleShape)
+                        )
+                        Text(
+                            text = stop,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DroppingPointsPreviewPanel(
+    stops: List<String>,
+    cityName: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "Dropping Points in $cityName",
+            fontWeight = FontWeight.Black,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (stops.isEmpty()) {
+            Text(
+                text = "No dropping points listed.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            stops.forEach { stop ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color(0xFF15803D), CircleShape)
+                        )
+                        Text(
+                            text = stop,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
