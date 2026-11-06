@@ -2849,7 +2849,7 @@ private fun HighlightsPanel(route: RouteItem) {
 
                 Surface(
 
-                    color = Color(0xFFF1F5F9),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
 
                     shape = RoundedCornerShape(8.dp)
 
@@ -3289,7 +3289,7 @@ private fun BusRouteTimelinePanel(route: RouteItem) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFFF8FAFC), RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                 .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -3405,13 +3405,13 @@ private fun BusSafetyStandardsPanel(route: RouteItem) {
         safetyList.forEach { (title, desc) ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFF8FAFC),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF0F172A))
-                    Text(text = desc, fontSize = 10.5.sp, color = Color(0xFF64748B), lineHeight = 14.sp)
+                    Text(text = title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = desc, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 14.sp)
                 }
             }
         }
@@ -3602,7 +3602,7 @@ private fun CustomerReviewsPanel(
 
         if (totalRatingsCount == 0) {
             Surface(
-                color = Color(0xFFF8FAFC),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
@@ -3629,7 +3629,7 @@ private fun CustomerReviewsPanel(
         } else {
             Surface(
 
-                color = Color(0xFFF8FAFC),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
 
                 shape = RoundedCornerShape(16.dp),
 
@@ -3719,7 +3719,7 @@ private fun CustomerReviewsPanel(
 
                             fontSize = 11.sp,
 
-                            color = Color(0xFF1E293B)
+                            color = MaterialTheme.colorScheme.onSurface
 
                         )
 
@@ -3817,7 +3817,7 @@ private fun CustomerReviewsPanel(
 
                                     fontWeight = FontWeight.Bold,
 
-                                    color = Color(0xFF475569),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
 
                                     modifier = Modifier.width(22.dp)
 
@@ -3849,7 +3849,7 @@ private fun CustomerReviewsPanel(
 
                                     fontWeight = FontWeight.SemiBold,
 
-                                    color = Color(0xFF64748B),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
 
                                     modifier = Modifier.width(28.dp),
 
@@ -3907,7 +3907,7 @@ private fun CustomerReviewsPanel(
 
                         shape = RoundedCornerShape(16.dp),
 
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
 
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
 
@@ -3931,7 +3931,7 @@ private fun CustomerReviewsPanel(
 
                                 fontWeight = FontWeight.Medium,
 
-                                color = Color(0xFF1E293B)
+                                color = MaterialTheme.colorScheme.onSurface
 
                             )
 
@@ -3941,7 +3941,7 @@ private fun CustomerReviewsPanel(
 
                                 fontSize = 11.sp,
 
-                                color = Color(0xFF64748B)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
 
                             )
 
@@ -3963,7 +3963,7 @@ private fun CustomerReviewsPanel(
 
             shape = RoundedCornerShape(14.dp),
 
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
 
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
 
@@ -4089,7 +4089,7 @@ private fun CustomerReviewsPanel(
 
                 modifier = Modifier.fillMaxSize(),
 
-                color = Color(0xFFF8FAFC)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
 
             ) {
 
@@ -4111,7 +4111,7 @@ private fun CustomerReviewsPanel(
 
                             .fillMaxWidth()
 
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.surface)
 
                             .padding(horizontal = 14.dp, vertical = 12.dp),
 
@@ -4433,7 +4433,7 @@ private fun CustomerReviewsPanel(
 
                                 Surface(
 
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.surface,
 
                                     shape = RoundedCornerShape(16.dp),
 
@@ -4471,7 +4471,7 @@ private fun CustomerReviewsPanel(
 
                                                 fontSize = 15.sp,
 
-                                                color = Color(0xFF0F172A)
+                                                color = MaterialTheme.colorScheme.onSurface
 
                                             )
 
@@ -4563,7 +4563,7 @@ private fun CustomerReviewsPanel(
 
                                                 fontSize = 11.sp,
 
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                             )
 
@@ -4581,7 +4581,7 @@ private fun CustomerReviewsPanel(
 
                                                 fontSize = 13.sp,
 
-                                                color = Color(0xFF334155),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
 
                                                 lineHeight = 18.sp
 
@@ -4613,7 +4613,7 @@ private fun CustomerReviewsPanel(
 
                                                     fontWeight = FontWeight.SemiBold,
 
-                                                    color = Color(0xFF64748B)
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                                 )
 
@@ -4623,7 +4623,7 @@ private fun CustomerReviewsPanel(
 
                                                         shape = RoundedCornerShape(6.dp),
 
-                                                        color = Color(0xFFF1F5F9),
+                                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
 
                                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
 
@@ -4637,7 +4637,7 @@ private fun CustomerReviewsPanel(
 
                                                             fontWeight = FontWeight.SemiBold,
 
-                                                            color = Color(0xFF475569),
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
 
                                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
 

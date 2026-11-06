@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -13,5 +14,6 @@ import java.time.LocalDate;
 public class ChangeJourneyDateRequest {
     private LocalDate newTravelDate;
     private Long newRouteId;
+    private List<String> newSeatNumbers;
 }
 

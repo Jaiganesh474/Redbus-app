@@ -91,6 +91,69 @@ public class EmailService {
     }
 
     /**
+     * Send rescheduled / date-changed e-ticket email with explanatory message and updated PDF attachment
+     */
+    public boolean sendBookingRescheduledEmail(Booking booking, java.time.LocalDate oldDate, java.time.LocalDate newDate, List<String> oldSeats) {
+        String recipient = booking.getContactEmail().trim();
+        try {
+            byte[] pdfBytes = pdfService.generateTicketPdf(booking);
+            String passengersList = booking.getPassengers().stream()
+                    .map(p -> p.getName() + " (Seat " + p.getSeatNumber() + ")")
+                    .collect(Collectors.joining(", "));
+            String newSeatsStr = booking.getPassengers().stream()
+                    .map(com.redbus.entity.BookingPassenger::getSeatNumber)
+                    .collect(Collectors.joining(", "));
+            String oldSeatsStr = (oldSeats != null && !oldSeats.isEmpty())
+                    ? String.join(", ", oldSeats)
+                    : newSeatsStr;
+
+            String subject = "📅 Rescheduled: Your Updated redBus Ticket for " + booking.getRoute().getSourceCity() +
+                    " to " + booking.getRoute().getDestinationCity() + " (" + newDate + ") [PNR: " + booking.getPnr() + "]";
+
+            String baseHtml = buildTicketEmailTemplate(booking, passengersList);
+            String rescheduleBanner = """
+                  <div style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:14px;padding:14px 16px;margin-bottom:20px;">
+                    <div style="font-size:12px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px;">
+                      📅 Journey Date Updated Successfully (Free Date Change)
+                    </div>
+                    <p style="margin:0;font-size:13px;color:#047857;line-height:1.55;font-weight:600;">
+                      Your bus journey for PNR <strong>%s</strong> has been rescheduled from <strong>%s</strong> (Seat: %s) to <strong>%s</strong> (Seat: %s). Your previous seat(s) on %s have been released, and your updated seat(s) are confirmed. Please use the updated E-Ticket PDF attached to this email for boarding.
+                    </p>
+                  </div>
+                  <div class="section-title">Journey & Bus Details</div>""".formatted(
+                    booking.getPnr(),
+                    oldDate != null ? oldDate.toString() : "Previous Date",
+                    oldSeatsStr,
+                    newDate != null ? newDate.toString() : booking.getRoute().getTravelDate().toString(),
+                    newSeatsStr,
+                    oldDate != null ? oldDate.toString() : "previous date"
+            );
+
+            String htmlContent = baseHtml
+                    .replace("Official Booking Confirmation & Tax Invoice", "Updated Rescheduled E-Ticket & Tax Invoice")
+                    .replace("<div class=\"section-title\">Journey & Bus Details</div>", rescheduleBanner);
+
+            String fileName = "redbus_updated_ticket_" + booking.getPnr() + ".pdf";
+            if (sendViaSmtp(recipient, subject, htmlContent, pdfBytes, fileName)) {
+                return true;
+            }
+            if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
+                boolean sent = sendViaBrevoApi(recipient, booking.getPassengers().get(0).getName(), subject, htmlContent, pdfBytes, fileName);
+                if (sent) return true;
+            }
+
+            log.info("==================== BREVO RESCHEDULED EMAIL DISPATCHED ====================");
+            log.info("To: {} | PNR: {} | Old Date: {} -> New Date: {} | Seats: {}", recipient, booking.getPnr(), oldDate, newDate, newSeatsStr);
+            log.info("PDF Attachment: {} ({} bytes)", fileName, pdfBytes.length);
+            log.info("============================================================================");
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to generate and send rescheduled e-ticket email for PNR " + booking.getPnr(), e);
+            return false;
+        }
+    }
+
+    /**
      * Send booking cancellation email with updated cancelled PDF attachment via Brevo
      */
     public boolean sendBookingCancellationEmail(Booking booking, java.math.BigDecimal refundAmount) {

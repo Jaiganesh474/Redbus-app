@@ -218,7 +218,7 @@ fun CheckoutScreen(
 
                         Surface(
 
-                            color = Color.White.copy(alpha = 0.2f),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
 
                             shape = RoundedCornerShape(10.dp),
 
@@ -878,7 +878,7 @@ fun CheckoutScreen(
                             }
 
                             if (tIdx < displayTravellers.size - 1) {
-                                HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f), thickness = 1.dp)
                             }
                         }
                     }
@@ -1001,7 +1001,7 @@ fun CheckoutScreen(
 
                                                 fontSize = 14.sp,
 
-                                                color = Color(0xFF0F172A)
+                                                color = MaterialTheme.colorScheme.onSurface
 
                                             )
 
@@ -1081,7 +1081,7 @@ fun CheckoutScreen(
 
                                 fontSize = 11.sp,
 
-                                color = Color(0xFF475569)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
 
                             )
 
@@ -1097,7 +1097,7 @@ fun CheckoutScreen(
 
                                 .fillMaxWidth()
 
-                                .background(Color(0xFFF8FAFC), RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
 
                                 .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
 
@@ -1165,7 +1165,7 @@ fun CheckoutScreen(
 
                                             fontSize = 14.sp,
 
-                                            color = Color(0xFF0F172A)
+                                            color = MaterialTheme.colorScheme.onSurface
 
                                         )
 
@@ -1177,7 +1177,7 @@ fun CheckoutScreen(
 
                                             fontWeight = FontWeight.SemiBold,
 
-                                            color = Color(0xFF64748B)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                         )
 
@@ -1205,7 +1205,7 @@ fun CheckoutScreen(
 
                                 fontSize = 12.sp,
 
-                                color = Color(0xFF334155),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
 
                                 lineHeight = 16.sp
 
@@ -1279,7 +1279,7 @@ fun CheckoutScreen(
 
                                                 fontSize = 10.sp,
 
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                             )
 
@@ -1321,7 +1321,7 @@ fun CheckoutScreen(
 
                                                 fontSize = 10.sp,
 
-                                                color = Color(0xFF64748B)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                             )
 
@@ -1726,7 +1726,7 @@ fun CheckoutScreen(
 
                             .fillMaxWidth()
 
-                            .background(Color(0xFFF8FAFC))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
 
                             .padding(horizontal = 14.dp, vertical = 10.dp),
 
@@ -1774,7 +1774,7 @@ fun CheckoutScreen(
 
                                 fontSize = 16.sp,
 
-                                color = Color(0xFF0F172A)
+                                color = MaterialTheme.colorScheme.onSurface
 
                             )
 
@@ -1856,7 +1856,7 @@ fun CheckoutScreen(
 
                             fontSize = 18.sp,
 
-                            color = Color(0xFF0F172A)
+                            color = MaterialTheme.colorScheme.onSurface
 
                         )
 
@@ -2006,7 +2006,7 @@ fun CheckoutScreen(
 
                                         fontSize = 16.sp,
 
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
 
                                     )
 
@@ -2016,7 +2016,7 @@ fun CheckoutScreen(
 
                                         fontSize = 12.sp,
 
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2104,7 +2104,7 @@ fun CheckoutScreen(
 
                                                         fontSize = 14.sp,
 
-                                                        color = Color(0xFF0F172A)
+                                                        color = MaterialTheme.colorScheme.onSurface
 
                                                     )
 
@@ -2114,7 +2114,7 @@ fun CheckoutScreen(
 
                                                         fontSize = 11.sp,
 
-                                                        color = Color(0xFF64748B)
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                                     )
 
@@ -2128,7 +2128,7 @@ fun CheckoutScreen(
 
                                                     fontSize = 13.sp,
 
-                                                    color = Color(0xFF0F172A)
+                                                    color = MaterialTheme.colorScheme.onSurface
 
                                                 )
 
@@ -2168,7 +2168,7 @@ fun CheckoutScreen(
 
                                                         fontSize = 14.sp,
 
-                                                        color = Color(0xFF0F172A)
+                                                        color = MaterialTheme.colorScheme.onSurface
 
                                                     )
 
@@ -2178,7 +2178,7 @@ fun CheckoutScreen(
 
                                                         fontSize = 11.sp,
 
-                                                        color = Color(0xFF64748B)
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                                     )
 
@@ -2192,7 +2192,7 @@ fun CheckoutScreen(
 
                                                     fontSize = 13.sp,
 
-                                                    color = Color(0xFF0F172A)
+                                                    color = MaterialTheme.colorScheme.onSurface
 
                                                 )
 
@@ -2226,7 +2226,7 @@ fun CheckoutScreen(
 
                                         fontSize = 15.sp,
 
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
 
                                     )
 
@@ -2240,7 +2240,7 @@ fun CheckoutScreen(
 
                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
 
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.surface
 
                                     ) {
 
@@ -2252,7 +2252,7 @@ fun CheckoutScreen(
 
                                                     .fillMaxWidth()
 
-                                                    .background(Color(0xFFF8FAFC))
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
 
                                                     .padding(12.dp),
 
@@ -2260,9 +2260,9 @@ fun CheckoutScreen(
 
                                             ) {
 
-                                                Text("Time window", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF475569))
+                                                Text("Time window", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                                Text("Refund", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF475569))
+                                                Text("Refund", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                                             }
 
@@ -2296,13 +2296,13 @@ fun CheckoutScreen(
 
                                                 ) {
 
-                                                    Text(time, fontSize = 12.sp, color = Color(0xFF334155))
+                                                    Text(time, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                                    Text(ref, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                                                    Text(ref, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
                                                 }
 
-                                                if (i < 3) HorizontalDivider(color = Color(0xFFF1F5F9))
+                                                if (i < 3) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
 
                                             }
 
@@ -2316,13 +2316,13 @@ fun CheckoutScreen(
 
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
-                                        Text("* Cancellation charges are computed on a per seat basis. Above cancellation fare is calculated based on seat fare of ₹${fareBreakdown.baseFare.toInt()}", fontSize = 10.sp, color = Color(0xFF64748B))
+                                        Text("* Cancellation charges are computed on a per seat basis. Above cancellation fare is calculated based on seat fare of ₹${fareBreakdown.baseFare.toInt()}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                        Text("* Cancellation charges are calculated based on service start date + time at :${route.departureTime}", fontSize = 10.sp, color = Color(0xFF64748B))
+                                        Text("* Cancellation charges are calculated based on service start date + time at :${route.departureTime}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                        Text("* Ticket cannot be cancelled after scheduled bus departure time from the first boarding point", fontSize = 10.sp, color = Color(0xFF64748B))
+                                        Text("* Ticket cannot be cancelled after scheduled bus departure time from the first boarding point", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                        Text("* Note: Cancellation charges mentioned above are excluding GST", fontSize = 10.sp, color = Color(0xFF64748B))
+                                        Text("* Note: Cancellation charges mentioned above are excluding GST", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                                     }
 
@@ -2350,7 +2350,7 @@ fun CheckoutScreen(
 
                                         fontSize = 15.sp,
 
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
 
                                     )
 
@@ -2360,7 +2360,7 @@ fun CheckoutScreen(
 
                                         fontSize = 11.sp,
 
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2388,7 +2388,7 @@ fun CheckoutScreen(
 
                                                     fontSize = 14.sp,
 
-                                                    color = Color(0xFF0F172A)
+                                                    color = MaterialTheme.colorScheme.onSurface
 
                                                 )
 
@@ -2398,7 +2398,7 @@ fun CheckoutScreen(
 
                                                     fontSize = 12.sp,
 
-                                                    color = Color(0xFF64748B)
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                                 )
 
@@ -2457,7 +2457,7 @@ fun CheckoutScreen(
 
                                         fontSize = 14.sp,
 
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
 
                                     )
 
@@ -2467,7 +2467,7 @@ fun CheckoutScreen(
 
                                         fontSize = 11.sp,
 
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2479,7 +2479,7 @@ fun CheckoutScreen(
 
                                         fontWeight = FontWeight.SemiBold,
 
-                                        color = Color(0xFF334155)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2491,7 +2491,7 @@ fun CheckoutScreen(
 
                                         fontWeight = FontWeight.SemiBold,
 
-                                        color = Color(0xFF334155)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2521,7 +2521,7 @@ fun CheckoutScreen(
 
                                         fontSize = 15.sp,
 
-                                        color = Color(0xFF0F172A)
+                                        color = MaterialTheme.colorScheme.onSurface
 
                                     )
 
@@ -2531,7 +2531,7 @@ fun CheckoutScreen(
 
                                         fontSize = 11.sp,
 
-                                        color = Color(0xFF64748B)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
 
                                     )
 
@@ -2545,9 +2545,9 @@ fun CheckoutScreen(
 
                                     ) {
 
-                                        Text("Base Fare", fontSize = 13.sp, color = Color(0xFF475569))
+                                        Text("Base Fare", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                        Text("₹${fareBreakdown.baseFare.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                                        Text("₹${fareBreakdown.baseFare.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
                                     }
 
@@ -2561,9 +2561,9 @@ fun CheckoutScreen(
 
                                     ) {
 
-                                        Text("Operator Service Fee", fontSize = 13.sp, color = Color(0xFF475569))
+                                        Text("Operator Service Fee", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                                        Text("+₹${fareBreakdown.gstAndService.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                                        Text("+₹${fareBreakdown.gstAndService.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
 
                                     }
 
@@ -2663,7 +2663,7 @@ fun CheckoutScreen(
 
                                     ) {
 
-                                        Text("Total", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color(0xFF0F172A))
+                                        Text("Total", fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
 
                                         Text("₹${fareBreakdown.netPayable.toInt()}", fontWeight = FontWeight.Black, fontSize = 18.sp, color = RedbusCrimson)
 
@@ -3253,7 +3253,7 @@ private fun RazorpayOfficialTestPageModal(
 
                 Surface(
 
-                    color = Color(0xFF1E293B),
+                    color = MaterialTheme.colorScheme.onSurface,
 
                     modifier = Modifier.fillMaxWidth()
 
@@ -4368,7 +4368,7 @@ private fun DeckCard(
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
         modifier = modifier
     ) {
@@ -4387,17 +4387,17 @@ private fun DeckCard(
                     text = title,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF334155)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = Color(0xFFF1F5F9)
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
                 ) {
                     Text(
                         text = headerBadge,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 }

@@ -1476,12 +1476,13 @@ class RedbusViewModel(
         pnr: String,
         newTravelDate: String?,
         newRouteId: Long?,
+        newSeatNumbers: List<String>? = null,
         onSuccess: () -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isBookingsLoading = true, bookingActionMessage = null) }
-            repository.changeJourneyDate(pnr, newTravelDate, newRouteId)
+            repository.changeJourneyDate(pnr, newTravelDate, newRouteId, newSeatNumbers)
                 .onSuccess { updated ->
                     _uiState.update { state ->
                         val updatedList = state.myBookings.map { if (it.pnr == pnr) updated else it }
@@ -1489,9 +1490,10 @@ class RedbusViewModel(
                             isBookingsLoading = false,
                             myBookings = updatedList,
                             pnrSearchResult = if (state.pnrSearchResult?.pnr == pnr) updated else state.pnrSearchResult,
-                            bookingActionMessage = "Journey date successfully postponed for $pnr"
+                            bookingActionMessage = "Journey date rescheduled to ${updated.travelDate} for $pnr! Updated ticket emailed."
                         )
                     }
+                    performSearch()
                     onSuccess()
                 }
                 .onFailure { err ->

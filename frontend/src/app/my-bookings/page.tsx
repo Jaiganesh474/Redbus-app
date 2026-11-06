@@ -13,6 +13,7 @@ import {
   useSendTicketEmailMutation,
   useChangeTripPointsMutation,
   useChangeJourneyDateMutation,
+  useGetAvailableDatesForBookingQuery,
   useCreateReviewMutation,
   useGetMeQuery,
   API_BASE_URL,
@@ -85,9 +86,15 @@ export default function MyBookingsPage() {
 
   const [selectedBookingForChangeDate, setSelectedBookingForChangeDate] = useState<BookingDetails | null>(null);
   const [newJourneyDate, setNewJourneyDate] = useState("");
+  const [selectedNewSeats, setSelectedNewSeats] = useState<string[]>([]);
   const [showConfirmDateModal, setShowConfirmDateModal] = useState(false);
   const [changeDateError, setChangeDateError] = useState("");
   const [changeDateSuccess, setChangeDateSuccess] = useState("");
+
+  const { data: availableDatesData, isFetching: isLoadingAvailableDates } = useGetAvailableDatesForBookingQuery(
+    selectedBookingForChangeDate?.pnr || "",
+    { skip: !selectedBookingForChangeDate?.pnr }
+  );
 
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<BookingDetails | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
@@ -744,7 +751,11 @@ export default function MyBookingsPage() {
                           )}
                           <div className="flex justify-between text-gray-600">
                             <span>Operator Service Fee & GST</span>
-                            <span className="font-bold text-emerald-600">FREE (₹0.00)</span>
+                            {Number(booking.serviceFee || 0) > 0 ? (
+                              <span className="font-bold text-gray-900">+₹{Number(booking.serviceFee).toFixed(2)}</span>
+                            ) : (
+                              <span className="font-bold text-emerald-600">FREE (₹0.00)</span>
+                            )}
                           </div>
                           <div className="pt-2 border-t border-gray-200 flex justify-between items-center text-sm">
                             <div>
@@ -2214,29 +2225,48 @@ export default function MyBookingsPage() {
       })()}
 
       {/* ======================================================== */}
-      {/* 4. FREE BUS CHANGE / DATE POSTPONEMENT MODAL (Image 2) */}
+      {/* 4. FREE BUS CHANGE / DATE POSTPONEMENT MODAL */}
       {/* ======================================================== */}
       {selectedBookingForChangeDate && (() => {
         const booking = selectedBookingForChangeDate;
+        const datesList = availableDatesData?.dates || [];
+        const selectedDateInfo = datesList.find((d) => d.date === newJourneyDate);
+        const bookedSeats = availableDatesData?.bookedSeats || booking.passengers.map((p) => p.seatNumber);
+        const requiredSeatCount = bookedSeats.length || 1;
+        const needsSeatSelection = selectedDateInfo && selectedDateInfo.busAvailable && !selectedDateInfo.sameSeatsAvailable;
 
         const handleConfirmDateChange = async () => {
           if (!newJourneyDate) {
             setChangeDateError("Please pick a future journey date.");
             return;
           }
+          if (selectedDateInfo && !selectedDateInfo.busAvailable) {
+            setChangeDateError("This bus is not available on the selected date. Please pick a highlighted available date or search other buses.");
+            setShowConfirmDateModal(false);
+            return;
+          }
+          if (needsSeatSelection && selectedNewSeats.length !== requiredSeatCount) {
+            setChangeDateError(`Please select ${requiredSeatCount} replacement seat(s) to continue.`);
+            setShowConfirmDateModal(false);
+            return;
+          }
           try {
-            await changeJourneyDateMutation({
+            const updatedBooking = await changeJourneyDateMutation({
               pnr: booking.pnr,
               newTravelDate: newJourneyDate,
+              newRouteId: selectedDateInfo?.routeId || undefined,
+              newSeatNumbers: needsSeatSelection ? selectedNewSeats : undefined,
             }).unwrap();
-            setChangeDateSuccess("Journey postponed successfully!");
+            setChangeDateSuccess("Journey date updated! Updated e-ticket & PDF sent to your email.");
+            setSelectedBookingForJourney(updatedBooking);
+            refetchBookings();
             setTimeout(() => {
               setShowConfirmDateModal(false);
               setSelectedBookingForChangeDate(null);
-              setSelectedBookingForJourney(null);
-            }, 1200);
+              setSelectedNewSeats([]);
+            }, 1400);
           } catch (err: any) {
-            setChangeDateError(err?.data?.message || "Failed to postpone journey date.");
+            setChangeDateError(err?.data?.message || "Failed to update journey date.");
             setShowConfirmDateModal(false);
           }
         };
@@ -2247,16 +2277,22 @@ export default function MyBookingsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 space-y-4"
+              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                 <div>
-                  <h3 className="text-base font-black text-gray-900">Postpone Journey Date</h3>
-                  <p className="text-[11px] text-gray-500">Free Bus Change • Ticket #{booking.pnr}</p>
+                  <h3 className="text-base font-black text-gray-900">Change Journey Date</h3>
+                  <p className="text-[11px] text-gray-500">
+                    {booking.operatorName} • Ticket #{booking.pnr} • Seat(s): {bookedSeats.join(", ")}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedBookingForChangeDate(null)}
+                  onClick={() => {
+                    setSelectedBookingForChangeDate(null);
+                    setSelectedNewSeats([]);
+                    setShowConfirmDateModal(false);
+                  }}
                   className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -2276,32 +2312,176 @@ export default function MyBookingsPage() {
               )}
 
               <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-100 text-xs text-rose-900 space-y-1">
-                <p className="font-bold">Current Date: {booking.travelDate}</p>
+                <p className="font-bold">Current Journey Date: {booking.travelDate}</p>
                 <p className="text-[11px] text-gray-600">
-                  Select any date on or after current departure to postpone your trip at no extra penalty.
+                  Select an upcoming available date below. Faded dates indicate the bus is not operating or sold out on that date.
                 </p>
               </div>
 
-              {/* Monthly Date Picker Input */}
+              {/* Dynamic Upcoming Dates Calendar Grid */}
               <div>
-                <label className="text-xs font-black text-gray-900 block mb-1.5">
-                  Select New Journey Date:
-                </label>
-                <input
-                  type="date"
-                  min={booking.travelDate}
-                  value={newJourneyDate}
-                  onChange={(e) => setNewJourneyDate(e.target.value)}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-[#d84e55] focus:outline-hidden"
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-black text-gray-900">
+                    Select Upcoming Date:
+                  </label>
+                  {isLoadingAvailableDates && (
+                    <span className="text-[11px] text-gray-500 animate-pulse">Checking live seat availability...</span>
+                  )}
+                </div>
+
+                {datesList.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto p-1">
+                    {datesList.slice(0, 28).map((item) => {
+                      const isCurrent = item.date === booking.travelDate;
+                      const isSelected = item.date === newJourneyDate;
+                      const isAvailable = item.busAvailable;
+                      const parsed = new Date(`${item.date}T00:00:00`);
+                      const label = parsed.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+                      const weekday = parsed.toLocaleDateString("en-IN", { weekday: "short" });
+
+                      return (
+                        <button
+                          key={item.date}
+                          type="button"
+                          onClick={() => {
+                            setNewJourneyDate(item.date);
+                            setSelectedNewSeats([]);
+                            setShowConfirmDateModal(false);
+                            if (!isAvailable) {
+                              setChangeDateError(
+                                `${booking.operatorName} is not available on ${item.date}. Please choose a highlighted date or search other buses.`
+                              );
+                            } else {
+                              setChangeDateError("");
+                            }
+                          }}
+                          className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-[#d84e55] bg-[#d84e55]/10 ring-2 ring-[#d84e55]/40"
+                              : isCurrent
+                              ? "border-blue-300 bg-blue-50/40"
+                              : isAvailable
+                              ? "border-gray-200 bg-white hover:border-[#d84e55]"
+                              : "border-gray-100 bg-gray-100/60 opacity-45"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-gray-500">{weekday}</span>
+                            {isCurrent && (
+                              <span className="text-[9px] font-black text-blue-600 uppercase">Current</span>
+                            )}
+                          </div>
+                          <p className="text-xs font-black text-gray-900 mt-0.5">{label}</p>
+                          <p
+                            className={`text-[10px] font-bold mt-0.5 ${
+                              !isAvailable
+                                ? "text-red-500"
+                                : item.sameSeatsAvailable
+                                ? "text-emerald-600"
+                                : "text-amber-600"
+                            }`}
+                          >
+                            {!isAvailable
+                              ? "Unavailable"
+                              : item.sameSeatsAvailable
+                              ? `${item.availableSeats} Seats`
+                              : `Seat ${item.conflictingSeats.join(",")} taken`}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    min={booking.travelDate}
+                    value={newJourneyDate}
+                    onChange={(e) => {
+                      setNewJourneyDate(e.target.value);
+                      setSelectedNewSeats([]);
+                      setChangeDateError("");
+                    }}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:ring-2 focus:ring-[#d84e55] focus:outline-hidden"
+                  />
+                )}
               </div>
+
+              {/* Bus Unavailable Prompt */}
+              {selectedDateInfo && !selectedDateInfo.busAvailable && (
+                <div className="p-3.5 bg-red-50 rounded-2xl border border-red-200 space-y-2.5">
+                  <p className="text-xs font-bold text-red-800">
+                    {booking.operatorName} ({booking.departureTime?.slice(0, 5)}) is not available on{" "}
+                    <span className="font-black">{newJourneyDate}</span>. Please pick another available date in the calendar or explore other buses on this date.
+                  </p>
+                  <Link
+                    href={`/search?source=${encodeURIComponent(booking.sourceCity)}&destination=${encodeURIComponent(booking.destinationCity)}&date=${newJourneyDate}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#d84e55] text-white text-xs font-black rounded-xl hover:bg-[#b83e44]"
+                  >
+                    Search Buses on {newJourneyDate} &rarr;
+                  </Link>
+                </div>
+              )}
+
+              {/* Replacement Seat Selection when user's booked seat is already taken on new date */}
+              {needsSeatSelection && selectedDateInfo && (
+                <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-black text-amber-900">
+                        Seat {selectedDateInfo.conflictingSeats.join(", ")} is already booked on {newJourneyDate}
+                      </p>
+                      <p className="text-[11px] text-gray-600 mt-0.5">
+                        Select {requiredSeatCount} available replacement seat(s) below ({selectedNewSeats.length}/{requiredSeatCount} selected):
+                      </p>
+                    </div>
+                    <Link
+                      href={`/search?source=${encodeURIComponent(booking.sourceCity)}&destination=${encodeURIComponent(booking.destinationCity)}&date=${newJourneyDate}`}
+                      className="text-[11px] font-black text-[#d84e55] underline shrink-0"
+                    >
+                      Open Bus Search
+                    </Link>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pt-1">
+                    {selectedDateInfo.availableSeatNumbers.map((seatNo) => {
+                      const picked = selectedNewSeats.includes(seatNo);
+                      return (
+                        <button
+                          key={seatNo}
+                          type="button"
+                          onClick={() => {
+                            setChangeDateError("");
+                            setSelectedNewSeats((prev) => {
+                              if (prev.includes(seatNo)) return prev.filter((s) => s !== seatNo);
+                              if (prev.length >= requiredSeatCount) {
+                                return [...prev.slice(1), seatNo];
+                              }
+                              return [...prev, seatNo];
+                            });
+                          }}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer ${
+                            picked
+                              ? "bg-[#d84e55] text-white border-[#d84e55]"
+                              : "bg-white text-gray-800 border-gray-200 hover:border-[#d84e55]"
+                          }`}
+                        >
+                          {seatNo}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Confirmation Step */}
               {showConfirmDateModal ? (
                 <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-3">
                   <p className="text-xs font-black text-amber-900 leading-snug">
-                    Are you confirm to change to your journey date to{" "}
-                    <span className="text-[#d84e55] font-extrabold">{newJourneyDate}</span>?
+                    Confirm changing your journey date to{" "}
+                    <span className="text-[#d84e55] font-extrabold">{newJourneyDate}</span>
+                    {needsSeatSelection && selectedNewSeats.length > 0
+                      ? ` with new seat(s) ${selectedNewSeats.join(", ")}`
+                      : ` (Seat ${bookedSeats.join(", ")})`}
+                    ?
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -2325,14 +2505,22 @@ export default function MyBookingsPage() {
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedBookingForChangeDate(null)}
+                    onClick={() => {
+                      setSelectedBookingForChangeDate(null);
+                      setSelectedNewSeats([]);
+                    }}
                     className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    disabled={!newJourneyDate || newJourneyDate === booking.travelDate}
+                    disabled={
+                      !newJourneyDate ||
+                      newJourneyDate === booking.travelDate ||
+                      (selectedDateInfo ? !selectedDateInfo.busAvailable : false) ||
+                      (needsSeatSelection ? selectedNewSeats.length !== requiredSeatCount : false)
+                    }
                     onClick={() => setShowConfirmDateModal(true)}
                     className="flex-1 py-2.5 bg-[#d84e55] text-white text-xs font-black rounded-xl hover:bg-[#b83e44] shadow-xs cursor-pointer disabled:opacity-50"
                   >

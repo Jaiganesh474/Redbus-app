@@ -166,9 +166,14 @@ class RedbusRepository(
             runCatching { api.changeTripPoints(pnr, ChangeTripPointsRequest(boardingPoint, droppingPoint)) }
         }
 
-    suspend fun changeJourneyDate(pnr: String, newTravelDate: String?, newRouteId: Long?): Result<BookingDetails> =
+    suspend fun changeJourneyDate(
+        pnr: String,
+        newTravelDate: String?,
+        newRouteId: Long?,
+        newSeatNumbers: List<String>? = null
+    ): Result<BookingDetails> =
         withContext(Dispatchers.IO) {
-            runCatching { api.changeJourneyDate(pnr, ChangeJourneyDateRequest(newTravelDate, newRouteId)) }
+            runCatching { api.changeJourneyDate(pnr, ChangeJourneyDateRequest(newTravelDate, newRouteId, newSeatNumbers)) }
         }
 
     suspend fun sendTicketEmail(pnr: String, email: String?): Result<Map<String, Any>> =

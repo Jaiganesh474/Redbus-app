@@ -29,6 +29,7 @@ public class BusRouteService {
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
     private final ReviewRepository reviewRepository;
+    private final BookingRepository bookingRepository;
 
     public static BigDecimal calculateDurationHours(LocalTime dep, LocalTime arr) {
         if (dep == null || arr == null) return new BigDecimal("6.5");
@@ -164,7 +165,7 @@ public class BusRouteService {
         }
     }
 
-    private boolean isOperatingOnDate(String operatingDays, LocalDate date) {
+    public boolean isOperatingOnDate(String operatingDays, LocalDate date) {
         if (operatingDays == null || operatingDays.equalsIgnoreCase("DAILY")) {
             return true;
         }
@@ -173,7 +174,7 @@ public class BusRouteService {
         return operatingDays.toUpperCase().contains(dayName.substring(0, 3));
     }
 
-    private void generateBusSeats(Bus bus) {
+    public void generateBusSeats(Bus bus) {
         boolean isSleeper = bus.getBusType().toUpperCase().contains("SLEEPER");
         int total = bus.getTotalSeats() != null ? bus.getTotalSeats() : 30;
         List<Seat> seats = new ArrayList<>();
@@ -223,6 +224,81 @@ public class BusRouteService {
         }
 
         seatRepository.saveAll(seats);
+    }
+
+    /**
+     * Ensures RouteSeat records exist for this Route and reconciles their BOOKED status
+     * with actual CONFIRMED bookings on this Route (healing any orphaned seats after date changes).
+     */
+    @Transactional
+    public List<RouteSeat> reconcileRouteSeats(Route route) {
+        if (route == null || route.getId() == null) return Collections.emptyList();
+
+        List<RouteSeat> routeSeats = routeSeatRepository.findByRouteId(route.getId());
+        if (routeSeats.isEmpty() && route.getBus() != null) {
+            List<Seat> busSeats = seatRepository.findByBusIdOrderByDeckAscRowNumAscColNumAsc(route.getBus().getId());
+            if (busSeats.isEmpty()) {
+                generateBusSeats(route.getBus());
+                busSeats = seatRepository.findByBusIdOrderByDeckAscRowNumAscColNumAsc(route.getBus().getId());
+            }
+            for (Seat s : busSeats) {
+                RouteSeat rs = RouteSeat.builder()
+                        .route(route)
+                        .seat(s)
+                        .status("AVAILABLE")
+                        .genderRestriction("NONE")
+                        .build();
+                routeSeats.add(rs);
+            }
+            routeSeats = routeSeatRepository.saveAll(routeSeats);
+        }
+
+        // Reconcile BOOKED seats against actual CONFIRMED bookings on this route (skipping legacy seed routeId 3)
+        if (route.getId() != 3L && !routeSeats.isEmpty()) {
+            List<Booking> confirmedBookings = bookingRepository.findConfirmedBookingsByRouteId(route.getId());
+            Map<String, String> confirmedSeatGenders = new HashMap<>();
+            for (Booking b : confirmedBookings) {
+                if (b.getPassengers() != null) {
+                    for (BookingPassenger bp : b.getPassengers()) {
+                        if (bp.getSeatNumber() != null) {
+                            String g = bp.getGender() != null ? bp.getGender().trim().toUpperCase() : "MALE";
+                            confirmedSeatGenders.put(bp.getSeatNumber().trim().toUpperCase(), g);
+                        }
+                    }
+                }
+            }
+
+            boolean anyChanged = false;
+            for (RouteSeat rs : routeSeats) {
+                String seatNum = rs.getSeat() != null && rs.getSeat().getSeatNumber() != null
+                        ? rs.getSeat().getSeatNumber().trim().toUpperCase()
+                        : "";
+                if (confirmedSeatGenders.containsKey(seatNum)) {
+                    String expectedGender = confirmedSeatGenders.get(seatNum);
+                    if (!"BOOKED".equalsIgnoreCase(rs.getStatus()) || !expectedGender.equalsIgnoreCase(rs.getBookedGender())) {
+                        rs.setStatus("BOOKED");
+                        rs.setBookedGender(expectedGender);
+                        rs.setLockExpiry(null);
+                        rs.setLockedByUserId(null);
+                        anyChanged = true;
+                    }
+                } else if ("BOOKED".equalsIgnoreCase(rs.getStatus())) {
+                    // Seat was marked BOOKED, but no CONFIRMED booking on this route holds it anymore (e.g. date changed)
+                    rs.setStatus("AVAILABLE");
+                    rs.setBookedGender(null);
+                    rs.setGenderRestriction("NONE");
+                    rs.setLockExpiry(null);
+                    rs.setLockedByUserId(null);
+                    anyChanged = true;
+                }
+            }
+
+            if (anyChanged) {
+                routeSeats = routeSeatRepository.saveAllAndFlush(routeSeats);
+            }
+        }
+
+        return routeSeats;
     }
 
     @Transactional
@@ -333,7 +409,7 @@ public class BusRouteService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RouteResponseDto getRouteById(Long routeId) {
         Route route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Route not found with id: " + routeId));
@@ -345,26 +421,7 @@ public class BusRouteService {
         Route route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Route not found with id: " + routeId));
 
-        List<RouteSeat> routeSeats = routeSeatRepository.findByRouteId(routeId);
-
-        // If route seats have not been generated yet for this route, initialize from the bus seat catalog
-        if (routeSeats.isEmpty()) {
-            List<Seat> busSeats = seatRepository.findByBusIdOrderByDeckAscRowNumAscColNumAsc(route.getBus().getId());
-            if (busSeats.isEmpty()) {
-                generateBusSeats(route.getBus());
-                busSeats = seatRepository.findByBusIdOrderByDeckAscRowNumAscColNumAsc(route.getBus().getId());
-            }
-            for (Seat s : busSeats) {
-                RouteSeat rs = RouteSeat.builder()
-                        .route(route)
-                        .seat(s)
-                        .status("AVAILABLE")
-                        .genderRestriction("NONE")
-                        .build();
-                routeSeats.add(rs);
-            }
-            routeSeats = routeSeatRepository.saveAll(routeSeats);
-        }
+        List<RouteSeat> routeSeats = reconcileRouteSeats(route);
 
         List<SeatDto> seatDtos = routeSeats.stream().map(rs -> {
             Seat s = rs.getSeat();
@@ -458,6 +515,7 @@ public class BusRouteService {
     }
 
     public RouteResponseDto mapToRouteDto(Route route) {
+        reconcileRouteSeats(route);
         int availableSeats = routeSeatRepository.countAvailableSeats(route.getId());
         boolean isSingleLayout = route.getBus() != null && route.getBus().getBusType() != null &&
                 (route.getBus().getBusType().contains("2+1") || route.getBus().getBusType().contains("1+2") || route.getBus().getBusType().contains("1+1"));
@@ -549,4 +607,3 @@ public class BusRouteService {
         return BigDecimal.valueOf(hours);
     }
 }
-

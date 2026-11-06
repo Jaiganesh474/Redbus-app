@@ -101,7 +101,7 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
               {formatTripDuration(route.departureTime, route.arrivalTime, route.durationHours)} • {route.availableSeats} Seats
               {(() => {
                 const isSingleLayout = route.busType?.toLowerCase().includes("2+1") || route.busType?.toLowerCase().includes("1+2") || route.busType?.toLowerCase().includes("1+1");
-                const singleCount = (route as any).availableSingleSeats ?? (isSingleLayout && route.availableSeats > 0 ? Math.ceil(route.availableSeats / 3) : 0);
+                const singleCount = isSingleLayout ? ((route as any).availableSingleSeats ?? 0) : 0;
                 return singleCount > 0 ? (
                   <span className="text-amber-700 dark:text-amber-500 font-medium"> ({singleCount} Single)</span>
                 ) : null;

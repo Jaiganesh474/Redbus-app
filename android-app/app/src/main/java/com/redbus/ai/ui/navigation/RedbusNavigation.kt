@@ -373,7 +373,14 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onMarkNotificationAsRead = viewModel::markNotificationAsRead,
                         onMarkAllNotificationsAsRead = viewModel::markAllNotificationsAsRead,
                         onDismissNotification = viewModel::dismissNotification,
-                        onClearAllNotifications = viewModel::clearAllNotifications
+                        onClearAllNotifications = viewModel::clearAllNotifications,
+                        onOpenBusSearchForDate = { src, dst, dateStr ->
+                            viewModel.updateSourceCity(src)
+                            viewModel.updateDestinationCity(dst)
+                            viewModel.updateTravelDate(dateStr)
+                            viewModel.performSearch()
+                            navigateToTab(navController, ScreenRoute.SearchResults.route)
+                        }
                     )
                 }
 

@@ -1558,7 +1558,7 @@ private fun BusRouteCard3D(
                     // 7h 05m • 18 Seats (1 Single)
                     val durationText = calculateTripDuration(route.departureTime, route.arrivalTime, route.durationHours)
                     val isSingleLayout = route.busType.contains("2+1", ignoreCase = true) || route.busType.contains("1+2", ignoreCase = true) || route.busType.contains("1+1", ignoreCase = true)
-                    val singleSeatsCount = route.availableSingleSeats ?: if (isSingleLayout && route.availableSeats > 0) ((route.availableSeats + 2) / 3) else 0
+                    val singleSeatsCount = if (isSingleLayout) (route.availableSingleSeats ?: 0) else 0
                     val singleSeatNote = if (singleSeatsCount > 0) " ($singleSeatsCount Single)" else ""
                     Text(
                         text = "$durationText • ${route.availableSeats} Seats$singleSeatNote",

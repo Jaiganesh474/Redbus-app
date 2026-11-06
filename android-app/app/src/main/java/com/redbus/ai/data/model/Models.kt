@@ -270,7 +270,33 @@ data class ChangeTripPointsRequest(
 
 data class ChangeJourneyDateRequest(
     val newTravelDate: String? = null,
-    val newRouteId: Long? = null
+    val newRouteId: Long? = null,
+    val newSeatNumbers: List<String>? = null
+)
+
+data class AvailableDateItem(
+    val date: String = "",
+    val isCurrentBookingDate: Boolean? = false,
+    val routeId: Long? = null,
+    val busAvailable: Boolean = false,
+    val availableSeats: Int = 0,
+    val sameSeatsAvailable: Boolean = false,
+    val conflictingSeats: List<String>? = emptyList(),
+    val availableSeatNumbers: List<String>? = emptyList(),
+    val otherBusesAvailable: Boolean? = false
+)
+
+data class AvailableDatesResponse(
+    val pnr: String = "",
+    val currentTravelDate: String = "",
+    val currentRouteId: Long? = null,
+    val currentSeats: List<String>? = emptyList(),
+    val passengerCount: Int = 1,
+    val operatorName: String? = null,
+    val busType: String? = null,
+    val sourceCity: String? = null,
+    val destinationCity: String? = null,
+    val dates: List<AvailableDateItem>? = emptyList()
 )
 
 data class PaginatedBookingsResponse(

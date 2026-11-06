@@ -465,14 +465,18 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ["Booking"],
     }),
+    getAvailableDatesForBooking: builder.query<any, string>({
+      query: (pnr) => `/bookings/${pnr}/available-dates`,
+      providesTags: ["Booking", "Route", "Seat"],
+    }),
     changeJourneyDate: builder.mutation<
       BookingDetails,
-      { pnr: string; newTravelDate?: string; newRouteId?: number }
+      { pnr: string; newTravelDate?: string; newRouteId?: number; newSeatNumbers?: string[] }
     >({
-      query: ({ pnr, newTravelDate, newRouteId }) => ({
+      query: ({ pnr, newTravelDate, newRouteId, newSeatNumbers }) => ({
         url: `/bookings/${pnr}/change-date`,
         method: "PUT",
-        body: { newTravelDate, newRouteId },
+        body: { newTravelDate, newRouteId, newSeatNumbers },
       }),
       invalidatesTags: ["Booking", "Route", "Seat"],
     }),
@@ -876,6 +880,7 @@ export const {
   useSendMobileOtpMutation,
   useLoginWithMobileOtpMutation,
   useResetPasswordWithMobileOtpMutation,
+  useGetAvailableDatesForBookingQuery,
 } = apiSlice;
 
 

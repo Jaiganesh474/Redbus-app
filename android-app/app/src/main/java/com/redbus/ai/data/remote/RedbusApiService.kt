@@ -132,6 +132,11 @@ interface RedbusApiService {
         @Body request: ChangeTripPointsRequest
     ): BookingDetails
 
+    @GET("bookings/{pnr}/available-dates")
+    suspend fun getAvailableDatesForBooking(
+        @Path("pnr") pnr: String
+    ): AvailableDatesResponse
+
     @PUT("bookings/{pnr}/change-date")
     suspend fun changeJourneyDate(
         @Path("pnr") pnr: String,

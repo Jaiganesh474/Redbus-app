@@ -128,6 +128,11 @@ public class BookingController {
         return ResponseEntity.ok(updated);
     }
 
+    @GetMapping("/{pnr}/available-dates")
+    public ResponseEntity<java.util.Map<String, Object>> getAvailableDatesForDateChange(@PathVariable String pnr) {
+        return ResponseEntity.ok(bookingService.getAvailableDatesForDateChange(pnr));
+    }
+
     @PutMapping("/{pnr}/change-date")
     public ResponseEntity<BookingResponseDto> changeJourneyDate(
             @PathVariable String pnr,
@@ -137,7 +142,8 @@ public class BookingController {
         Long userId = extractUserIdFromHeader(authHeader);
         java.time.LocalDate newDate = request != null ? request.getNewTravelDate() : null;
         Long newRouteId = request != null ? request.getNewRouteId() : null;
-        BookingResponseDto updated = bookingService.changeJourneyDate(pnr, newDate, newRouteId, userId);
+        java.util.List<String> newSeatNumbers = request != null ? request.getNewSeatNumbers() : null;
+        BookingResponseDto updated = bookingService.changeJourneyDate(pnr, newDate, newRouteId, newSeatNumbers, userId);
         return ResponseEntity.ok(updated);
     }
 

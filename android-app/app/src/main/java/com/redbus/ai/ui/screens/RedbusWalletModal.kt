@@ -161,7 +161,7 @@ fun RedbusWalletModal(
         ) {
             Surface(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                color = Color(0xFFF8FAFC),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
@@ -172,7 +172,7 @@ fun RedbusWalletModal(
                 Column(modifier = Modifier.fillMaxSize()) {
                     // 1. Top Header: ←  redBus wallet   FAQ   ✕ (Exact match to screenshot)
                     Surface(
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         shadowElevation = 1.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -196,7 +196,7 @@ fun RedbusWalletModal(
                                     text = "redBus wallet",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF111827)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -229,8 +229,8 @@ fun RedbusWalletModal(
                         ) {
                             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Frequently Asked Questions", fontWeight = FontWeight.Bold, color = Color(0xFF1E40AF), fontSize = 13.sp)
-                                Text("• What is redBus Wallet? A digital balance used instantly for 1-tap bus payments with zero gateway charges.", fontSize = 12.sp, color = Color(0xFF334155))
-                                Text("• How do refunds work? Instant refund credit for cancelled trips.", fontSize = 12.sp, color = Color(0xFF334155))
+                                Text("• What is redBus Wallet? A digital balance used instantly for 1-tap bus payments with zero gateway charges.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("• How do refunds work? Instant refund credit for cancelled trips.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -247,7 +247,7 @@ fun RedbusWalletModal(
                             item {
                                 Card(
                                     shape = RoundedCornerShape(24.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -276,13 +276,13 @@ fun RedbusWalletModal(
                                             text = "Log In to Access Your Wallet",
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Black,
-                                            color = Color(0xFF111827),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
                                         Text(
                                             text = "Sign in with your redBus AI account to view your live wallet balance, offer cash validity, instant refund credits, and recent transaction history.",
                                             fontSize = 13.sp,
-                                            color = Color(0xFF64748B),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                             lineHeight = 18.sp
                                         )
@@ -308,7 +308,7 @@ fun RedbusWalletModal(
                             item {
                             Card(
                                 shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -326,19 +326,19 @@ fun RedbusWalletModal(
                                                 text = "₹${String.format(Locale.US, "%.2f", walletBalance)}",
                                                 fontSize = 36.sp,
                                                 fontWeight = FontWeight.Black,
-                                                color = Color(0xFF111827),
+                                                color = MaterialTheme.colorScheme.onSurface,
                                                 letterSpacing = (-0.5).sp
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = "Wallet balance",
                                                 fontSize = 13.sp,
-                                                color = Color(0xFF64748B),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontWeight = FontWeight.Medium
                                             )
 
                                             Spacer(modifier = Modifier.height(18.dp))
-                                            HorizontalDivider(color = Color(0xFFF1F5F9))
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
                                             Spacer(modifier = Modifier.height(14.dp))
 
                                             // Offer cash row
@@ -351,7 +351,7 @@ fun RedbusWalletModal(
                                                     text = "Offer cash: ₹${String.format(Locale.US, "%.2f", walletBalance)}",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF1E293B)
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Icon(
                                                     imageVector = Icons.Default.ChevronRight,
@@ -427,7 +427,7 @@ fun RedbusWalletModal(
                         item {
                             Card(
                                 shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -449,13 +449,13 @@ fun RedbusWalletModal(
                                                 text = "Refer and earn",
                                                 fontWeight = FontWeight.Black,
                                                 fontSize = 16.sp,
-                                                color = Color(0xFF111827)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = "Invite your friends to redBus and earn wallet money",
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF64748B),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 lineHeight = 16.sp
                                             )
                                         }
@@ -516,7 +516,7 @@ fun RedbusWalletModal(
                                                 )
                                                 Surface(
                                                     shape = CircleShape,
-                                                    color = Color.White.copy(alpha = 0.25f),
+                                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.25f),
                                                     modifier = Modifier.size(24.dp)
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
@@ -568,7 +568,7 @@ fun RedbusWalletModal(
                                     text = "Recent activity",
                                     fontWeight = FontWeight.Black,
                                     fontSize = 17.sp,
-                                    color = Color(0xFF111827)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 // Filter Tabs: All, Added, Deducted (Matching Screenshot)
@@ -614,7 +614,7 @@ fun RedbusWalletModal(
                             item {
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.surface,
                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -625,7 +625,7 @@ fun RedbusWalletModal(
                                         Text(
                                             text = "No ${activeFilter.lowercase()} wallet activity found.",
                                             fontSize = 13.sp,
-                                            color = Color(0xFF64748B)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -634,7 +634,7 @@ fun RedbusWalletModal(
                             items(filteredTransactions, key = { it.id }) { tx ->
                                 Surface(
                                     shape = RoundedCornerShape(18.dp),
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.surface,
                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
                                     shadowElevation = 1.dp,
                                     modifier = Modifier.fillMaxWidth()
@@ -671,7 +671,7 @@ fun RedbusWalletModal(
                                                     text = tx.reference,
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.SemiBold,
-                                                    color = Color(0xFF475569)
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                                 Text(
                                                     text = tx.date,
@@ -695,7 +695,7 @@ fun RedbusWalletModal(
                                             Text(
                                                 text = tx.description,
                                                 fontSize = 12.sp,
-                                                color = Color(0xFF64748B),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 lineHeight = 16.sp
                                             )
                                         }

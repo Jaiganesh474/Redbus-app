@@ -44,6 +44,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.hasTripGuarantee = true")
     long countTripGuaranteeBookings();
 
+    @Query("SELECT DISTINCT b FROM Booking b LEFT JOIN FETCH b.passengers bp WHERE b.route.id = :routeId AND b.status = 'CONFIRMED'")
+    List<Booking> findConfirmedBookingsByRouteId(@Param("routeId") Long routeId);
+
     @Query("SELECT DISTINCT b FROM Booking b " +
            "JOIN FETCH b.route r " +
            "JOIN FETCH r.bus bus " +

@@ -185,7 +185,7 @@ fun HomeScreen(
                         // Left: redBus stylized bus badge
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.surface,
                             shadowElevation = 2.dp,
                             modifier = Modifier.border(
                                 1.5.dp,
@@ -221,7 +221,7 @@ fun HomeScreen(
                             Surface(
                                 onClick = onOpenWallet,
                                 shape = RoundedCornerShape(50),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.surface,
                                 shadowElevation = 3.dp
                             ) {
                                 Row(
@@ -237,17 +237,17 @@ fun HomeScreen(
                                     )
                                     Text(
                                         text = AppStrings.get("wallet", uiState.selectedLanguage),
-                                        color = Color(0xFF1E293B),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Surface(
                                         shape = RoundedCornerShape(50),
-                                        color = Color(0xFFF1F5F9)
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
                                     ) {
                                         Text(
                                             text = "₹${(uiState.user?.walletBalance ?: 0.0).toInt()}",
-                                            color = Color(0xFF0F172A),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -259,7 +259,7 @@ fun HomeScreen(
                             Surface(
                                 onClick = onNavigateToAccount,
                                 shape = RoundedCornerShape(50),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.surface,
                                 shadowElevation = 3.dp
                             ) {
                                 Row(
@@ -279,7 +279,7 @@ fun HomeScreen(
                                         } else {
                                             "My Account"
                                         },
-                                        color = Color(0xFF1E293B),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -432,7 +432,7 @@ fun HomeScreen(
                                                 onSwapCities()
                                             },
                                             shape = CircleShape,
-                                            color = Color(0xFF4B5563),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             shadowElevation = 4.dp,
                                             modifier = Modifier
                                                 .align(Alignment.CenterEnd)
@@ -1038,7 +1038,7 @@ private fun ServiceCategoryTile(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = if (selected) 6.dp else 2.dp,
         modifier = modifier
             .graphicsLayer {
@@ -1080,7 +1080,7 @@ private fun ServiceCategoryTile(
 
             Text(
                 text = title,
-                color = Color(0xFF111827),
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 13.sp,
                 fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
             )
@@ -1142,7 +1142,7 @@ private fun UpcomingTripCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.border(1.dp, RedbusCrimson, RoundedCornerShape(8.dp))
                 ) {
                     Text(
@@ -1160,7 +1160,7 @@ private fun UpcomingTripCard(
                 ) {
                     Text(
                         text = badgeLabel,
-                        color = Color(0xFF111827),
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -1637,7 +1637,7 @@ private fun LiveBannerCard(
                         }
                         banner.promoCode?.let { code ->
                             Surface(
-                                color = Color.White.copy(alpha = 0.2f),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(

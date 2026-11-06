@@ -39,6 +39,8 @@ public class BookingService {
     private final CouponService couponService;
     private final EmailService emailService;
     private final WhatsAppService whatsAppService;
+    private final ScheduleRepository scheduleRepository;
+    private final BusRouteService busRouteService;
 
     private static final String PNR_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private final SecureRandom random = new SecureRandom();
@@ -615,7 +617,127 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingResponseDto changeJourneyDate(String pnr, java.time.LocalDate newTravelDate, Long newRouteId, Long currentUserId) {
+    public java.util.Map<String, Object> getAvailableDatesForDateChange(String pnr) {
+        Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
+
+        Route currentRoute = booking.getRoute();
+        Bus bus = currentRoute.getBus();
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        java.time.LocalDate todayIst = java.time.LocalDate.now(istZone);
+        LocalDateTime nowIst = LocalDateTime.now(istZone);
+
+        // Materialize active schedules for this corridor for the next 45 days
+        List<Schedule> matchingSchedules = scheduleRepository.findActiveBySourceAndDestination(
+                currentRoute.getSourceCity().trim(), currentRoute.getDestinationCity().trim());
+        for (int i = 0; i <= 45; i++) {
+            java.time.LocalDate d = todayIst.plusDays(i);
+            for (Schedule s : matchingSchedules) {
+                busRouteService.ensureScheduleMaterialized(s, d);
+            }
+        }
+
+        List<String> currentSeats = booking.getPassengers().stream()
+                .map(bp -> bp.getSeatNumber() != null ? bp.getSeatNumber().trim().toUpperCase() : "")
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+        int passengerCount = Math.max(1, booking.getPassengers().size());
+
+        List<Route> allCorridorRoutes = routeRepository.findBySourceAndDestination(
+                currentRoute.getSourceCity(), currentRoute.getDestinationCity());
+
+        List<java.util.Map<String, Object>> datesList = new ArrayList<>();
+        for (int i = 0; i <= 45; i++) {
+            java.time.LocalDate d = todayIst.plusDays(i);
+            LocalDateTime depDateTime = LocalDateTime.of(d, currentRoute.getDepartureTime() != null ? currentRoute.getDepartureTime() : java.time.LocalTime.of(22, 0));
+            boolean isTooCloseOrPast = depDateTime.isBefore(nowIst.plusHours(2));
+
+            // Find matching route for the same bus on date d
+            Route matchingRoute = null;
+            if (bus != null) {
+                List<Route> exact = routeRepository.findByBusIdAndTravelDateAndDepartureTime(
+                        bus.getId(), d, currentRoute.getDepartureTime());
+                if (!exact.isEmpty()) {
+                    matchingRoute = exact.get(0);
+                } else {
+                    matchingRoute = allCorridorRoutes.stream()
+                            .filter(r -> d.equals(r.getTravelDate()) && r.getBus() != null && r.getBus().getId().equals(bus.getId()))
+                            .findFirst()
+                            .orElse(null);
+                }
+            }
+
+            long otherBusesCount = allCorridorRoutes.stream()
+                    .filter(r -> d.equals(r.getTravelDate()))
+                    .count();
+
+            java.util.Map<String, Object> entry = new java.util.LinkedHashMap<>();
+            entry.put("date", d.toString());
+            entry.put("isCurrentBookingDate", d.equals(currentRoute.getTravelDate()));
+
+            if (matchingRoute != null && !isTooCloseOrPast) {
+                List<RouteSeat> rSeats = busRouteService.reconcileRouteSeats(matchingRoute);
+                List<String> availSeatNums = new ArrayList<>();
+                List<String> conflictSeats = new ArrayList<>();
+                boolean isSameRoute = matchingRoute.getId().equals(currentRoute.getId());
+
+                for (RouteSeat rs : rSeats) {
+                    String sNum = rs.getSeat() != null && rs.getSeat().getSeatNumber() != null
+                            ? rs.getSeat().getSeatNumber().trim().toUpperCase()
+                            : "";
+                    if ("AVAILABLE".equalsIgnoreCase(rs.getStatus())) {
+                        availSeatNums.add(sNum);
+                    }
+                }
+
+                for (String reqSeat : currentSeats) {
+                    if (!isSameRoute && !availSeatNums.contains(reqSeat)) {
+                        conflictSeats.add(reqSeat);
+                    }
+                }
+
+                boolean busAvailable = isSameRoute || availSeatNums.size() >= passengerCount;
+                entry.put("routeId", matchingRoute.getId());
+                entry.put("busAvailable", busAvailable);
+                entry.put("availableSeats", availSeatNums.size());
+                entry.put("sameSeatsAvailable", conflictSeats.isEmpty());
+                entry.put("conflictingSeats", conflictSeats);
+                entry.put("availableSeatNumbers", availSeatNums);
+                entry.put("otherBusesAvailable", otherBusesCount > 1);
+            } else {
+                entry.put("routeId", null);
+                entry.put("busAvailable", false);
+                entry.put("availableSeats", 0);
+                entry.put("sameSeatsAvailable", false);
+                entry.put("conflictingSeats", currentSeats);
+                entry.put("availableSeatNumbers", Collections.emptyList());
+                entry.put("otherBusesAvailable", otherBusesCount > 0 && !isTooCloseOrPast);
+            }
+            datesList.add(entry);
+        }
+
+        java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("pnr", booking.getPnr());
+        response.put("currentTravelDate", currentRoute.getTravelDate().toString());
+        response.put("currentRouteId", currentRoute.getId());
+        response.put("currentSeats", currentSeats);
+        response.put("passengerCount", passengerCount);
+        response.put("operatorName", bus != null ? bus.getOperatorName() : "Intercity SmartBus");
+        response.put("busType", bus != null ? bus.getBusType() : "AC Sleeper");
+        response.put("sourceCity", currentRoute.getSourceCity());
+        response.put("destinationCity", currentRoute.getDestinationCity());
+        response.put("dates", datesList);
+        return response;
+    }
+
+    @Transactional
+    public BookingResponseDto changeJourneyDate(
+            String pnr,
+            java.time.LocalDate newTravelDate,
+            Long newRouteId,
+            List<String> newSeatNumbers,
+            Long currentUserId
+    ) {
         Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
 
@@ -635,38 +757,174 @@ public class BookingService {
         }
 
         Route currentRoute = booking.getRoute();
-        Route targetRoute = null;
+        java.time.LocalDate oldTravelDate = currentRoute.getTravelDate();
+        List<String> oldSeatNumbers = booking.getPassengers().stream()
+                .map(BookingPassenger::getSeatNumber)
+                .collect(Collectors.toList());
 
-        if (newRouteId != null) {
-            targetRoute = routeRepository.findById(newRouteId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Target route not found: " + newRouteId));
-        } else {
-            List<Route> available = routeRepository.findBySourceAndDestinationAndDate(
-                    currentRoute.getSourceCity(), currentRoute.getDestinationCity(), newTravelDate);
-            if (!available.isEmpty()) {
-                targetRoute = available.get(0);
-            } else {
-                targetRoute = Route.builder()
-                        .bus(currentRoute.getBus())
-                        .operatorId(currentRoute.getOperatorId())
-                        .sourceCity(currentRoute.getSourceCity())
-                        .destinationCity(currentRoute.getDestinationCity())
-                        .travelDate(newTravelDate)
-                        .departureTime(currentRoute.getDepartureTime())
-                        .arrivalTime(currentRoute.getArrivalTime())
-                        .basePrice(currentRoute.getBasePrice())
-                        .durationHours(currentRoute.getDurationHours())
-                        .distanceKm(currentRoute.getDistanceKm())
-                        .boardingPoints(currentRoute.getBoardingPoints())
-                        .droppingPoints(currentRoute.getDroppingPoints())
-                        .build();
-                targetRoute = routeRepository.save(targetRoute);
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        LocalDateTime nowIst = LocalDateTime.now(istZone);
+        if (currentRoute.getTravelDate() != null && currentRoute.getDepartureTime() != null) {
+            LocalDateTime currentDep = LocalDateTime.of(currentRoute.getTravelDate(), currentRoute.getDepartureTime());
+            if (currentDep.isBefore(nowIst.plusHours(2))) {
+                throw new BadRequestException("Date change is only permitted up to 2 hours before scheduled departure.");
             }
         }
 
+        // Materialize active schedules for the target date if provided
+        if (newTravelDate != null) {
+            List<Schedule> matchingSchedules = scheduleRepository.findActiveBySourceAndDestination(
+                    currentRoute.getSourceCity().trim(), currentRoute.getDestinationCity().trim());
+            for (Schedule s : matchingSchedules) {
+                busRouteService.ensureScheduleMaterialized(s, newTravelDate);
+            }
+        }
+
+        Route targetRoute = null;
+        if (newRouteId != null) {
+            targetRoute = routeRepository.findById(newRouteId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Target route not found: " + newRouteId));
+        } else if (newTravelDate != null) {
+            if (currentRoute.getBus() != null) {
+                List<Route> exactBusRoutes = routeRepository.findByBusIdAndTravelDateAndDepartureTime(
+                        currentRoute.getBus().getId(), newTravelDate, currentRoute.getDepartureTime());
+                if (!exactBusRoutes.isEmpty()) {
+                    targetRoute = exactBusRoutes.get(0);
+                } else {
+                    List<Route> sameDateRoutes = routeRepository.findBySourceAndDestinationAndDate(
+                            currentRoute.getSourceCity(), currentRoute.getDestinationCity(), newTravelDate);
+                    targetRoute = sameDateRoutes.stream()
+                            .filter(r -> r.getBus() != null && r.getBus().getId().equals(currentRoute.getBus().getId()))
+                            .findFirst()
+                            .orElse(null);
+                }
+            }
+        }
+
+        if (targetRoute == null) {
+            String opName = currentRoute.getBus() != null ? currentRoute.getBus().getOperatorName() : "This bus";
+            throw new BadRequestException("BUS_NOT_AVAILABLE:" + opName + " is not scheduled on " + newTravelDate + ". Please choose another highlighted date on the calendar.");
+        }
+
+        if (targetRoute.getTravelDate() != null && targetRoute.getDepartureTime() != null) {
+            LocalDateTime targetDep = LocalDateTime.of(targetRoute.getTravelDate(), targetRoute.getDepartureTime());
+            if (targetDep.isBefore(nowIst.plusHours(2))) {
+                throw new BadRequestException("Cannot reschedule to a bus departing within 2 hours or in the past.");
+            }
+        }
+
+        // Ensure both currentRoute and targetRoute seats are initialized & reconciled
+        List<RouteSeat> oldRouteSeats = busRouteService.reconcileRouteSeats(currentRoute);
+        List<RouteSeat> targetRouteSeats = busRouteService.reconcileRouteSeats(targetRoute);
+
+        List<BookingPassenger> passengers = booking.getPassengers();
+        int passengerCount = passengers.size();
+
+        List<String> requestedSeats = new ArrayList<>();
+        if (newSeatNumbers != null && !newSeatNumbers.isEmpty()) {
+            for (String s : newSeatNumbers) {
+                if (s != null && !s.isBlank()) {
+                    requestedSeats.add(s.trim().toUpperCase());
+                }
+            }
+            if (requestedSeats.size() != passengerCount) {
+                throw new BadRequestException("Please select exactly " + passengerCount + " seat(s) for your rescheduled journey.");
+            }
+        } else {
+            for (BookingPassenger bp : passengers) {
+                requestedSeats.add(bp.getSeatNumber().trim().toUpperCase());
+            }
+        }
+
+        boolean isSameRoute = targetRoute.getId().equals(currentRoute.getId());
+        long availCountOnTarget = targetRouteSeats.stream()
+                .filter(rs -> "AVAILABLE".equalsIgnoreCase(rs.getStatus()) || (isSameRoute && oldSeatNumbers.stream().anyMatch(os -> os.equalsIgnoreCase(rs.getSeat().getSeatNumber()))))
+                .count();
+
+        if (availCountOnTarget < passengerCount) {
+            throw new BadRequestException("BUS_SOLD_OUT:No seats are available on this bus for " + targetRoute.getTravelDate() + ". Please select another available date.");
+        }
+
+        List<String> conflictingSeats = new ArrayList<>();
+        for (String desiredSeat : requestedSeats) {
+            RouteSeat matchRs = targetRouteSeats.stream()
+                    .filter(rs -> rs.getSeat() != null && desiredSeat.equalsIgnoreCase(rs.getSeat().getSeatNumber()))
+                    .findFirst()
+                    .orElse(null);
+
+            boolean isHeldByCurrentBookingOnSameRoute = isSameRoute && oldSeatNumbers.stream().anyMatch(os -> os.equalsIgnoreCase(desiredSeat));
+            if (matchRs == null || (!"AVAILABLE".equalsIgnoreCase(matchRs.getStatus()) && !isHeldByCurrentBookingOnSameRoute)) {
+                conflictingSeats.add(desiredSeat);
+            }
+        }
+
+        if (!conflictingSeats.isEmpty()) {
+            String conflictList = String.join(", ", conflictingSeats);
+            throw new BadRequestException("SEAT_ALREADY_BOOKED:" + targetRoute.getId() + ":" + String.join(",", conflictingSeats) +
+                    ":Seat " + conflictList + " is already booked on " + targetRoute.getTravelDate() + ". Please select a different available seat.");
+        }
+
+        // 1. Release old seats on currentRoute
+        for (BookingPassenger bp : passengers) {
+            String oldSeatNum = bp.getSeatNumber() != null ? bp.getSeatNumber().trim() : "";
+            Long oldSeatId = bp.getSeat() != null ? bp.getSeat().getId() : null;
+            for (RouteSeat oldRs : oldRouteSeats) {
+                boolean matchesId = oldSeatId != null && oldRs.getSeat() != null && oldSeatId.equals(oldRs.getSeat().getId());
+                boolean matchesNum = oldRs.getSeat() != null && oldSeatNum.equalsIgnoreCase(oldRs.getSeat().getSeatNumber());
+                if (matchesId || matchesNum) {
+                    oldRs.setStatus("AVAILABLE");
+                    oldRs.setBookedGender(null);
+                    oldRs.setGenderRestriction("NONE");
+                    oldRs.setLockExpiry(null);
+                    oldRs.setLockedByUserId(null);
+                    routeSeatRepository.save(oldRs);
+                }
+            }
+        }
+        routeSeatRepository.flush();
+
+        // 2. Book new seats on targetRoute & update BookingPassenger records
+        for (int i = 0; i < passengers.size(); i++) {
+            BookingPassenger bp = passengers.get(i);
+            String desiredSeatNum = requestedSeats.get(i);
+            RouteSeat newRs = targetRouteSeats.stream()
+                    .filter(rs -> rs.getSeat() != null && desiredSeatNum.equalsIgnoreCase(rs.getSeat().getSeatNumber()))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Seat " + desiredSeatNum + " not found on target bus."));
+
+            String passengerGender = bp.getGender() != null ? bp.getGender().trim().toUpperCase() : "MALE";
+            newRs.setStatus("BOOKED");
+            newRs.setBookedGender(passengerGender);
+            newRs.setLockExpiry(null);
+            newRs.setLockedByUserId(null);
+            routeSeatRepository.save(newRs);
+
+            if ("FEMALE".equalsIgnoreCase(passengerGender)) {
+                markAdjacentSeatFemaleRestricted(targetRoute.getId(), newRs.getSeat());
+            }
+
+            bp.setSeat(newRs.getSeat());
+            bp.setSeatNumber(newRs.getSeat().getSeatNumber());
+        }
+
+        // 3. Update booking route and flush
         booking.setRoute(targetRoute);
-        Booking saved = bookingRepository.save(booking);
-        log.info("Successfully postponed/changed journey date for PNR {} to {}", pnr, targetRoute.getTravelDate());
+        Booking saved = bookingRepository.saveAndFlush(booking);
+        routeSeatRepository.flush();
+
+        // Reconcile both routes to guarantee seat counts match
+        busRouteService.reconcileRouteSeats(currentRoute);
+        busRouteService.reconcileRouteSeats(targetRoute);
+
+        // 4. Send updated rescheduled e-ticket email with explanatory message and new PDF
+        try {
+            emailService.sendBookingRescheduledEmail(saved, oldTravelDate, targetRoute.getTravelDate(), oldSeatNumbers);
+        } catch (Exception e) {
+            log.warn("Failed to dispatch rescheduled e-ticket email for PNR {}: {}", saved.getPnr(), e.getMessage());
+        }
+
+        log.info("Successfully changed journey date for PNR {} from {} (Seats: {}) to {} (Seats: {})",
+                pnr, oldTravelDate, oldSeatNumbers, targetRoute.getTravelDate(), requestedSeats);
         return mapToDto(saved);
     }
 }
