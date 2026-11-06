@@ -5,6 +5,15 @@ import com.redbus.ai.data.model.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.draw.rotate
+import kotlinx.coroutines.delay
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -4600,12 +4609,28 @@ fun ProfileAndWalletScreen(
                             }
                         }
 
-                        IconButton(onClick = onRefreshAccount) {
+                        var isRefreshingAccount by remember { mutableStateOf(false) }
+                        val refreshRotation by animateFloatAsState(
+                            targetValue = if (isRefreshingAccount) 360f else 0f,
+                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+                            label = "refreshAnim"
+                        )
+                        IconButton(onClick = {
+                            isRefreshingAccount = true
+                            onRefreshAccount()
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
                                 contentDescription = "Sync Account",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.rotate(refreshRotation)
                             )
+                        }
+                        LaunchedEffect(isRefreshingAccount) {
+                            if (isRefreshingAccount) {
+                                delay(650)
+                                isRefreshingAccount = false
+                            }
                         }
                     }
 
@@ -5934,50 +5959,202 @@ fun ProfileAndWalletScreen(
         )
     }
 
-    // Modal: Avatar Selector
+    // Modal: Avatar Selector (Upload Image, Default Icon, Male 3D, Female 3D, and Remove Photo)
     if (showAvatarModal) {
-        val sampleAvatars = listOf(
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
-            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop"
-        )
+        val context = LocalContext.current
+        val galleryLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            uri?.let {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val bmp = BitmapFactory.decodeStream(inputStream)
+                    inputStream?.close()
+                    if (bmp != null) {
+                        val maxDim = 320
+                        val ratio = minOf(maxDim.toFloat() / bmp.width, maxDim.toFloat() / bmp.height, 1f)
+                        val scaled = Bitmap.createScaledBitmap(bmp, (bmp.width * ratio).toInt(), (bmp.height * ratio).toInt(), true)
+                        val baos = ByteArrayOutputStream()
+                        scaled.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                        val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                        onUpdateAvatar("data:image/jpeg;base64,$b64")
+                        showAvatarModal = false
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showAvatarModal = false },
-            title = { Text("Choose Avatar", fontWeight = FontWeight.Black) },
+            title = {
+                Text("Choose Profile Photo", fontWeight = FontWeight.Black, fontSize = 18.sp)
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("Pick a passenger profile avatar:", fontSize = 13.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Pick a 3D avatar, upload your own photo, or use the default icon",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // 1. Upload Custom Image Card
+                    Surface(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        shape = RoundedCornerShape(14.dp),
+                        color = RedbusCrimson.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, RedbusCrimson.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        sampleAvatars.forEach { url ->
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             Surface(
                                 shape = CircleShape,
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clickable {
-                                        onUpdateAvatar(url)
-                                        showAvatarModal = false
-                                    }
+                                color = RedbusCrimson,
+                                modifier = Modifier.size(38.dp)
                             ) {
-                                AsyncImage(
-                                    model = url,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudUpload,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Upload Profile Image", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Select an image from device gallery", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
-                    TextButton(
-                        onClick = {
-                            onUpdateAvatar("")
-                            showAvatarModal = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
+
+                    // 2. Avatar Selection Options (Default Icon, Male 3D, Female 3D)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Reset to Default Initials")
+                        // Option A: Default Icon
+                        val isDefault = user.avatarUrl.isNullOrBlank()
+                        Surface(
+                            onClick = {
+                                onUpdateAvatar("REMOVE")
+                                showAvatarModal = false
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isDefault) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(if (isDefault) 2.dp else 1.dp, if (isDefault) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = RedbusCrimson,
+                                    modifier = Modifier.size(46.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(initials, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                    }
+                                }
+                                Text("Default Icon", fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                                Text("Initials", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        // Option B: Male 3D
+                        val male3dUrl = "https://api.dicebear.com/7.x/adventurer/svg?seed=Alex&backgroundColor=b6e3f4"
+                        val isMale3d = user.avatarUrl == male3dUrl
+                        Surface(
+                            onClick = {
+                                onUpdateAvatar(male3dUrl)
+                                showAvatarModal = false
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isMale3d) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(if (isMale3d) 2.dp else 1.dp, if (isMale3d) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(46.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = male3dUrl,
+                                        contentDescription = "Male 3D",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Text("Male 3D", fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                                Text("3D Avatar", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        // Option C: Female 3D
+                        val female3dUrl = "https://api.dicebear.com/7.x/adventurer/svg?seed=Priya&backgroundColor=ffd5dc"
+                        val isFemale3d = user.avatarUrl == female3dUrl
+                        Surface(
+                            onClick = {
+                                onUpdateAvatar(female3dUrl)
+                                showAvatarModal = false
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isFemale3d) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(if (isFemale3d) 2.dp else 1.dp, if (isFemale3d) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(46.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = female3dUrl,
+                                        contentDescription = "Female 3D",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Text("Female 3D", fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                                Text("3D Avatar", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    // 3. Remove Profile Image Button
+                    if (!user.avatarUrl.isNullOrBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                onUpdateAvatar("REMOVE")
+                                showAvatarModal = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                            border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Remove Profile Image", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
                     }
                 }
             },

@@ -30,4 +30,7 @@ public interface RouteSeatRepository extends JpaRepository<RouteSeat, Long> {
 
     @Query("SELECT COUNT(rs) FROM RouteSeat rs WHERE rs.route.id = :routeId AND rs.status = 'AVAILABLE'")
     int countAvailableSeats(@Param("routeId") Long routeId);
+
+    @Query("SELECT COUNT(rs) FROM RouteSeat rs WHERE rs.route.id = :routeId AND rs.status = 'AVAILABLE' AND rs.seat.colNum = 1")
+    int countAvailableSingleSeats(@Param("routeId") Long routeId);
 }

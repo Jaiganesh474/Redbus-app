@@ -132,6 +132,18 @@ function CheckoutContent() {
 
   // Trip Guarantee Add-on State (defaults to unselected / null)
   const [hasTripGuarantee, setHasTripGuarantee] = useState<boolean | null>(null);
+  const [tripGuaranteeBuyers, setTripGuaranteeBuyers] = useState<number>(0);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/v1/bookings/trip-guarantee-stats`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data?.buyersCount === 'number') {
+          setTripGuaranteeBuyers(data.buyersCount);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [showTripGuaranteeModal, setShowTripGuaranteeModal] = useState(false);
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false);
   const [selectedDetailsTab, setSelectedDetailsTab] = useState<"trip" | "cancellation" | "passenger" | "fare">("trip");
@@ -929,7 +941,11 @@ function CheckoutContent() {
 
             {/* Social Proof Pill Banner */}
             <div className="bg-[#eaf5ea] text-[#2c7a36] text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center gap-2">
-              <span>Bought by 7,42,445+ people in the last month</span>
+              <span>
+                  {tripGuaranteeBuyers > 0
+                    ? `Bought by ${tripGuaranteeBuyers.toLocaleString()} passenger${tripGuaranteeBuyers === 1 ? '' : 's'} this month`
+                    : `Selected by live passengers this month`}
+                </span>
             </div>
 
             {/* Radio Choice Options */}

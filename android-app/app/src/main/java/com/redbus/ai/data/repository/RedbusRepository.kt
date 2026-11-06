@@ -29,10 +29,17 @@ class RedbusRepository(
         runCatching { api.getMe() }
     }
 
-    suspend fun updateProfile(name: String, phone: String, gender: String?): Result<User> =
+    suspend fun updateProfile(name: String, phone: String, gender: String?, avatarUrl: String? = null): Result<User> =
         withContext(Dispatchers.IO) {
-            runCatching { api.updateProfile(UpdateProfileRequest(name = name, phone = phone, gender = gender)) }
+            runCatching { api.updateProfile(UpdateProfileRequest(name = name, phone = phone, gender = gender, avatarUrl = avatarUrl)) }
         }
+
+    suspend fun getTripGuaranteeStats(): Result<Long> = withContext(Dispatchers.IO) {
+        runCatching {
+            val res = api.getTripGuaranteeStats()
+            (res["buyersCount"] as? Number)?.toLong() ?: 0L
+        }
+    }
 
     suspend fun getSavedTravellers(): Result<List<SavedTraveller>> = withContext(Dispatchers.IO) {
         runCatching { api.getSavedTravellers() }

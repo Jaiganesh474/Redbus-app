@@ -99,9 +99,13 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
             {/* Duration • Seats left */}
             <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">
               {formatTripDuration(route.departureTime, route.arrivalTime, route.durationHours)} • {route.availableSeats} Seats
-              {route.availableSeats > 0 ? (
-                <span className="text-amber-700 dark:text-amber-500 font-medium"> (1 Single)</span>
-              ) : null}
+              {(() => {
+                const isSingleLayout = route.busType?.toLowerCase().includes("2+1") || route.busType?.toLowerCase().includes("1+2") || route.busType?.toLowerCase().includes("1+1");
+                const singleCount = (route as any).availableSingleSeats ?? (isSingleLayout && route.availableSeats > 0 ? Math.ceil(route.availableSeats / 3) : 0);
+                return singleCount > 0 ? (
+                  <span className="text-amber-700 dark:text-amber-500 font-medium"> ({singleCount} Single)</span>
+                ) : null;
+              })()}
             </p>
 
             {/* Operator Name */}

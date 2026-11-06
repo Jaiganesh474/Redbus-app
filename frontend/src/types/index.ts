@@ -78,6 +78,7 @@ export interface RouteItem {
   durationHours: number;
   basePrice: number;
   availableSeats: number;
+  availableSingleSeats?: number;
   boardingPoints: string[];
   droppingPoints: string[];
   busPhotoUrl?: string;

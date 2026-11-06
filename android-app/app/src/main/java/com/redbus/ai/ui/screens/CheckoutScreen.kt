@@ -1349,7 +1349,11 @@ fun CheckoutScreen(
 
                                 Text(
 
-                                    text = "Bought by 7,42,445+ people in the last month",
+                                    text = if (uiState.tripGuaranteeBuyers > 0) {
+                                        "Bought by ${uiState.tripGuaranteeBuyers} passengers this month"
+                                    } else {
+                                        "Selected by live passengers this month"
+                                    },
 
                                     fontSize = 11.sp,
 

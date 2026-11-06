@@ -30,6 +30,7 @@ public class RouteResponseDto {
     private BigDecimal durationHours;
     private BigDecimal basePrice;
     private int availableSeats;
+    private int availableSingleSeats;
     private List<String> boardingPoints;
     private List<String> droppingPoints;
     private String busPhotoUrl;

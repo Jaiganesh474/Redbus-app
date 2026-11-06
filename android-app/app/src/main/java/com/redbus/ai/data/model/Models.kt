@@ -109,6 +109,7 @@ data class RouteItem(
     val durationHours: Double = 0.0,
     val basePrice: Double = 0.0,
     val availableSeats: Int = 0,
+    val availableSingleSeats: Int? = null,
     val boardingPoints: List<String>? = emptyList(),
     val droppingPoints: List<String>? = emptyList(),
     val busPhotoUrl: String? = null,

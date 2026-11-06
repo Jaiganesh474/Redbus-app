@@ -251,6 +251,11 @@ class RedbusViewModel(
             }
         }
 
+        viewModelScope.launch {
+            repository.getTripGuaranteeStats().onSuccess { count ->
+                _uiState.update { it.copy(tripGuaranteeBuyers = count) }
+            }
+        }
         performSearch()
         searchCities("", isSource = true)
         searchCities("", isSource = false)
@@ -514,7 +519,8 @@ class RedbusViewModel(
     fun updateProfileDetails(name: String, phone: String, gender: String?) {
         viewModelScope.launch {
             _uiState.update { it.copy(isAuthLoading = true, authError = null, authSuccessMessage = null) }
-            repository.updateProfile(name, phone, gender)
+            val currentAvatar = _uiState.value.user?.avatarUrl
+            repository.updateProfile(name, phone, gender, avatarUrl = currentAvatar)
                 .onSuccess { updatedUser ->
                     SessionManager.updateUser(updatedUser)
                     _uiState.update {
@@ -943,13 +949,20 @@ class RedbusViewModel(
     fun updateProfileAvatar(avatarUrl: String) {
         val user = _uiState.value.user ?: return
         viewModelScope.launch {
-            repository.updateProfile(user.name, user.phone.orEmpty(), user.gender)
-            _uiState.update {
-                it.copy(
-                    user = it.user?.copy(avatarUrl = avatarUrl),
-                    profileActionMessage = "Profile photo updated!"
-                )
-            }
+            val urlToSend = if (avatarUrl.isBlank() || avatarUrl.equals("REMOVE", ignoreCase = true)) "REMOVE" else avatarUrl
+            repository.updateProfile(user.name, user.phone.orEmpty(), user.gender, avatarUrl = urlToSend)
+                .onSuccess { updatedUser ->
+                    SessionManager.updateUser(updatedUser)
+                    _uiState.update {
+                        it.copy(
+                            user = updatedUser,
+                            profileActionMessage = if (urlToSend == "REMOVE") "Profile photo removed!" else "Profile photo updated!"
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(authError = "Failed to save profile avatar.") }
+                }
         }
     }
 

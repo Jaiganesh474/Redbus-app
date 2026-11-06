@@ -459,6 +459,9 @@ public class BusRouteService {
 
     public RouteResponseDto mapToRouteDto(Route route) {
         int availableSeats = routeSeatRepository.countAvailableSeats(route.getId());
+        boolean isSingleLayout = route.getBus() != null && route.getBus().getBusType() != null &&
+                (route.getBus().getBusType().contains("2+1") || route.getBus().getBusType().contains("1+2") || route.getBus().getBusType().contains("1+1"));
+        int availableSingleSeats = isSingleLayout ? routeSeatRepository.countAvailableSingleSeats(route.getId()) : 0;
 
         List<String> amenitiesList = Collections.emptyList();
         if (route.getBus().getAmenities() != null && !route.getBus().getAmenities().isBlank()) {
@@ -528,6 +531,7 @@ public class BusRouteService {
                 .durationHours(duration)
                 .basePrice(route.getBasePrice())
                 .availableSeats(availableSeats)
+                .availableSingleSeats(availableSingleSeats)
                 .boardingPoints(boardingPointsList)
                 .droppingPoints(droppingPointsList)
                 .busPhotoUrl(route.getBus() != null ? route.getBus().getPhotoUrls() : null)

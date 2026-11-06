@@ -41,6 +41,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByOperatorIdAndStatus(Long operatorId, String status);
 
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.hasTripGuarantee = true")
+    long countTripGuaranteeBookings();
+
     @Query("SELECT DISTINCT b FROM Booking b " +
            "JOIN FETCH b.route r " +
            "JOIN FETCH r.bus bus " +

@@ -54,6 +54,12 @@ public class BookingController {
         return new ResponseEntity<>(booking, HttpStatus.CREATED);
     }
 
+    @GetMapping("/trip-guarantee-stats")
+    public ResponseEntity<java.util.Map<String, Object>> getTripGuaranteeStats() {
+        long count = bookingRepository.countTripGuaranteeBookings();
+        return ResponseEntity.ok(java.util.Map.of("buyersCount", count));
+    }
+
     @GetMapping("/{pnr}")
     public ResponseEntity<BookingResponseDto> getBooking(@PathVariable String pnr) {
         return ResponseEntity.ok(bookingService.getBookingByPnr(pnr));
