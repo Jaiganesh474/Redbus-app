@@ -111,7 +111,10 @@ data class RouteItem(
     val availableSeats: Int = 0,
     val boardingPoints: List<String>? = emptyList(),
     val droppingPoints: List<String>? = emptyList(),
-    val busPhotoUrl: String? = null
+    val busPhotoUrl: String? = null,
+    val busRoute: String? = null,
+    val restStop: String? = null,
+    val busSafety: String? = null
 )
 
 data class AiRecommendationsResponse(

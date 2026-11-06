@@ -1145,7 +1145,7 @@ fun SearchResultsScreen(
                     itemsIndexed(displayedRoutes, key = { _, it -> it.id }) { index, route ->
                         val previouslyBooked = uiState.myBookings.any { b ->
                             (b.status == "CONFIRMED" || b.status == "COMPLETED") &&
-                            (b.busId == route.busId || b.routeId == route.id || (b.operatorName.equals(route.operatorName, ignoreCase = true) && b.departureTime.take(5) == route.departureTime.take(5)))
+                            (b.busId == route.busId.toLong() || b.routeId == route.id || (b.operatorName.equals(route.operatorName, ignoreCase = true) && b.departureTime.take(5) == route.departureTime.take(5)))
                         }
                         BusRouteCard3D(
                             route = route,

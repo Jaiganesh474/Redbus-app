@@ -1023,22 +1023,26 @@ class RedbusViewModel(
         val route = state.selectedRoute ?: return
         val seatIds = if (state.lockedSeatIds.isNotEmpty()) state.lockedSeatIds else state.selectedSeats.map { if (it.seatId != 0) it.seatId else it.id }
 
-        seatLockTimerJob?.cancel()
-        seatLockTimerJob = null
+        timerJob?.cancel()
+        timerJob = null
 
         // Optimistically make seats AVAILABLE in UI state immediately so they never show as "Sold"
         _uiState.update { curr ->
-            val updatedRouteSeats = curr.selectedRouteSeats.map { seat ->
-                if (seatIds.contains(seat.id) && seat.status.equals("LOCKED", ignoreCase = true)) {
-                    seat.copy(status = "AVAILABLE")
-                } else {
-                    seat
-                }
+            val updatedLayout = curr.seatLayout?.let { layout ->
+                layout.copy(
+                    seats = layout.seats.map { seat ->
+                        if (seatIds.contains(seat.seatId) || seatIds.contains(seat.id)) {
+                            seat.copy(status = "AVAILABLE")
+                        } else {
+                            seat
+                        }
+                    }
+                )
             }
             curr.copy(
                 lockedSeatIds = emptyList(),
                 seatLockSeconds = 0,
-                selectedRouteSeats = updatedRouteSeats
+                seatLayout = updatedLayout
             )
         }
 
@@ -1047,7 +1051,7 @@ class RedbusViewModel(
                 repository.unlockSeats(route.id, seatIds)
                 if (refreshSeats) {
                     repository.getRouteSeats(route.id).onSuccess { seatMap ->
-                        _uiState.update { it.copy(selectedRouteSeats = seatMap.seats) }
+                        _uiState.update { it.copy(seatLayout = seatMap) }
                     }
                 }
             }

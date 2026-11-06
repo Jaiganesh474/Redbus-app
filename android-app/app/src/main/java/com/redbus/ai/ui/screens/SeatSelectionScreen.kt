@@ -2227,8 +2227,7 @@ private fun SleeperBerthItem(
 
 ) {
 
-    val isLockedByAnother = seat.status.equals("LOCKED", ignoreCase = true) && !uiState.lockedSeatIds.contains(seat.id)
-    val isSold = !isSelected && (seat.status.equals("BOOKED", ignoreCase = true) || isLockedByAnother)
+    val isSold = !isSelected && (seat.status.equals("BOOKED", ignoreCase = true) || seat.status.equals("LOCKED", ignoreCase = true))
 
     val isFemale = seat.genderRestriction.equals("FEMALE", ignoreCase = true) ||
 
@@ -2949,7 +2948,7 @@ private fun BusPhotosPanel(route: RouteItem) {
 
 
 @Composable
-private fun DateChangePolicyPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+private fun DateChangePolicyPanel(route: RouteItem) {
     val cutoffText = remember(route.travelDate, route.departureTime) {
         try {
             val dep = route.departureTime.take(5)
@@ -3251,7 +3250,7 @@ private fun DroppingPointsPreviewPanel(
 }
 
 @Composable
-private fun BusRouteTimelinePanel(route: com.redbus.ai.data.model.BusRouteItem) {
+private fun BusRouteTimelinePanel(route: RouteItem) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -3327,7 +3326,7 @@ private fun BusRouteTimelinePanel(route: com.redbus.ai.data.model.BusRouteItem) 
 }
 
 @Composable
-private fun RestStopDetailsPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+private fun RestStopDetailsPanel(route: RouteItem) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -3370,7 +3369,7 @@ private fun RestStopDetailsPanel(route: com.redbus.ai.data.model.BusRouteItem) {
 }
 
 @Composable
-private fun BusSafetyStandardsPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+private fun BusSafetyStandardsPanel(route: RouteItem) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),

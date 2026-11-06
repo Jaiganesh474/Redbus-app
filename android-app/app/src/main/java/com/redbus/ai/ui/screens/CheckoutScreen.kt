@@ -43,6 +43,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 
 import androidx.compose.material.icons.Icons
 
@@ -760,8 +761,8 @@ fun CheckoutScreen(
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.padding(vertical = 12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(

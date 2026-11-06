@@ -8,109 +8,112 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.redbus.ai.R
 
-// Primary Font: Metropolis (Zomato-level brand & geometric typeface for titles, buttons & headings)
-val MetropolisFontFamily = FontFamily(
-    Font(R.font.metropolis_regular, FontWeight.Normal),
-    Font(R.font.metropolis_semibold, FontWeight.SemiBold),
-    Font(R.font.metropolis_bold, FontWeight.Bold),
-    Font(R.font.metropolis_bold, FontWeight.ExtraBold),
-    Font(R.font.metropolis_bold, FontWeight.Black)
+// Primary Font: Lenskart Sans (Geometric Sans-Serif / Poppins typography system matching Lenskart Mobile App)
+val LenskartSansFontFamily = FontFamily(
+    Font(R.font.poppins_regular, FontWeight.Normal),
+    Font(R.font.poppins_medium, FontWeight.Medium),
+    Font(R.font.poppins_semibold, FontWeight.SemiBold),
+    Font(R.font.poppins_bold, FontWeight.Bold),
+    Font(R.font.poppins_extrabold, FontWeight.ExtraBold),
+    Font(R.font.poppins_black, FontWeight.Black)
 )
 
-// Secondary Font: Open Sans (Used for secondary support text & readable body)
-val OpenSansFontFamily = FontFamily(
-    Font(R.font.opensans_regular, FontWeight.Normal),
-    Font(R.font.opensans_semibold, FontWeight.SemiBold),
-    Font(R.font.opensans_bold, FontWeight.Bold),
-    Font(R.font.opensans_bold, FontWeight.ExtraBold),
-    Font(R.font.opensans_bold, FontWeight.Black)
-)
+// Aliases point to LenskartSansFontFamily for complete 100% app-wide font coverage
+val PoppinsFontFamily = LenskartSansFontFamily
+val MetropolisFontFamily = LenskartSansFontFamily
+val OpenSansFontFamily = LenskartSansFontFamily
 
 val RedbusTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Black,
         fontSize = 32.sp,
         lineHeight = 38.sp,
         letterSpacing = (-0.5).sp
     ),
     displayMedium = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 28.sp,
         lineHeight = 34.sp
     ),
+    displaySmall = TextStyle(
+        fontFamily = LenskartSansFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp,
+        lineHeight = 30.sp
+    ),
     headlineLarge = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Black,
         fontSize = 26.sp,
         lineHeight = 32.sp,
         letterSpacing = (-0.4).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = (-0.3).sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 26.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
         lineHeight = 24.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 18.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = OpenSansFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 22.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = OpenSansFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         lineHeight = 19.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = OpenSansFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 18.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = MetropolisFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = OpenSansFontFamily,
+        fontFamily = LenskartSansFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 10.sp,
         lineHeight = 14.sp
