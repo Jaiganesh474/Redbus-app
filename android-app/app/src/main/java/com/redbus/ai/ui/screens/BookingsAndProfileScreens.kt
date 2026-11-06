@@ -2705,7 +2705,7 @@ private fun FreeBusChangeModal(
         isLoadingDates = true
         try {
             val res = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                com.redbus.ai.data.remote.RetrofitClient.apiService.getAvailableDatesForBooking(booking.pnr)
+                com.redbus.ai.data.remote.RedbusApiService.create().getAvailableDatesForBooking(booking.pnr)
             }
             availableDatesMap = res.dates.orEmpty().associateBy { it.date }
         } catch (_: Exception) {
