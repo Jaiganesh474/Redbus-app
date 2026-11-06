@@ -190,7 +190,12 @@ public class PdfService {
                 fareCell.addElement(new Paragraph("redBus Wallet Deducted: -₹" + booking.getWalletAmountUsed(), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, new Color(16, 149, 93))));
             }
 
-            fareCell.addElement(new Paragraph("Operator Service Fee & GST: FREE (₹0.00)", normalFont));
+            java.math.BigDecimal opFee = booking.getServiceFee() != null ? booking.getServiceFee() : java.math.BigDecimal.ZERO;
+            if (opFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                fareCell.addElement(new Paragraph("Operator Service Fee: +₹" + opFee, normalFont));
+            } else {
+                fareCell.addElement(new Paragraph("Operator Service Fee & GST: FREE (₹0.00)", normalFont));
+            }
 
             String paymentMode;
             if (booking.getWalletAmountUsed() != null && booking.getWalletAmountUsed().compareTo(java.math.BigDecimal.ZERO) > 0) {

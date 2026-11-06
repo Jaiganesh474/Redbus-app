@@ -5098,7 +5098,7 @@ fun ProfileAndWalletScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Passengers (${uiState.savedTravellers.size})",
+                                    text = "Saved Passengers (${uiState.savedTravellers.size})",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black
                                 )
@@ -5188,7 +5188,7 @@ fun ProfileAndWalletScreen(
                                                         fontSize = 15.sp
                                                     )
                                                     Text(
-                                                        text = "${traveller.age} yrs • ${traveller.gender}",
+                                                        text = "${traveller.age} years • ${traveller.gender}",
                                                         fontSize = 12.sp,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
@@ -5240,7 +5240,7 @@ fun ProfileAndWalletScreen(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("+ Add Passenger", fontWeight = FontWeight.Black, fontSize = 15.sp)
+                            Text(" Add Passenger", fontWeight = FontWeight.Black, fontSize = 15.sp)
                         }
                     }
                 }

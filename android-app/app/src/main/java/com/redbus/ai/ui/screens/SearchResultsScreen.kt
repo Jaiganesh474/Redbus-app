@@ -65,6 +65,11 @@ import com.redbus.ai.ui.localization.AppStrings
 import com.redbus.ai.ui.viewmodel.RedbusUiState
 import com.redbus.ai.ui.viewmodel.RouteFilter
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 
@@ -1965,44 +1970,171 @@ private fun QuickDateSelectorDialog(
     onSelectDate: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val upcomingDates = remember {
-        val today = LocalDate.now()
-        (0..13).map { offset -> today.plusDays(offset.toLong()) }
+    val today = remember { LocalDate.now() }
+    val selectedDate = remember(selectedDateStr) {
+        runCatching { LocalDate.parse(selectedDateStr) }.getOrDefault(today)
     }
+    var currentYearMonth by remember { mutableStateOf(YearMonth.from(selectedDate)) }
+    val weekdays = remember { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Journey Date", fontWeight = FontWeight.Black) },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                upcomingDates.chunked(2).forEach { pair ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Select date",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Surface(
+                        onClick = onDismiss,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(34.dp)
                     ) {
-                        pair.forEach { d ->
-                            val iso = d.toString()
-                            val isSel = iso == selectedDateStr
-                            val dayName = d.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale.ENGLISH)
-                            val monthName = d.month.getDisplayName(JavaTextStyle.SHORT, Locale.ENGLISH)
-                            Surface(
-                                onClick = { onSelectDate(iso) },
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSel) RedbusCrimson else MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "$dayName, ${d.dayOfMonth} $monthName",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    weekdays.forEach { wd ->
+                        Text(
+                            text = wd,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { currentYearMonth = currentYearMonth.minusMonths(1) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous month"
+                        )
+                    }
+                    val monthTitle = remember(currentYearMonth) {
+                        val mName = currentYearMonth.month.getDisplayName(JavaTextStyle.FULL, Locale.ENGLISH)
+                        "$mName ${currentYearMonth.year}"
+                    }
+                    Text(
+                        text = monthTitle,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(
+                        onClick = { currentYearMonth = currentYearMonth.plusMonths(1) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next month"
+                        )
+                    }
+                }
+
+                val daysInMonth = currentYearMonth.lengthOfMonth()
+                val firstDayMondayBased = currentYearMonth.atDay(1).dayOfWeek.value - 1
+                val totalCells = firstDayMondayBased + daysInMonth
+                val rows = (totalCells + 6) / 7
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (row in 0 until rows) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            for (col in 0 until 7) {
+                                val cellIndex = row * 7 + col
+                                val dayNum = cellIndex - firstDayMondayBased + 1
+                                if (dayNum in 1..daysInMonth) {
+                                    val cellDate = currentYearMonth.atDay(dayNum)
+                                    val isPast = cellDate.isBefore(today)
+                                    val isSelected = cellDate == selectedDate
+                                    val isSunday = col == 6
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Surface(
+                                            onClick = {
+                                                if (!isPast) {
+                                                    onSelectDate(cellDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                                                }
+                                            },
+                                            enabled = !isPast,
+                                            shape = CircleShape,
+                                            color = when {
+                                                isSelected -> Color(0xFF1E293B)
+                                                else -> Color.Transparent
+                                            },
+                                            modifier = Modifier.size(38.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = dayNum.toString(),
+                                                    fontSize = 13.sp,
+                                                    fontWeight = when {
+                                                        isSelected -> FontWeight.ExtraBold
+                                                        isSunday -> FontWeight.Bold
+                                                        else -> FontWeight.SemiBold
+                                                    },
+                                                    color = when {
+                                                        isPast -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.32f)
+                                                        isSelected -> Color.White
+                                                        isSunday -> RedbusCrimson
+                                                        else -> MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Spacer(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp)
                                     )
                                 }
                             }
@@ -2010,13 +2142,8 @@ private fun QuickDateSelectorDialog(
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close", color = RedbusCrimson, fontWeight = FontWeight.Bold)
-            }
         }
-    )
+    }
 }
 
 private fun parseHour(timeStr: String): Int {

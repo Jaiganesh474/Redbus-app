@@ -398,7 +398,7 @@ export default function ProfilePage() {
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Saved Travellers</h3>
+                    <h3 className="text-base font-bold text-gray-900">Saved Passengers</h3>
                     <p className="text-xs text-gray-400">Auto-fill passenger details at bus checkout</p>
                   </div>
                 </div>
@@ -409,7 +409,7 @@ export default function ProfilePage() {
                   className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-red-50 text-[#d84e55] hover:bg-red-100 text-xs font-bold transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{showAddTraveller ? "Cancel" : "Add Traveller"}</span>
+                  <span>{showAddTraveller ? "Cancel" : "Add Passenger"}</span>
                 </button>
               </div>
 

@@ -421,15 +421,27 @@ public class AiService {
             sessionId = "session-" + UUID.randomUUID().toString().substring(0, 12);
         }
 
-        // Safe session retrieval/creation
+        // Safe session retrieval/creation with strict user isolation
         ChatSession session = null;
         try {
-            final String sid = sessionId;
-            session = chatSessionRepository.findById(sessionId)
-                    .orElseGet(() -> {
-                        ChatSession s = ChatSession.builder().id(sid).userId(request.getUserId()).build();
-                        return chatSessionRepository.save(s);
-                    });
+            ChatSession existing = chatSessionRepository.findById(sessionId).orElse(null);
+            if (existing != null && existing.getUserId() != null && request.getUserId() != null && !existing.getUserId().equals(request.getUserId())) {
+                log.info("Session {} belongs to user {}, creating isolated fresh session for user {}", sessionId, existing.getUserId(), request.getUserId());
+                sessionId = "session-" + UUID.randomUUID().toString().substring(0, 12);
+                existing = null;
+            }
+
+            if (existing == null) {
+                final String finalSid = sessionId;
+                session = ChatSession.builder().id(finalSid).userId(request.getUserId()).build();
+                chatSessionRepository.save(session);
+            } else {
+                session = existing;
+                if (session.getUserId() == null && request.getUserId() != null) {
+                    session.setUserId(request.getUserId());
+                    chatSessionRepository.save(session);
+                }
+            }
 
             ChatMessage userMsg = ChatMessage.builder()
                     .session(session)

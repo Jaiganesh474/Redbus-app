@@ -414,7 +414,12 @@ public class EmailService {
             invoiceRows.append("<tr><td class='label'>redBus Wallet Deducted</td><td class='value' style='color:#059669;font-weight:700;'>-₹").append(booking.getWalletAmountUsed()).append("</td></tr>");
         }
 
-        invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#059669;'>FREE (₹0.00)</td></tr>");
+        java.math.BigDecimal opFee = booking.getServiceFee() != null ? booking.getServiceFee() : java.math.BigDecimal.ZERO;
+        if (opFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#111827;font-weight:700;'>+₹").append(opFee).append("</td></tr>");
+        } else {
+            invoiceRows.append("<tr><td class='label'>Operator & Service Fee</td><td class='value' style='color:#059669;'>FREE (₹0.00)</td></tr>");
+        }
 
         String paymentModeText;
         if (booking.getWalletAmountUsed() != null && booking.getWalletAmountUsed().compareTo(java.math.BigDecimal.ZERO) > 0) {

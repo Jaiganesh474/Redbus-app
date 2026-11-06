@@ -349,7 +349,8 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                             viewModel.selectRouteForSeats(route) {
                                 navController.navigate(ScreenRoute.SeatSelection.route)
                             }
-                        }
+                        },
+                        onResetChat = viewModel::resetChatSession
                     )
                 }
 

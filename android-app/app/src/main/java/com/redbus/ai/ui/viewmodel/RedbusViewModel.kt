@@ -240,13 +240,17 @@ class RedbusViewModel(
             repository.getMe().onSuccess { freshUser ->
                 SessionManager.updateUser(freshUser)
                 val isOp = freshUser.role.contains("OPERATOR", ignoreCase = true) || freshUser.role.contains("ADMIN", ignoreCase = true)
+                val isDifferentUser = lastObservedUserId != null && lastObservedUserId != freshUser.id
+                lastObservedUserId = freshUser.id
                 _uiState.update {
                     it.copy(
                         user = freshUser,
                         isAuthenticated = true,
                         isOperator = isOp,
                         contactEmail = freshUser.email,
-                        contactPhone = freshUser.phone.orEmpty()
+                        contactPhone = freshUser.phone.orEmpty(),
+                        aiSessionId = if (isDifferentUser) null else it.aiSessionId,
+                        chatMessages = if (isDifferentUser) getDefaultChatMessages() else it.chatMessages
                     )
                 }
                 if (isOp) {
@@ -302,6 +306,7 @@ class RedbusViewModel(
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
                     val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
+                    lastObservedUserId = res.user.id
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
@@ -311,7 +316,10 @@ class RedbusViewModel(
                             isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
-                            authSuccessMessage = "Logged in as ${res.user.name}"
+                            authSuccessMessage = "Logged in as ${res.user.name}",
+                            aiSessionId = null,
+                            chatMessages = getDefaultChatMessages(),
+                            isAiTyping = false
                         )
                     }
                     refreshAuthenticatedAccountData()
@@ -341,6 +349,7 @@ class RedbusViewModel(
             repository.register(name, email, phone, password)
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
+                    lastObservedUserId = res.user.id
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
@@ -349,7 +358,10 @@ class RedbusViewModel(
                             isAuthenticated = true,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
-                            authSuccessMessage = res.message ?: "Account created & signed in!"
+                            authSuccessMessage = res.message ?: "Account created & signed in!",
+                            aiSessionId = null,
+                            chatMessages = getDefaultChatMessages(),
+                            isAiTyping = false
                         )
                     }
                     refreshAuthenticatedAccountData()
@@ -407,6 +419,7 @@ class RedbusViewModel(
                 .onSuccess { res ->
                     SessionManager.saveSession(res.token, res.user)
                     val isOp = res.user.role.contains("OPERATOR", ignoreCase = true) || res.user.role.contains("ADMIN", ignoreCase = true)
+                    lastObservedUserId = res.user.id
                     _uiState.update {
                         it.copy(
                             isAuthLoading = false,
@@ -417,7 +430,10 @@ class RedbusViewModel(
                             isOperator = isOp,
                             contactEmail = res.user.email,
                             contactPhone = res.user.phone.orEmpty(),
-                            authSuccessMessage = "Logged in as ${res.user.name}"
+                            authSuccessMessage = "Logged in as ${res.user.name}",
+                            aiSessionId = null,
+                            chatMessages = getDefaultChatMessages(),
+                            isAiTyping = false
                         )
                     }
                     refreshAuthenticatedAccountData()
@@ -439,6 +455,7 @@ class RedbusViewModel(
 
     fun logout() {
         SessionManager.clearSession()
+        lastObservedUserId = null
         _uiState.update {
             it.copy(
                 user = null,
@@ -459,7 +476,10 @@ class RedbusViewModel(
                 myBookings = emptyList(),
                 pnrSearchResult = null,
                 authSuccessMessage = null,
-                authError = null
+                authError = null,
+                aiSessionId = null,
+                chatMessages = getDefaultChatMessages(),
+                isAiTyping = false
             )
         }
     }

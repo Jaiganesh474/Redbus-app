@@ -1978,9 +1978,9 @@ fun CheckoutScreen(
 
                             .weight(1f)
 
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
 
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 80.dp),
 
                         verticalArrangement = Arrangement.spacedBy(16.dp)
 
@@ -2557,7 +2557,7 @@ fun CheckoutScreen(
 
                                     ) {
 
-                                        Text("AI Operator Service Fee", fontSize = 13.sp, color = Color(0xFF475569))
+                                        Text("Operator Service Fee", fontSize = 13.sp, color = Color(0xFF475569))
 
                                         Text("+₹${fareBreakdown.gstAndService.toInt()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
 
@@ -2719,9 +2719,21 @@ fun CheckoutScreen(
 
                                     }
 
+
+
+                                    Spacer(modifier = Modifier.height(28.dp))
+
                                 }
 
                             }
+
+                        }
+
+
+
+                        item {
+
+                            Spacer(modifier = Modifier.height(48.dp))
 
                         }
 
