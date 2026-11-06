@@ -1318,6 +1318,154 @@ export default function BusDetailsModal({
                             </div>
                           )}
 
+                          {/* Bus Route Tab */}
+                          {activeTab === "route" && (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                  <MapPin className="w-4 h-4 text-[#d84e55]" />
+                                  <span>Journey Route & Major Transit Corridor</span>
+                                </h3>
+                                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-50 text-[#d84e55] dark:bg-red-950/40 dark:text-red-300 border border-red-200/50">
+                                  {route.durationHours || 6.5} hrs Direct
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                                Real-time AI generated transit pathway connecting <strong>{route.sourceCity}</strong> to <strong>{route.destinationCity}</strong>.
+                              </p>
+
+                              {/* Visual Route Timeline */}
+                              <div className="p-4 bg-gray-50/80 dark:bg-slate-800/60 rounded-2xl border border-gray-200 dark:border-slate-700/80 space-y-4">
+                                <div className="space-y-3">
+                                  {(route.busRoute || `${route.sourceCity} (Main Terminal) ➔ Express Highway Corridor ➔ Mid-Highway Transit ➔ City Bypass ➔ ${route.destinationCity} (Central)`).split(/➔|->/).map((stop, sIdx, arr) => {
+                                    const isFirst = sIdx === 0;
+                                    const isLast = sIdx === arr.length - 1;
+                                    return (
+                                      <div key={sIdx} className="flex items-start space-x-3 relative">
+                                        <div className="flex flex-col items-center">
+                                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                                            isFirst ? "border-[#d84e55] bg-[#d84e55]" : isLast ? "border-emerald-600 bg-emerald-600" : "border-gray-400 bg-white dark:bg-slate-700"
+                                          }`}>
+                                            {(isFirst || isLast) && <div className="w-1 h-1 rounded-full bg-white" />}
+                                          </div>
+                                          {!isLast && <div className="w-0.5 h-7 bg-gray-300 dark:bg-slate-600 my-0.5" />}
+                                        </div>
+                                        <div className="flex-1 pb-1">
+                                          <div className="flex items-center justify-between">
+                                            <span className={`text-xs font-bold ${
+                                              isFirst ? "text-[#d84e55]" : isLast ? "text-emerald-600 dark:text-emerald-400" : "text-gray-800 dark:text-slate-200"
+                                            }`}>
+                                              {stop.trim()}
+                                            </span>
+                                            {isFirst && <span className="text-[10px] font-bold text-gray-400">{route.departureTime}</span>}
+                                            {isLast && <span className="text-[10px] font-bold text-gray-400">{route.arrivalTime}</span>}
+                                          </div>
+                                          <span className="text-[10px] text-gray-400">
+                                            {isFirst ? "Source Origin Station" : isLast ? "Final Destination Station" : "Transit Corridor Highway Node"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Rest Stop Tab */}
+                          {activeTab === "rest_stop" && (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                  <Coffee className="w-4 h-4 text-[#d84e55]" />
+                                  <span>Mid-Journey Rest Stop & Refreshments</span>
+                                </h3>
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50">
+                                  ✓ Verified Halt
+                                </span>
+                              </div>
+
+                              <div className="p-4 bg-gradient-to-br from-amber-50/70 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h4 className="text-xs font-black text-amber-950 dark:text-amber-200">
+                                      {route.restStop ? route.restStop.split("•")[0].trim() : "Highway Food Village Plaza & Rest Stop"}
+                                    </h4>
+                                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                      {route.restStop && route.restStop.includes("•") ? route.restStop.split("•").slice(1).join(" • ") : "Scheduled midway stop for meals, washrooms and refreshments."}
+                                    </p>
+                                  </div>
+                                  <div className="px-2.5 py-1 bg-amber-100/90 dark:bg-amber-900/60 rounded-xl text-center shrink-0">
+                                    <span className="block text-[10px] font-bold text-amber-800 dark:text-amber-200">BREAK</span>
+                                    <span className="text-xs font-black text-amber-900 dark:text-amber-100">20-25m</span>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-amber-200/50 dark:border-amber-800/40">
+                                  <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                                    <span>🚻</span>
+                                    <span>Hygienic Toilets</span>
+                                  </div>
+                                  <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                                    <span>☕</span>
+                                    <span>Tea & Coffee Stalls</span>
+                                  </div>
+                                  <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                                    <span>🍽️</span>
+                                    <span>24/7 Food Court</span>
+                                  </div>
+                                  <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-amber-900 dark:text-amber-200">
+                                    <span>🏧</span>
+                                    <span>ATM & Medical</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bus Safety Tab */}
+                          {activeTab === "safety" && (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                  <span>Certified Safety Standards & Passenger Protection</span>
+                                </h3>
+                                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+                                  🛡️ 100% Verified
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-gray-500 dark:text-slate-400">
+                                RedBus AI certifies that {route.operatorName} rigorously adheres to safety, health, and vehicle roadworthiness protocols.
+                              </p>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {[
+                                  { icon: "✨", title: "Sanitized Coach & Blankets", desc: "Coach is thoroughly deep cleaned and fresh sanitized blankets are provided before departure." },
+                                  { icon: "🚨", title: "Emergency Exits & Hammers", desc: "2 clearly marked emergency exits and safety window break hammers installed." },
+                                  { icon: "🧯", title: "Fire Safety Certified", desc: "Commercial grade fire extinguishers maintained onboard with valid certification." },
+                                  { icon: "🛰️", title: "Live GPS & Speed Governor", desc: "Live satellite telemetry tracking with speed electronically restricted under 80 km/h." },
+                                  { icon: "👨‍✈️", title: "2 Certified Highway Drivers", desc: "Two experienced commercial drivers on duty for fatigue-free overnight travel." },
+                                  { icon: "📹", title: "CCTV Cabin Surveillance", desc: "Continuous video monitoring in public aisle for round-the-clock passenger safety." },
+                                  { icon: "🩹", title: "First-Aid Emergency Kit", desc: "Standard medical first-aid kit available on board with driver assistance." },
+                                  { icon: "🆘", title: "24/7 RedBus Emergency SOS", desc: "Instant passenger SOS helpline and rapid highway breakdown response." },
+                                ].map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-3 bg-gray-50 dark:bg-slate-800/80 rounded-2xl border border-gray-200/80 dark:border-slate-700/80 flex items-start space-x-3"
+                                  >
+                                    <span className="text-lg pt-0.5 shrink-0">{item.icon}</span>
+                                    <div>
+                                      <h5 className="text-xs font-bold text-gray-900 dark:text-white">{item.title}</h5>
+                                      <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5 leading-relaxed">{item.desc}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Bus Features Tab */}
                           {activeTab === "features" && (
                             <div className="space-y-4">

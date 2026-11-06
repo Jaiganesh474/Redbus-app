@@ -65,6 +65,15 @@ public class Route {
     @Column(name = "dropping_points", columnDefinition = "TEXT")
     private String droppingPoints;
 
+    @Column(name = "bus_route", columnDefinition = "TEXT")
+    private String busRoute;
+
+    @Column(name = "rest_stop", columnDefinition = "TEXT")
+    private String restStop;
+
+    @Column(name = "bus_safety", columnDefinition = "TEXT")
+    private String busSafety;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

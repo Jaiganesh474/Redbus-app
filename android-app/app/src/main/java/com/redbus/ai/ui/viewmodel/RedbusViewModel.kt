@@ -1018,6 +1018,42 @@ class RedbusViewModel(
         }
     }
 
+    fun unlockSelectedSeats(refreshSeats: Boolean = true) {
+        val state = _uiState.value
+        val route = state.selectedRoute ?: return
+        val seatIds = if (state.lockedSeatIds.isNotEmpty()) state.lockedSeatIds else state.selectedSeats.map { if (it.seatId != 0) it.seatId else it.id }
+
+        seatLockTimerJob?.cancel()
+        seatLockTimerJob = null
+
+        // Optimistically make seats AVAILABLE in UI state immediately so they never show as "Sold"
+        _uiState.update { curr ->
+            val updatedRouteSeats = curr.selectedRouteSeats.map { seat ->
+                if (seatIds.contains(seat.id) && seat.status.equals("LOCKED", ignoreCase = true)) {
+                    seat.copy(status = "AVAILABLE")
+                } else {
+                    seat
+                }
+            }
+            curr.copy(
+                lockedSeatIds = emptyList(),
+                seatLockSeconds = 0,
+                selectedRouteSeats = updatedRouteSeats
+            )
+        }
+
+        if (seatIds.isNotEmpty()) {
+            viewModelScope.launch {
+                repository.unlockSeats(route.id, seatIds)
+                if (refreshSeats) {
+                    repository.getRouteSeats(route.id).onSuccess { seatMap ->
+                        _uiState.update { it.copy(selectedRouteSeats = seatMap.seats) }
+                    }
+                }
+            }
+        }
+    }
+
     fun updateBoardingDropping(boarding: String, dropping: String) {
         _uiState.update {
             it.copy(selectedBoardingPoint = boarding, selectedDroppingPoint = dropping)

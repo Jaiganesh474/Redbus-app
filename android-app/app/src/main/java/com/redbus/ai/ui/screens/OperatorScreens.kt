@@ -5583,6 +5583,12 @@ private fun PublishScheduleModal(
     var droppingPoints by remember {
         mutableStateOf(editingSchedule?.droppingPoints ?: getAiDroppingPoints(destCity, arrivalTime))
     }
+    var busRoute by remember {
+        mutableStateOf(getAiBusRoute(sourceCity, destCity))
+    }
+    var restStop by remember {
+        mutableStateOf(getAiRestStop(sourceCity, destCity, departureTime))
+    }
     var showDepartureTimePicker by remember { mutableStateOf(false) }
     var showArrivalTimePicker by remember { mutableStateOf(false) }
 
@@ -5693,6 +5699,8 @@ private fun PublishScheduleModal(
                                     sourceCity = it
                                     isSourceMenuExpanded = true
                                     boardingPoints = getAiBoardingPoints(it, departureTime)
+                                    busRoute = getAiBusRoute(it, destCity)
+                                    restStop = getAiRestStop(it, destCity, departureTime)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isSourceMenuExpanded = !isSourceMenuExpanded }) {
@@ -5706,6 +5714,7 @@ private fun PublishScheduleModal(
                             DropdownMenu(
                                 expanded = isSourceMenuExpanded,
                                 onDismissRequest = { isSourceMenuExpanded = false },
+                                properties = androidx.compose.ui.window.PopupProperties(focusable = false),
                                 modifier = Modifier.width(280.dp)
                             ) {
                                 val filtered = POPULAR_CITIES.filter { it.name.contains(sourceCity, ignoreCase = true) }.ifEmpty { POPULAR_CITIES }
@@ -5752,6 +5761,8 @@ private fun PublishScheduleModal(
                                         onClick = {
                                             sourceCity = city.name
                                             boardingPoints = getAiBoardingPoints(city.name, departureTime)
+                                            busRoute = getAiBusRoute(city.name, destCity)
+                                            restStop = getAiRestStop(city.name, destCity, departureTime)
                                             isSourceMenuExpanded = false
                                         }
                                     )
@@ -5774,6 +5785,8 @@ private fun PublishScheduleModal(
                                     destCity = it
                                     isDestMenuExpanded = true
                                     droppingPoints = getAiDroppingPoints(it, arrivalTime)
+                                    busRoute = getAiBusRoute(sourceCity, it)
+                                    restStop = getAiRestStop(sourceCity, it, departureTime)
                                 },
                                 trailingIcon = {
                                     IconButton(onClick = { isDestMenuExpanded = !isDestMenuExpanded }) {
@@ -5787,6 +5800,7 @@ private fun PublishScheduleModal(
                             DropdownMenu(
                                 expanded = isDestMenuExpanded,
                                 onDismissRequest = { isDestMenuExpanded = false },
+                                properties = androidx.compose.ui.window.PopupProperties(focusable = false),
                                 modifier = Modifier.width(280.dp)
                             ) {
                                 val filtered = POPULAR_CITIES.filter { it.name.contains(destCity, ignoreCase = true) }.ifEmpty { POPULAR_CITIES }
@@ -5833,6 +5847,8 @@ private fun PublishScheduleModal(
                                         onClick = {
                                             destCity = city.name
                                             droppingPoints = getAiDroppingPoints(city.name, arrivalTime)
+                                            busRoute = getAiBusRoute(sourceCity, city.name)
+                                            restStop = getAiRestStop(sourceCity, city.name, departureTime)
                                             isDestMenuExpanded = false
                                         }
                                     )
@@ -6016,6 +6032,38 @@ private fun PublishScheduleModal(
                     )
                 }
 
+                // Bus Route with AI Auto-Population
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Bus Route (Transit Corridor)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("✨ Auto-populated by AI", fontSize = 10.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Medium)
+                    }
+                    OutlinedTextField(
+                        value = busRoute,
+                        onValueChange = { busRoute = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Rest Stop with AI Auto-Population
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Rest Stop (Meals & Restrooms)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("✨ Auto-populated by AI", fontSize = 10.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Medium)
+                    }
+                    OutlinedTextField(
+                        value = restStop,
+                        onValueChange = { restStop = it },
+                        minLines = 2,
+                        maxLines = 3,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 // Instant Materialization Highlight Banner (Matching Image 2)
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -6062,6 +6110,8 @@ private fun PublishScheduleModal(
                         Text(if (isEditing) "Save Schedule Changes" else "Publish Live Schedule", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+                Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.navigationBarsPadding())
             }
         }
     }
@@ -6510,4 +6560,20 @@ fun ScheduleTimePickerDialog(
             }
         }
     }
+}
+
+private fun getAiBusRoute(source: String, dest: String): String {
+    val sl = source.lowercase().trim()
+    val dl = dest.lowercase().trim()
+    return if (sl.contains("bangalore") && dl.contains("chennai")) {
+        "Bangalore (Majestic) ➔ Hosur (NH44) ➔ Krishnagiri ➔ Ambur ➔ Vellore ➔ Sriperumbudur ➔ Chennai"
+    } else if (sl.contains("chennai") && dl.contains("bangalore")) {
+        "Chennai (Koyambedu) ➔ Sriperumbudur ➔ Vellore ➔ Ambur ➔ Krishnagiri ➔ Hosur ➔ Bangalore"
+    } else {
+        "$source (Main Terminal) ➔ Express Highway Corridor ➔ Mid-Highway Transit ➔ City Bypass ➔ $dest"
+    }
+}
+
+private fun getAiRestStop(source: String, dest: String, departureTime: String = "22:30"): String {
+    return "Food Village Highway Plaza, Krishnagiri (NH 44) • 25 mins break • Clean AC Washrooms & 24/7 Food Court"
 }

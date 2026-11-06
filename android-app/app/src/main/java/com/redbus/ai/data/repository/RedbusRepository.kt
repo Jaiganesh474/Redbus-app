@@ -96,6 +96,14 @@ class RedbusRepository(
             runCatching { api.lockSeats(LockSeatsRequest(routeId, seatIds, userId)) }
         }
 
+    suspend fun unlockSeats(routeId: Int, seatIds: List<Int>): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                api.unlockSeats(LockSeatsRequest(routeId, seatIds, null))
+                Unit
+            }
+        }
+
     suspend fun getAvailableCoupons(): Result<List<Coupon>> = withContext(Dispatchers.IO) {
         runCatching { api.getAvailableCoupons() }
     }

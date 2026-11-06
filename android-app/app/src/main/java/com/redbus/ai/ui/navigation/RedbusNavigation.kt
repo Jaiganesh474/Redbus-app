@@ -291,7 +291,10 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                                 navController.navigate(ScreenRoute.Checkout.route)
                             }
                         },
-                        onBack = { navController.popBackStack() },
+                        onBack = {
+                            viewModel.unlockSelectedSeats()
+                            navController.popBackStack()
+                        },
                         onSubmitReview = { busId, rating, comment ->
                             viewModel.submitReview(busId, rating, comment)
                         }
@@ -331,7 +334,10 @@ fun RedbusAiApp(viewModel: RedbusViewModel) {
                         onNavigateToAuth = {
                             navigateToTab(navController, ScreenRoute.Profile.route)
                         },
-                        onBack = { navController.popBackStack() }
+                        onBack = {
+                            viewModel.unlockSelectedSeats()
+                            navController.popBackStack()
+                        }
                     )
                 }
 

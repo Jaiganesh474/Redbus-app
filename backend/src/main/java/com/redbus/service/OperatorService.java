@@ -169,6 +169,15 @@ public class OperatorService {
         if (req.getDroppingPoints() != null && !req.getDroppingPoints().trim().isEmpty()) {
             schedule.setDroppingPoints(req.getDroppingPoints().trim());
         }
+        if (req.getBusRoute() != null && !req.getBusRoute().trim().isEmpty()) {
+            schedule.setBusRoute(req.getBusRoute().trim());
+        }
+        if (req.getRestStop() != null && !req.getRestStop().trim().isEmpty()) {
+            schedule.setRestStop(req.getRestStop().trim());
+        }
+        if (req.getBusSafety() != null && !req.getBusSafety().trim().isEmpty()) {
+            schedule.setBusSafety(req.getBusSafety().trim());
+        }
         if (req.getDepartureTime() != null) {
             schedule.setDepartureTime(req.getDepartureTime());
         }
@@ -201,6 +210,9 @@ public class OperatorService {
             if (saved.getBasePrice() != null) r.setBasePrice(saved.getBasePrice());
             if (saved.getBoardingPoints() != null) r.setBoardingPoints(saved.getBoardingPoints());
             if (saved.getDroppingPoints() != null) r.setDroppingPoints(saved.getDroppingPoints());
+            if (saved.getBusRoute() != null) r.setBusRoute(saved.getBusRoute());
+            if (saved.getRestStop() != null) r.setRestStop(saved.getRestStop());
+            if (saved.getBusSafety() != null) r.setBusSafety(saved.getBusSafety());
             r.setDurationHours(computedDuration);
             routeRepository.save(r);
         }
@@ -255,6 +267,16 @@ public class OperatorService {
                 ? req.getDroppingPoints().trim()
                 : req.getDestinationCity() + " City Center (14:00), " + req.getDestinationCity() + " Main Terminal (14:30)";
 
+        String bRoute = req.getBusRoute() != null && !req.getBusRoute().trim().isEmpty()
+                ? req.getBusRoute().trim()
+                : AiService.generateBusRoute(req.getSourceCity(), req.getDestinationCity());
+        String rStop = req.getRestStop() != null && !req.getRestStop().trim().isEmpty()
+                ? req.getRestStop().trim()
+                : AiService.generateRestStop(req.getSourceCity(), req.getDestinationCity(), req.getDepartureTime());
+        String bSafety = req.getBusSafety() != null && !req.getBusSafety().trim().isEmpty()
+                ? req.getBusSafety().trim()
+                : AiService.generateBusSafety(bus.getBusType());
+
         Schedule schedule = Schedule.builder()
                 .operator(operator)
                 .bus(bus)
@@ -262,6 +284,9 @@ public class OperatorService {
                 .destinationCity(req.getDestinationCity().trim())
                 .boardingPoints(boarding)
                 .droppingPoints(dropping)
+                .busRoute(bRoute)
+                .restStop(rStop)
+                .busSafety(bSafety)
                 .departureTime(req.getDepartureTime())
                 .arrivalTime(req.getArrivalTime())
                 .operatingDays(req.getOperatingDays() != null && !req.getOperatingDays().trim().isEmpty() ? req.getOperatingDays().trim().toUpperCase() : "DAILY")
@@ -308,6 +333,9 @@ public class OperatorService {
                         .durationHours(calculateDurationHours(req.getDepartureTime(), req.getArrivalTime()))
                         .boardingPoints(boarding)
                         .droppingPoints(dropping)
+                        .busRoute(schedule.getBusRoute())
+                        .restStop(schedule.getRestStop())
+                        .busSafety(schedule.getBusSafety())
                         .build();
 
                 Route savedRoute = routeRepository.save(route);
@@ -388,6 +416,9 @@ public class OperatorService {
                 .basePrice(schedule.getBasePrice())
                 .boardingPoints(schedule.getBoardingPoints())
                 .droppingPoints(schedule.getDroppingPoints())
+                .busRoute(schedule.getBusRoute())
+                .restStop(schedule.getRestStop())
+                .busSafety(schedule.getBusSafety())
                 .validFrom(schedule.getValidFrom())
                 .validTo(schedule.getValidTo())
                 .status(schedule.getStatus())

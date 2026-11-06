@@ -496,6 +496,18 @@ public class BusRouteService {
                 ? computeDurationHours(route.getDepartureTime(), route.getArrivalTime())
                 : (route.getDurationHours() != null ? route.getDurationHours() : new BigDecimal("6.5"));
 
+        String bRoute = (route.getBusRoute() != null && !route.getBusRoute().isBlank())
+                ? route.getBusRoute()
+                : AiService.generateBusRoute(route.getSourceCity(), route.getDestinationCity());
+
+        String rStop = (route.getRestStop() != null && !route.getRestStop().isBlank())
+                ? route.getRestStop()
+                : AiService.generateRestStop(route.getSourceCity(), route.getDestinationCity(), route.getDepartureTime());
+
+        String bSafety = (route.getBusSafety() != null && !route.getBusSafety().isBlank())
+                ? route.getBusSafety()
+                : AiService.generateBusSafety(route.getBus().getBusType());
+
         return RouteResponseDto.builder()
                 .id(route.getId())
                 .busId(route.getBus().getId())
@@ -514,6 +526,9 @@ public class BusRouteService {
                 .boardingPoints(boardingPointsList)
                 .droppingPoints(droppingPointsList)
                 .busPhotoUrl(route.getBus() != null ? route.getBus().getPhotoUrls() : null)
+                .busRoute(bRoute)
+                .restStop(rStop)
+                .busSafety(bSafety)
                 .build();
     }
 

@@ -1034,10 +1034,14 @@ public class AiService {
 
     // 6. AI Boarding & Dropping Points Recommendation
     public static AiCityPointsDto getAiCityPoints(String city) {
-        return getAiCityPoints(city, null, null);
+        return getAiCityPoints(city, null, null, null);
     }
 
     public static AiCityPointsDto getAiCityPoints(String city, String departureTimeStr, String arrivalTimeStr) {
+        return getAiCityPoints(city, null, departureTimeStr, arrivalTimeStr);
+    }
+
+    public static AiCityPointsDto getAiCityPoints(String city, String destinationCity, String departureTimeStr, String arrivalTimeStr) {
         String cleanCity = cleanCityName(city);
         if (cleanCity.isBlank()) {
             cleanCity = "Bangalore";
@@ -1119,12 +1123,75 @@ public class AiService {
             landmarks = List.of(cleanCity + " Central Omni Bus Stand", cleanCity + " City Bypass", cleanCity + " Highway Junction");
         }
 
+        String dest = (destinationCity != null && !destinationCity.isBlank()) ? destinationCity : "Chennai";
+        String generatedRoute = generateBusRoute(cleanCity, dest);
+        String generatedRestStop = generateRestStop(cleanCity, dest, dep);
+        String generatedSafety = generateBusSafety("AC Sleeper");
+
         return AiCityPointsDto.builder()
                 .city(cleanCity)
                 .boardingPoints(boarding)
                 .droppingPoints(dropping)
                 .majorLandmarks(landmarks)
+                .busRoute(generatedRoute)
+                .restStop(generatedRestStop)
+                .busSafety(generatedSafety)
                 .build();
+    }
+
+    public static String generateBusRoute(String source, String destination) {
+        String s = cleanCityName(source);
+        String d = cleanCityName(destination);
+        if (s.isBlank()) s = "Bangalore";
+        if (d.isBlank()) d = "Chennai";
+        String sl = s.toLowerCase();
+        String dl = d.toLowerCase();
+
+        if ((sl.contains("bangalore") || sl.contains("bengaluru")) && dl.contains("chennai")) {
+            return "Bangalore (Majestic) ➔ Hosur (NH44) ➔ Krishnagiri ➔ Ambur ➔ Vellore (Katpadi) ➔ Kanchipuram Bypass ➔ Sriperumbudur ➔ Chennai (Koyambedu)";
+        } else if (sl.contains("chennai") && (dl.contains("bangalore") || dl.contains("bengaluru"))) {
+            return "Chennai (Koyambedu) ➔ Sriperumbudur ➔ Kanchipuram Bypass ➔ Vellore ➔ Ambur ➔ Krishnagiri ➔ Hosur ➔ Bangalore (Electronic City/Majestic)";
+        } else if (sl.contains("bangalore") && dl.contains("hyderabad")) {
+            return "Bangalore ➔ Devanahalli ➔ Chikkaballapur ➔ Anantapur ➔ Kurnool (NH44) ➔ Shadnagar ➔ Hyderabad (MGBS)";
+        } else if (sl.contains("chennai") && dl.contains("coimbatore")) {
+            return "Chennai ➔ Tindivanam ➔ Villupuram ➔ Salem ➔ Erode Bypass ➔ Avinashi ➔ Coimbatore (Gandhipuram)";
+        } else if (sl.contains("bangalore") && dl.contains("coimbatore")) {
+            return "Bangalore ➔ Hosur ➔ Dharmapuri ➔ Salem Bypass ➔ Bhavani ➔ Avinashi ➔ Coimbatore";
+        } else if (sl.contains("chennai") && (dl.contains("madurai") || dl.contains("dindigul"))) {
+            return "Chennai ➔ Chengalpattu ➔ Villupuram ➔ Trichy ➔ Dindigul ➔ Madurai Mattuthavani";
+        } else {
+            return String.format("%s (Main Terminal) ➔ %s Express Highway Toll ➔ Mid-Highway Transit ➔ %s City Bypass ➔ %s (Central Station)", s, s, d, d);
+        }
+    }
+
+    public static String generateRestStop(String source, String destination, LocalTime departureTime) {
+        String s = cleanCityName(source);
+        String d = cleanCityName(destination);
+        String sl = s.toLowerCase();
+        String dl = d.toLowerCase();
+        LocalTime dep = departureTime != null ? departureTime : LocalTime.of(22, 30);
+        LocalTime stopTime = dep.plusHours(2).plusMinutes(30);
+        String stopTimeStr = stopTime.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a", java.util.Locale.US));
+
+        if ((sl.contains("bangalore") && dl.contains("chennai")) || (sl.contains("chennai") && dl.contains("bangalore"))) {
+            return String.format("Food Village Highway Plaza, Krishnagiri (NH 44) • Stop Time: %s • Duration: 25 mins • Clean AC Washrooms, Cafe Coffee Day, South Indian Food Court & Medical Store", stopTimeStr);
+        } else if (sl.contains("hyderabad") || dl.contains("hyderabad")) {
+            return String.format("Kurnool Highway Oasis Rest Stop (NH 44) • Stop Time: %s • Duration: 20 mins • 24/7 Food Court, Clean Restrooms & Tea Refreshment Stalls", stopTimeStr);
+        } else if (sl.contains("coimbatore") || dl.contains("coimbatore") || sl.contains("salem") || dl.contains("salem")) {
+            return String.format("A1 Highway Plaza & Rest Stop, Salem Bypass • Stop Time: %s • Duration: 25 mins • Hygienic Washrooms, Pure Veg Dining & Coffee Break", stopTimeStr);
+        } else {
+            return String.format("Highway Grand Plaza Rest Stop (Midway Corridor) • Stop Time: %s • Duration: 20 mins • Hygienic Washrooms, 24/7 Refreshment Counters & Quick Snacks", stopTimeStr);
+        }
+    }
+
+    public static String generateBusSafety(String busType) {
+        return "1. Sanitized Bus: Deep cleaned and sanitized cabin, seats, and pristine fresh blankets provided.\n" +
+               "2. Emergency Safety: Equipped with 2 emergency exit windows, safety emergency hammers, and certified fire extinguishers.\n" +
+               "3. GPS Live Tracking: Real-time satellite vehicle tracking with continuous speed governor monitoring (< 80 km/h).\n" +
+               "4. Certified Drivers: 2 verified, seasoned commercial highway drivers assigned for overnight routes.\n" +
+               "5. CCTV Cabin Surveillance: Continuous CCTV monitoring in passenger common aisle for complete journey safety.\n" +
+               "6. First Aid Equipped: Comprehensive medical emergency first-aid kit onboard.\n" +
+               "7. 24/7 Emergency Support: Dedicated RedBus SOS response team and round-the-clock passenger helpline.";
     }
 
     private static LocalTime parseTime(String timeStr, LocalTime fallback) {

@@ -198,7 +198,7 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
                   onClick={() => openDetailsWithTab("cancellation")}
                   className="hover:text-[#d84e55] transition-colors cursor-pointer"
                 >
-                  Policy
+                  Cancellation Policy
                 </button>
               </div>
             </div>

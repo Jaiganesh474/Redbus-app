@@ -601,15 +601,16 @@ fun CheckoutScreen(
                 }
             }
 
-            // 2. Contact Details Card (Matching Image 4)
+            // 2. Contact Details Card (Exact match to Video 1 vid1_f2.jpg)
             item {
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(18.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
@@ -619,14 +620,15 @@ fun CheckoutScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Contact details",
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 16.sp
+                                    text = "Contact Details",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Your ticket will be sent to these details",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = "Ticket details will be sent to",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
                                 )
                             }
                             Text(
@@ -645,27 +647,30 @@ fun CheckoutScreen(
                             )
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        val rawPhone = uiState.contactPhone.ifBlank { "8939129572" }.removePrefix("+91").trim()
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Text(
-                                text = uiState.contactPhone.ifBlank { "+91 9489240474" },
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "+91 $rawPhone",
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Email, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(Icons.Default.Email, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Text(
                                 text = uiState.contactEmail.ifBlank { "jaiganeshrio474@gmail.com" },
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.clickable {
                                 editContactPhone = uiState.contactPhone
                                 editContactEmail = uiState.contactEmail
@@ -673,37 +678,37 @@ fun CheckoutScreen(
                                 showEditContactDialog = true
                             }
                         ) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Text(
-                                text = "State of residence: " + uiState.stateOfResidence.ifBlank { "Karnataka" },
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = uiState.stateOfResidence.ifBlank { "Karnataka" },
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
-                        // WhatsApp updates pill (Image 4)
+                        // WhatsApp updates pill (Video 1)
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFE8F5E9),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC8E6C9)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ChatBubble,
                                     contentDescription = null,
-                                    tint = Color(0xFF2E7D32),
+                                    tint = Color(0xFF15803D),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = "WhatsApp communication enabled",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2E7D32)
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF15803D)
                                 )
                             }
                         }
@@ -711,59 +716,85 @@ fun CheckoutScreen(
                 }
             }
 
-            // 3. Passenger Details Card with Saved Travellers & Add New (Matching Image 4 & 5)
+            // 3. Passenger Details Card (Exact match to Video 1 vid1_f2.jpg)
             item {
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(18.dp),
+                        modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        val totalSeats = uiState.selectedSeats.size
+                        val totalSeats = if (uiState.selectedSeats.isNotEmpty()) uiState.selectedSeats.size else 1
                         val filledCount = uiState.passengers.count { it.name.isNotBlank() }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Column {
                             Text(
                                 text = "Passenger details",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "$filledCount/$totalSeats Selected",
                                 fontSize = 12.sp,
                                 color = Color.Gray,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Normal
                             )
                         }
 
-                        // Saved travellers list with checkboxes (Image 4 & 5)
+                        // Button: + Add new passenger (Full-width pill above list, matching Video 1)
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = Color(0xFFFFEBEE),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    newPassengerName = ""
+                                    newPassengerAge = ""
+                                    newPassengerGender = "MALE"
+                                    showAddPassengerDialog = true
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PersonAdd,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Add new passenger",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                            }
+                        }
+
+                        // Saved travellers list with Checkboxes and Circular Avatars (Video 1)
                         val displayTravellers = if (uiState.savedTravellers.isNotEmpty()) {
                             uiState.savedTravellers
                         } else {
                             listOf(
-                                com.redbus.ai.data.model.SavedTraveller(id = 1, name = "Jaiganesh", age = 22, gender = "MALE"),
-                                com.redbus.ai.data.model.SavedTraveller(id = 2, name = "Krishnaveni", age = 48, gender = "FEMALE")
+                                com.redbus.ai.data.model.SavedTraveller(id = 1, name = "Jaiganesh", age = 23, gender = "MALE"),
+                                com.redbus.ai.data.model.SavedTraveller(id = 2, name = "Krishnaveni", age = 65, gender = "FEMALE")
                             )
                         }
 
-                        displayTravellers.forEach { traveller ->
+                        displayTravellers.forEachIndexed { tIdx, traveller ->
                             val isAssigned = uiState.passengers.any { it.name.equals(traveller.name, ignoreCase = true) }
-                            val assignedSeat = uiState.passengers.find { it.name.equals(traveller.name, ignoreCase = true) }?.seatNumber
+                            val isFemale = traveller.gender.startsWith("F", ignoreCase = true)
 
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isAssigned) (if (uiState.isDarkTheme) Color(0xFF332025) else Color(0xFFFFF1F2)) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isAssigned) RedbusCrimson else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                                ),
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -775,122 +806,78 @@ fun CheckoutScreen(
                                         } else {
                                             val pIdx = uiState.passengers.indexOfFirst { it.name.isBlank() }
                                             if (pIdx >= 0) {
-                                                onUpdatePassenger(pIdx, traveller.name, traveller.age.toInt(), traveller.gender)
+                                                onUpdatePassenger(pIdx, traveller.name, traveller.age, traveller.gender)
                                             } else if (uiState.passengers.isNotEmpty()) {
-                                                onUpdatePassenger(0, traveller.name, traveller.age.toInt(), traveller.gender)
+                                                onUpdatePassenger(0, traveller.name, traveller.age, traveller.gender)
                                             }
                                         }
                                     }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        Checkbox(
-                                            checked = isAssigned,
-                                            onCheckedChange = null,
-                                            colors = CheckboxDefaults.colors(checkedColor = RedbusCrimson)
-                                        )
-                                        Icon(Icons.Default.Person, contentDescription = null, tint = if (isAssigned) RedbusCrimson else Color.Gray, modifier = Modifier.size(20.dp))
-                                        Column {
-                                            Text(
-                                                text = traveller.name,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp
-                                            )
-                                            Text(
-                                                text = "${traveller.age} Yrs, ${if (traveller.gender.startsWith("F", ignoreCase = true)) "Female" else "Male"}",
-                                                fontSize = 11.sp,
-                                                color = Color.Gray
+                                    // Circular Avatar: Light Purple for Male, Light Pink for Female
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isFemale) Color(0xFFFCE7F3) else Color(0xFFEDE9FE),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = if (isFemale) Color(0xFFBE185D) else Color(0xFF4338CA),
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
-                                    if (isAssigned && assignedSeat != null) {
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = RedbusCrimson.copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                text = "Seat $assignedSeat",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = RedbusCrimson,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            text = traveller.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        val genderLabel = if (isFemale) "Female" else "Male"
+                                        Text(
+                                            text = "$genderLabel, ${traveller.age} Years",
+                                            fontSize = 12.sp,
+                                            color = Color.Gray
+                                        )
                                     }
                                 }
+
+                                Checkbox(
+                                    checked = isAssigned,
+                                    onCheckedChange = { checked ->
+                                        if (!checked) {
+                                            val pIdx = uiState.passengers.indexOfFirst { it.name.equals(traveller.name, ignoreCase = true) }
+                                            if (pIdx >= 0) {
+                                                onUpdatePassenger(pIdx, "", 0, "MALE")
+                                            }
+                                        } else {
+                                            val pIdx = uiState.passengers.indexOfFirst { it.name.isBlank() }
+                                            if (pIdx >= 0) {
+                                                onUpdatePassenger(pIdx, traveller.name, traveller.age, traveller.gender)
+                                            } else if (uiState.passengers.isNotEmpty()) {
+                                                onUpdatePassenger(0, traveller.name, traveller.age, traveller.gender)
+                                            }
+                                        }
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = RedbusCrimson,
+                                        uncheckedColor = Color(0xFFCBD5E1)
+                                    )
+                                )
                             }
-                        }
 
-                        // Button: + Add new passenger
-                        OutlinedButton(
-                            onClick = {
-                                newPassengerName = ""
-                                newPassengerAge = ""
-                                newPassengerGender = "MALE"
-                                showAddPassengerDialog = true
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RedbusCrimson)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("+ Add new passenger", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-
-                        // Input fields for remaining unassigned seats
-                        uiState.passengers.forEachIndexed { idx, passenger ->
-                            if (passenger.name.isBlank()) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                        .padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = "Seat ${passenger.seatNumber} Details",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = RedbusCrimson
-                                    )
-                                    OutlinedTextField(
-                                        value = passenger.name,
-                                        onValueChange = { onUpdatePassenger(idx, it, passenger.age, passenger.gender) },
-                                        label = { Text("Passenger Name") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedTextField(
-                                            value = if (passenger.age > 0) passenger.age.toString() else "",
-                                            onValueChange = { onUpdatePassenger(idx, passenger.name, it.toIntOrNull() ?: 0, passenger.gender) },
-                                            label = { Text("Age") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Row(
-                                            modifier = Modifier.weight(1f),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            FilterChip(
-                                                selected = passenger.gender.startsWith("M", ignoreCase = true),
-                                                onClick = { onUpdatePassenger(idx, passenger.name, passenger.age, "MALE") },
-                                                label = { Text("Male", fontSize = 11.sp) }
-                                            )
-                                            FilterChip(
-                                                selected = passenger.gender.startsWith("F", ignoreCase = true),
-                                                onClick = { onUpdatePassenger(idx, passenger.name, passenger.age, "FEMALE") },
-                                                label = { Text("Female", fontSize = 11.sp) }
-                                            )
-                                        }
-                                    }
-                                }
+                            if (tIdx < displayTravellers.size - 1) {
+                                HorizontalDivider(color = Color(0xFFF1F5F9), thickness = 1.dp)
                             }
                         }
                     }

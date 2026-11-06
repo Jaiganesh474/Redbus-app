@@ -15,4 +15,7 @@ public class AiCityPointsDto {
     private String boardingPoints;
     private String droppingPoints;
     private List<String> majorLandmarks;
+    private String busRoute;
+    private String restStop;
+    private String busSafety;
 }

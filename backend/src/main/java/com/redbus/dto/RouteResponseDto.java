@@ -33,4 +33,7 @@ public class RouteResponseDto {
     private List<String> boardingPoints;
     private List<String> droppingPoints;
     private String busPhotoUrl;
+    private String busRoute;
+    private String restStop;
+    private String busSafety;
 }

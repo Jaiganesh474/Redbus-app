@@ -31,6 +31,9 @@ public class ScheduleResponseDto {
     private String status;
     private String boardingPoints;
     private String droppingPoints;
+    private String busRoute;
+    private String restStop;
+    private String busSafety;
     private Integer materializedTripsCount;
     private LocalDateTime createdAt;
 }

@@ -78,10 +78,11 @@ public class AiController {
     @GetMapping("/cities/points")
     public ResponseEntity<AiCityPointsDto> getCityPoints(
             @RequestParam String city,
+            @RequestParam(required = false) String destination,
             @RequestParam(required = false) String departureTime,
             @RequestParam(required = false) String arrivalTime
     ) {
-        AiCityPointsDto points = aiService.getAiCityPoints(city, departureTime, arrivalTime);
+        AiCityPointsDto points = aiService.getAiCityPoints(city, destination, departureTime, arrivalTime);
         return ResponseEntity.ok(points);
     }
 }

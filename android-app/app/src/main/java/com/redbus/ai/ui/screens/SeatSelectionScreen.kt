@@ -999,6 +999,12 @@ fun SeatSelectionScreen(
 
                                         "boarding" to "Boarding & Dropping",
 
+                                        "route" to "Bus route",
+
+                                        "rest_stop" to "Rest stop",
+
+                                        "safety" to "Bus Safety",
+
                                         "reviews" to "⭐ Customer Reviews (${uiState.currentBusReviews.size})"
 
                                     )
@@ -1112,6 +1118,12 @@ fun SeatSelectionScreen(
                                         droppingStops = droppingStops
 
                                     )
+
+                                    "route" -> BusRouteTimelinePanel(route = route)
+
+                                    "rest_stop" -> RestStopDetailsPanel(route = route)
+
+                                    "safety" -> BusSafetyStandardsPanel(route = route)
 
                                     "reviews" -> CustomerReviewsPanel(
 
@@ -2219,9 +2231,8 @@ private fun SleeperBerthItem(
 
 ) {
 
-    val isSold = seat.status.equals("BOOKED", ignoreCase = true) ||
-
-            seat.status.equals("LOCKED", ignoreCase = true)
+    val isLockedByAnother = seat.status.equals("LOCKED", ignoreCase = true) && !uiState.lockedSeatIds.contains(seat.id)
+    val isSold = !isSelected && (seat.status.equals("BOOKED", ignoreCase = true) || isLockedByAnother)
 
     val isFemale = seat.genderRestriction.equals("FEMALE", ignoreCase = true) ||
 
@@ -2973,6 +2984,175 @@ private fun BoardingPreviewPanel(
 
     }
 
+}
+
+@Composable
+private fun BusRouteTimelinePanel(route: com.redbus.ai.data.model.BusRouteItem) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Journey Route & Transit Corridor", fontWeight = FontWeight.Black, fontSize = 14.sp, color = RedbusCrimson)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = RedbusCrimson.copy(alpha = 0.1f)
+            ) {
+                Text(
+                    text = "${route.durationHours ?: 6.5} hrs Direct",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RedbusCrimson,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+        Text(
+            text = "AI Verified transit highway corridor from ${route.sourceCity} to ${route.destinationCity}.",
+            fontSize = 11.sp,
+            color = Color.Gray
+        )
+
+        val stops = listOf(
+            "${route.sourceCity} (Main Terminal)",
+            "Hosur Highway Express Corridor",
+            "Krishnagiri Transit Toll Plaza",
+            "Vellore Katpadi Bypass Junction",
+            "Sriperumbudur Industrial Hub",
+            "${route.destinationCity} (Central Omni Terminal)"
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF8FAFC), RoundedCornerShape(14.dp))
+                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            stops.forEachIndexed { sIdx, stopName ->
+                val isFirst = sIdx == 0
+                val isLast = sIdx == stops.size - 1
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                if (isFirst) RedbusCrimson else if (isLast) Color(0xFF15803D) else Color(0xFF94A3B8),
+                                CircleShape
+                            )
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stopName,
+                            fontSize = 12.sp,
+                            fontWeight = if (isFirst || isLast) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isFirst) RedbusCrimson else if (isLast) Color(0xFF15803D) else Color(0xFF334155)
+                        )
+                        Text(
+                            text = if (isFirst) "Departure • ${route.departureTime}" else if (isLast) "Arrival • ${route.arrivalTime}" else "Transit Stop Node",
+                            fontSize = 10.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestStopDetailsPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Midway Rest Stop & Refreshments", fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFFB45309))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFEF3C7)
+            ) {
+                Text(
+                    text = "25 mins break",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFB45309),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = Color(0xFFFFFBEB),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Food Village Highway Plaza (NH 44)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF78350F))
+                Text("Hygienic highway plaza equipped for nighttime passenger comfort and meals.", fontSize = 11.sp, color = Color(0xFF92400E))
+                HorizontalDivider(color = Color(0xFFFDE68A))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("🚻 Clean Washrooms", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF78350F))
+                    Text("🍽️ 24/7 Food Court", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF78350F))
+                    Text("☕ Coffee / Tea", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF78350F))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BusSafetyStandardsPanel(route: com.redbus.ai.data.model.BusRouteItem) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Certified Bus Safety Standards", fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF15803D))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFDCFCE7)
+            ) {
+                Text(
+                    text = "🛡️ 100% Verified",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF15803D),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        val safetyList = listOf(
+            "✨ Sanitized Coach" to "Cabin deep cleaned and fresh sanitized blankets provided before departure.",
+            "🚨 Emergency Exits & Hammers" to "2 marked emergency window exits and safety hammers installed.",
+            "🧯 Fire Safety Certified" to "Commercial grade fire extinguishers maintained onboard.",
+            "🛰️ Live GPS & Speed Limiter" to "Real-time satellite vehicle tracking with speed strictly < 80 km/h.",
+            "👨‍✈️ 2 Certified Drivers" to "Two commercial highway drivers on duty for fatigue-free overnight journeys.",
+            "📹 CCTV Cabin Surveillance" to "Continuous monitoring in public aisle for round-the-clock safety.",
+            "🩹 First-Aid Medical Kit" to "Comprehensive first-aid emergency medical kit on board.",
+            "🆘 24/7 RedBus SOS" to "Dedicated 24/7 emergency roadside assistance and passenger hotline."
+        )
+
+        safetyList.forEach { (title, desc) ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF8FAFC),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF0F172A))
+                    Text(text = desc, fontSize = 10.5.sp, color = Color(0xFF64748B), lineHeight = 14.sp)
+                }
+            }
+        }
+    }
 }
 
 

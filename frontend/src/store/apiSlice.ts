@@ -530,10 +530,10 @@ export const apiSlice = createApi({
         params,
       }),
     }),
-    getAiCityPoints: builder.query<AiCityPoints, { city: string; departureTime?: string; arrivalTime?: string }>({
-      query: ({ city, departureTime, arrivalTime }) => ({
+    getAiCityPoints: builder.query<AiCityPoints, { city: string; destination?: string; departureTime?: string; arrivalTime?: string }>({
+      query: ({ city, destination, departureTime, arrivalTime }) => ({
         url: "/ai/cities/points",
-        params: { city, departureTime, arrivalTime },
+        params: { city, destination, departureTime, arrivalTime },
       }),
     }),
 

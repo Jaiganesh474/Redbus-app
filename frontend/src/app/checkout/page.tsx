@@ -689,7 +689,7 @@ function CheckoutContent() {
           className="inline-flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer hover:border-gray-300"
         >
           <ArrowLeft className="w-4 h-4 text-[#d84e55]" />
-          <span>← Back & Change Seats</span>
+          <span> Back & Change Seats</span>
         </button>
         <span className="text-xs text-gray-400 font-medium">
           Returning to search releases your locked seats automatically.
@@ -831,7 +831,7 @@ function CheckoutContent() {
                 className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-red-200 hover:border-[#d84e55] bg-red-50/40 hover:bg-red-50 text-[#d84e55] font-extrabold text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-[0.99]"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
-                <span>+ Add new passenger</span>
+                <span> Add new passenger</span>
               </button>
             </div>
 

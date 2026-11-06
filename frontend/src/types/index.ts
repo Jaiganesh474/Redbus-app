@@ -80,6 +80,9 @@ export interface RouteItem {
   boardingPoints: string[];
   droppingPoints: string[];
   busPhotoUrl?: string;
+  busRoute?: string;
+  restStop?: string;
+  busSafety?: string;
 }
 
 export interface SeatItem {
@@ -398,6 +401,9 @@ export interface AiCityPoints {
   boardingPoints: string;
   droppingPoints: string;
   majorLandmarks: string[];
+  busRoute?: string;
+  restStop?: string;
+  busSafety?: string;
 }
 
 export interface AppNotification {

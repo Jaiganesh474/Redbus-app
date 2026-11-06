@@ -36,6 +36,9 @@ public class ScheduleCreateRequest {
     private String operatingDays; // 'DAILY', 'MON,WED,FRI'
     private String boardingPoints;
     private String droppingPoints;
+    private String busRoute;
+    private String restStop;
+    private String busSafety;
 
     @NotNull(message = "Valid from date is required")
     private LocalDate validFrom;

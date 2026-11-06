@@ -197,6 +197,8 @@ export default function OperatorPortalPage() {
   );
   const [boardingPoints, setBoardingPoints] = useState("Madiwala (21:00), Silk Board (21:15), Electronic City (21:30)");
   const [droppingPoints, setDroppingPoints] = useState("Koyambedu (04:30), Guindy (05:00), Tambaram (05:30)");
+  const [busRoute, setBusRoute] = useState("Bangalore (Majestic) ➔ Hosur (NH44) ➔ Krishnagiri ➔ Ambur ➔ Vellore ➔ Sriperumbudur ➔ Chennai (Koyambedu)");
+  const [restStop, setRestStop] = useState("Food Village Highway Plaza, Krishnagiri (NH 44) • Stop Time: 01:00 AM • Duration: 25 mins • Clean AC Washrooms & Food Court");
 
   // Mutation and Query Hooks
   const {
@@ -560,9 +562,9 @@ export default function OperatorPortalPage() {
     try {
       setIsAiBoardingLoading(true);
       const res = await triggerGetCityPoints({ city, departureTime: depTime, arrivalTime: arrTime }).unwrap();
-      if (res && res.boardingPoints) {
-        setBoardingPoints(res.boardingPoints);
-      }
+      if (res && res.boardingPoints) setBoardingPoints(res.boardingPoints);
+      if (res && res.busRoute) setBusRoute(res.busRoute);
+      if (res && res.restStop) setRestStop(res.restStop);
     } catch (err) {
       console.error("AI boarding points fetch failed:", err);
     } finally {
@@ -576,9 +578,9 @@ export default function OperatorPortalPage() {
     try {
       setIsAiDroppingLoading(true);
       const res = await triggerGetCityPoints({ city, departureTime: depTime, arrivalTime: arrTime }).unwrap();
-      if (res && res.droppingPoints) {
-        setDroppingPoints(res.droppingPoints);
-      }
+      if (res && res.droppingPoints) setDroppingPoints(res.droppingPoints);
+      if (res && res.busRoute) setBusRoute(res.busRoute);
+      if (res && res.restStop) setRestStop(res.restStop);
     } catch (err) {
       console.error("AI dropping points fetch failed:", err);
     } finally {
@@ -746,6 +748,8 @@ export default function OperatorPortalPage() {
         validTo,
         boardingPoints,
         droppingPoints,
+        busRoute,
+        restStop,
       };
 
       if (editingSchedule) {
@@ -3310,6 +3314,42 @@ export default function OperatorPortalPage() {
                   value={droppingPoints}
                   onChange={(e) => setDroppingPoints(e.target.value)}
                   placeholder="e.g. Electronic City Toll (04:30), Silk Board (04:45)"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">Bus Route (Corridor & Transit Stops)</label>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-purple-500" />
+                    ✨ Auto-typed by AI
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={busRoute}
+                  onChange={(e) => setBusRoute(e.target.value)}
+                  placeholder="e.g. Bangalore (Majestic) ➔ Hosur ➔ Krishnagiri ➔ Vellore ➔ Chennai"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-slate-300">Rest Stop (Refreshments & Halt)</label>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-purple-500" />
+                    ✨ Auto-typed by AI
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={restStop}
+                  onChange={(e) => setRestStop(e.target.value)}
+                  placeholder="e.g. Food Village Highway Plaza, Krishnagiri (NH 44) • 25 mins break • Clean AC Washrooms"
                   className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-800 dark:text-white rounded-xl border border-gray-200 dark:border-slate-700 text-xs focus:outline-hidden focus:ring-2 focus:ring-[#d84e55]"
                 />
               </div>
