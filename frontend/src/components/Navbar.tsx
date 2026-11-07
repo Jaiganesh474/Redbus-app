@@ -144,9 +144,18 @@ export default function Navbar() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#d84e55] to-[#ef4444] flex items-center justify-center text-white shadow-md shadow-red-500/20 group-hover:scale-105 transition-transform">
                   <Bus className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="flex items-center">
                   <span className="text-2xl font-black tracking-tight text-[#d84e55]">red<span className="text-gray-900 dark:text-white">Bus</span></span>
-                  <span className="hidden sm:inline-block ml-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/70 text-[#d84e55] dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded">AI Edition</span>
+                  {mounted && isAuthenticated && activeUser?.role === "ROLE_OPERATOR" && (
+                    <span className="inline-block ml-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/70 text-[#d84e55] dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded">
+                      Operator
+                    </span>
+                  )}
+                  {mounted && isAuthenticated && activeUser?.role === "ROLE_ADMIN" && (
+                    <span className="inline-block ml-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/70 text-[#d84e55] dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded">
+                      Admin
+                    </span>
+                  )}
                 </div>
               </Link>
 
@@ -787,7 +796,11 @@ export default function Navbar() {
               {/* Sidebar Footer Branding */}
               <div className="p-3 bg-gray-50 dark:bg-[#0d121c] border-t border-gray-200 dark:border-slate-800 text-center">
                 <p className="text-[11px] font-medium text-gray-500 dark:text-slate-500">
-                  redBus AI Edition • India&apos;s AI Bus Network
+                  {mounted && isAuthenticated && activeUser?.role === "ROLE_ADMIN"
+                    ? "redBus Admin • India's Bus Network"
+                    : mounted && isAuthenticated && activeUser?.role === "ROLE_OPERATOR"
+                    ? "redBus Operator • India's Bus Network"
+                    : "redBus • India's Bus Network"}
                 </p>
               </div>
             </motion.div>
