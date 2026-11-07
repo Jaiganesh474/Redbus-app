@@ -31,6 +31,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -3287,6 +3288,7 @@ fun EnhancedTicketJourneyModal(
     val arrDateFormatted = remember(booking.travelDate) {
         formatTicketDate(booking.travelDate, plusDays = 1)
     }
+    val isDarkTheme = isSystemInDarkTheme()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -3862,8 +3864,8 @@ fun EnhancedTicketJourneyModal(
                                     // Excellent Comfort Score Banner (Matching Image 4)
                                     Surface(
                                         shape = RoundedCornerShape(16.dp),
-                                        color = Color(0xFFFEF2F2),
-                                        border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                                        color = if (isDarkTheme) Color(0xFF2A1518) else Color(0xFFFEF2F2),
+                                        border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF5A2228) else Color(0xFFFECDD3)),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(
@@ -3876,18 +3878,24 @@ fun EnhancedTicketJourneyModal(
                                             Column {
                                                 Text(
                                                     text = "$passengerName, great bus choice",
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (isDarkTheme) Color(0xFFCBD5E1) else Color(0xFF4B5563)
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
                                                     text = "Excellent comfort score $comfortScore/10",
                                                     fontSize = 13.5.sp,
                                                     fontWeight = FontWeight.Black,
-                                                    color = MaterialTheme.colorScheme.onSurface
+                                                    color = if (isDarkTheme) Color(0xFFFF8595) else Color(0xFF991B1B)
                                                 )
                                             }
-                                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.ChevronRight,
+                                                contentDescription = null,
+                                                tint = if (isDarkTheme) Color(0xFF94A3B8) else Color.Gray,
+                                                modifier = Modifier.size(18.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -3896,7 +3904,7 @@ fun EnhancedTicketJourneyModal(
                                 Card(
                                     shape = RoundedCornerShape(20.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -4031,11 +4039,11 @@ fun EnhancedTicketJourneyModal(
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Surface(
                                                         shape = RoundedCornerShape(6.dp),
-                                                        color = Color(0xFFFCE7F3)
+                                                        color = if (isDarkTheme) Color(0xFF3B1E2B) else Color(0xFFFCE7F3)
                                                     ) {
                                                         Text(
                                                             text = seatNumber,
-                                                            color = Color(0xFFDB2777),
+                                                            color = if (isDarkTheme) Color(0xFFF472B6) else Color(0xFFDB2777),
                                                             fontSize = 11.sp,
                                                             fontWeight = FontWeight.Black,
                                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -4047,7 +4055,7 @@ fun EnhancedTicketJourneyModal(
                                                 Surface(
                                                     shape = RoundedCornerShape(10.dp),
                                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                                                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                                    border = BorderStroke(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)),
                                                     modifier = Modifier.clickable { showSeatModal = true }
                                                 ) {
                                                     Column(
@@ -4056,7 +4064,7 @@ fun EnhancedTicketJourneyModal(
                                                     ) {
                                                         Text("::::", fontSize = 12.sp, color = Color(0xFF94A3B8), letterSpacing = 2.sp)
                                                         Spacer(modifier = Modifier.height(2.dp))
-                                                        Text("View seat", color = Color(0xFF2563EB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                        Text("View seat", color = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF2563EB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                     }
                                                 }
                                             }
@@ -4073,7 +4081,7 @@ fun EnhancedTicketJourneyModal(
                                             ) {
                                                 Text(
                                                     text = "Ticket details",
-                                                    color = Color(0xFF2563EB),
+                                                    color = if (isDarkTheme) Color(0xFF60A5FA) else Color(0xFF2563EB),
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
@@ -4761,6 +4769,7 @@ private fun ViewTicketDetailsModal(
                 .fillMaxSize()
                 .background(backdropColor.copy(alpha = 0.94f))
                 .systemBarsPadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -5212,53 +5221,55 @@ private fun ViewTicketDetailsModal(
             }
 
             // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = {
+                        val shareText = buildString {
+                            appendLine("🚌 redBus AI Confirmed E-Ticket")
+                            appendLine("Ticket #: $ticketNumber")
+                            appendLine("PNR #: ${booking.pnr}")
+                            appendLine("Route: ${booking.sourceCity} ➔ ${booking.destinationCity}")
+                            appendLine("Operator: ${booking.operatorName} (${booking.busType})")
+                            appendLine("Departure: ${booking.departureTime}, $departureDateFormatted (${booking.boardingPoint})")
+                            appendLine("Arrival: ${booking.arrivalTime}, $arrivalDateFormatted (${booking.droppingPoint})")
+                            appendLine("Passengers: ${passengers.joinToString { "${it.name} - Seat ${it.seatNumber}" }}")
+                            appendLine("Total Fare: ₹${String.format(Locale.US, "%.2f", booking.totalAmount)}")
+                        }
+                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "redBus E-Ticket PNR ${booking.pnr}")
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(Intent.createChooser(sendIntent, "Share your ticket"))
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RedbusCrimson,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
-                    Button(
-                        onClick = {
-                            val shareText = buildString {
-                                appendLine("🚌 redBus AI Confirmed E-Ticket")
-                                appendLine("Ticket #: $ticketNumber")
-                                appendLine("PNR #: ${booking.pnr}")
-                                appendLine("Route: ${booking.sourceCity} ➔ ${booking.destinationCity}")
-                                appendLine("Operator: ${booking.operatorName} (${booking.busType})")
-                                appendLine("Departure: ${booking.departureTime}, $departureDateFormatted (${booking.boardingPoint})")
-                                appendLine("Arrival: ${booking.arrivalTime}, $arrivalDateFormatted (${booking.droppingPoint})")
-                                appendLine("Passengers: ${passengers.joinToString { "${it.name} - Seat ${it.seatNumber}" }}")
-                                appendLine("Total Fare: ₹${String.format(Locale.US, "%.2f", booking.totalAmount)}")
-                            }
-                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "redBus E-Ticket PNR ${booking.pnr}")
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share your ticket"))
-                        },
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = RedbusCrimson,
-                            contentColor = Color.White
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = AppStrings.get("share_ticket"),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = AppStrings.get("share_ticket"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
             }
         }
     }
