@@ -1495,9 +1495,9 @@ private fun BusRouteCard3D(
     }
     val parsedBoardingStops = remember(route.boardingPoints, route.sourceCity) {
         val raw = route.boardingPoints.orEmpty()
-            .split(",")
-            .map { it.replace(Regex("\\([^)]*\\)"), "").trim() }
-            .filter { it.isNotEmpty() }
+            .flatMap { s -> s.split(",") }
+            .map { s -> s.replace(Regex("\\([^)]*\\)"), "").trim() }
+            .filter { s -> s.isNotEmpty() }
         if (raw.isNotEmpty()) raw else listOf(route.sourceCity, "${route.sourceCity} Bypass", "${route.sourceCity} Toll")
     }
     val stop1 = parsedBoardingStops.getOrNull(0) ?: route.sourceCity
