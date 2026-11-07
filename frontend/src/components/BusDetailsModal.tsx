@@ -419,16 +419,46 @@ export default function BusDetailsModal({
     { skip: !isOpen }
   );
 
-  const busFeaturesList = useMemo(() => [
-    { label: "Water Bottle", icon: "💧" },
-    { label: "Blankets", icon: "🛏️" },
-    { label: "Charging Point", icon: "🔌" },
-    { label: "Reading Light", icon: "💡" },
-    { label: "CCTV", icon: "📹" },
-    { label: "Toilet", icon: "🚻" },
-    { label: "Emergency Exit", icon: "🚪" },
-    { label: "Track My Bus", icon: "📍" },
-  ], []);
+  const busFeaturesList = useMemo(() => {
+    let list: string[] = [];
+    if (Array.isArray(route.amenities)) {
+      list = route.amenities.filter(Boolean);
+    } else if (typeof route.amenities === "string") {
+      list = (route.amenities as string).split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    if (list.length === 0) {
+      list = ["Live Tracking", "Charging Point", "Water Bottle", "Blanket", "Emergency Exit"];
+    }
+    const iconMap: Record<string, string> = {
+      "water bottle": "💧",
+      "water": "💧",
+      "blanket": "🛏️",
+      "blankets": "🛏️",
+      "charging point": "🔌",
+      "usb charging": "🔌",
+      "reading light": "💡",
+      "cctv": "📹",
+      "toilet": "🚻",
+      "emergency exit": "🚪",
+      "live tracking": "📍",
+      "track my bus": "📍",
+      "gps tracking": "📍",
+      "wifi": "📶",
+      "wi-fi": "📶",
+      "snacks": "🍪",
+      "pillow": "🛏️",
+      "first aid": "🩹",
+      "air conditioning": "❄️",
+      "ac": "❄️",
+      "sos emergency": "🚨",
+      "fire extinguisher": "🧯"
+    };
+    return list.map((item) => {
+      const lower = item.toLowerCase().trim();
+      const icon = iconMap[lower] || "✨";
+      return { label: item, icon };
+    });
+  }, [route.amenities]);
 
   const totalReviewsCount = reviewData?.totalRatings || reviewData?.reviews?.length || 0;
   const avgBusRating = totalReviewsCount > 0 ? (reviewData?.averageRating || 0) : 0;
@@ -617,6 +647,11 @@ export default function BusDetailsModal({
     return [route.sourceCity, "Hosur", "Krishnagiri", "Vellore", route.destinationCity];
   }, [route.busRoute, route.sourceCity, route.destinationCity]);
 
+  const is2x2 = useMemo(() => {
+    const t = (route.busType || "").toLowerCase();
+    return t.includes("2+2") || t.includes("2x2") || (t.includes("seater") && !t.includes("sleeper"));
+  }, [route.busType]);
+
   const estimatedDistanceKm = useMemo(() => {
     const hours = route.durationHours || 7.0;
     return Math.round(hours * 52);
@@ -626,7 +661,7 @@ export default function BusDetailsModal({
   const getDeckRows = (deckSeats: SeatItem[]) => {
     const rowsMap = new Map<number, SeatItem[]>();
     deckSeats.forEach((s, idx) => {
-      const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / 3) + 1;
+      const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / (is2x2 ? 4 : 3)) + 1;
       if (!rowsMap.has(r)) rowsMap.set(r, []);
       rowsMap.get(r)!.push(s);
     });
@@ -770,7 +805,7 @@ export default function BusDetailsModal({
     const rows = getDeckRows(deckSeats);
 
     return (
-      <div className="flex-1 max-w-[260px] min-w-[150px] sm:min-w-[190px]">
+      <div className={`flex-1 ${is2x2 ? "max-w-[320px] min-w-[240px] sm:min-w-[280px]" : "max-w-[260px] min-w-[150px] sm:min-w-[190px]"}`}>
         <div className="flex items-center justify-between px-2 sm:px-3 mb-2">
           <span className="text-[11px] sm:text-xs font-black text-gray-800 dark:text-white uppercase tracking-wider">
             {title}
@@ -803,9 +838,40 @@ export default function BusDetailsModal({
           <div className="space-y-2.5 sm:space-y-3.5">
             {rows.map((rowNum) => {
               const rowSeats = deckSeats.filter((s, idx) => {
-                const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / 3) + 1;
+                const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / (is2x2 ? 4 : 3)) + 1;
                 return r === rowNum;
               });
+
+              if (is2x2) {
+                let s1 = rowSeats.find((s) => s.colNum === 1);
+                let s2 = rowSeats.find((s) => s.colNum === 2);
+                let s3 = rowSeats.find((s) => s.colNum === 3);
+                let s4 = rowSeats.find((s) => s.colNum === 4);
+
+                if (!s1 && rowSeats.length > 0) s1 = rowSeats[0];
+                if (!s2 && rowSeats.length > 1) s2 = rowSeats[1];
+                if (!s3 && rowSeats.length > 2) s3 = rowSeats[2];
+                if (!s4 && rowSeats.length > 3) s4 = rowSeats[3];
+
+                return (
+                  <div key={rowNum} className="flex items-center justify-between">
+                    {/* Left Pair (2 Seats) */}
+                    <div className="flex items-center space-x-1 sm:space-x-1.5">
+                      {s1 ? (s1.seatType === "SLEEPER" ? renderSleeperBerth(s1) : renderSeaterChair(s1)) : <div className="w-8 sm:w-9 h-11" />}
+                      {s2 ? (s2.seatType === "SLEEPER" ? renderSleeperBerth(s2) : renderSeaterChair(s2)) : <div className="w-8 sm:w-9 h-11" />}
+                    </div>
+
+                    {/* Aisle */}
+                    <div className="w-2 sm:w-4" />
+
+                    {/* Right Pair (2 Seats) */}
+                    <div className="flex items-center space-x-1 sm:space-x-1.5">
+                      {s3 ? (s3.seatType === "SLEEPER" ? renderSleeperBerth(s3) : renderSeaterChair(s3)) : <div className="w-8 sm:w-9 h-11" />}
+                      {s4 ? (s4.seatType === "SLEEPER" ? renderSleeperBerth(s4) : renderSeaterChair(s4)) : <div className="w-8 sm:w-9 h-11" />}
+                    </div>
+                  </div>
+                );
+              }
 
               let leftSeat = rowSeats.find((s) => s.colNum === 1);
               let rightSeat1 = rowSeats.find((s) => s.colNum === 2);

@@ -241,7 +241,7 @@ fun RedbusWalletModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 48.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         if (user == null || !uiState.isAuthenticated) {
@@ -703,6 +703,9 @@ fun RedbusWalletModal(
                                     }
                                 }
                             }
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(28.dp))
                         }
                     }
                 }

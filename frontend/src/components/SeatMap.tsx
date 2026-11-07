@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
@@ -200,11 +200,16 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
     return selectedSeats.reduce((sum, s) => sum + (s.price || route.basePrice), 0);
   };
 
+  const is2x2 = useMemo(() => {
+    const t = (route.busType || "").toLowerCase();
+    return t.includes("2+2") || t.includes("2x2") || (t.includes("seater") && !t.includes("sleeper"));
+  }, [route.busType]);
+
   // Group seats by row
   const getDeckRows = (deckSeats: SeatItem[]) => {
     const rowsMap = new Map<number, SeatItem[]>();
-    deckSeats.forEach((s) => {
-      const r = s.rowNum || 1;
+    deckSeats.forEach((s, idx) => {
+      const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / (is2x2 ? 4 : 3)) + 1;
       if (!rowsMap.has(r)) rowsMap.set(r, []);
       rowsMap.get(r)!.push(s);
     });
@@ -403,7 +408,7 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
     const rows = getDeckRows(deckSeats);
 
     return (
-      <div className="flex-1 max-w-[280px] sm:max-w-[320px]">
+      <div className={`flex-1 ${is2x2 ? "max-w-[340px] sm:max-w-[380px]" : "max-w-[280px] sm:max-w-[320px]"}`}>
         {/* Deck Header */}
         <div className="flex items-center justify-between px-2 mb-3">
           <h4 className="text-base font-bold text-gray-900">{title}</h4>
@@ -426,7 +431,42 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
         <div className="rounded-3xl border-2 border-gray-200 bg-white p-4 shadow-sm relative min-h-[460px] flex flex-col justify-between">
           <div className="space-y-4">
             {rows.map((rowNum) => {
-              const rowSeats = deckSeats.filter((s) => (s.rowNum || 1) === rowNum);
+              const rowSeats = deckSeats.filter((s, idx) => {
+                const r = s.rowNum && s.rowNum > 0 ? s.rowNum : Math.floor(idx / (is2x2 ? 4 : 3)) + 1;
+                return r === rowNum;
+              });
+
+              if (is2x2) {
+                let s1 = rowSeats.find((s) => s.colNum === 1);
+                let s2 = rowSeats.find((s) => s.colNum === 2);
+                let s3 = rowSeats.find((s) => s.colNum === 3);
+                let s4 = rowSeats.find((s) => s.colNum === 4);
+
+                if (!s1 && rowSeats.length > 0) s1 = rowSeats[0];
+                if (!s2 && rowSeats.length > 1) s2 = rowSeats[1];
+                if (!s3 && rowSeats.length > 2) s3 = rowSeats[2];
+                if (!s4 && rowSeats.length > 3) s4 = rowSeats[3];
+
+                return (
+                  <div key={rowNum} className="flex items-center justify-between">
+                    {/* Left Pair (2 Seats) */}
+                    <div className="flex items-center space-x-2">
+                      {s1 ? (s1.seatType === "SEATER" ? renderSeaterChair(s1, deckSeats) : renderSleeperBerth(s1, deckSeats)) : <div className="w-10 h-11" />}
+                      {s2 ? (s2.seatType === "SEATER" ? renderSeaterChair(s2, deckSeats) : renderSleeperBerth(s2, deckSeats)) : <div className="w-10 h-11" />}
+                    </div>
+
+                    {/* Aisle */}
+                    <div className="w-4 sm:w-6" />
+
+                    {/* Right Pair (2 Seats) */}
+                    <div className="flex items-center space-x-2">
+                      {s3 ? (s3.seatType === "SEATER" ? renderSeaterChair(s3, deckSeats) : renderSleeperBerth(s3, deckSeats)) : <div className="w-10 h-11" />}
+                      {s4 ? (s4.seatType === "SEATER" ? renderSeaterChair(s4, deckSeats) : renderSleeperBerth(s4, deckSeats)) : <div className="w-10 h-11" />}
+                    </div>
+                  </div>
+                );
+              }
+
               const leftSeat = rowSeats.find((s) => s.colNum === 1);
               const rightSeat1 = rowSeats.find((s) => s.colNum === 2);
               const rightSeat2 = rowSeats.find((s) => s.colNum === 3);

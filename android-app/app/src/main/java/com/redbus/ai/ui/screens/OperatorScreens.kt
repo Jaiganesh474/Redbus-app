@@ -2916,6 +2916,8 @@ private fun EditBusModal(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -3085,6 +3087,7 @@ private fun EditBusModal(
                         Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+                Spacer(modifier = Modifier.height(28.dp))
             }
         }
     }
@@ -5195,6 +5198,8 @@ private fun AddBusModal(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -5639,6 +5644,7 @@ private fun AddBusModal(
                         Text("Create Bus Layout", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
+                Spacer(modifier = Modifier.height(28.dp))
             }
         }
     }
@@ -5897,6 +5903,8 @@ private fun PublishScheduleModal(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -6476,6 +6484,8 @@ private fun CreateCouponModal(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)

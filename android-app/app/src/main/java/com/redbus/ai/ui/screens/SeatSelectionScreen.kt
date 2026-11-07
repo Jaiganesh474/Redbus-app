@@ -2,51 +2,35 @@ package com.redbus.ai.ui.screens
 
 
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-
 import androidx.compose.foundation.border
-
 import androidx.compose.foundation.clickable
-
 import androidx.compose.foundation.horizontalScroll
-
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.lazy.LazyColumn
-
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
-
 import androidx.compose.foundation.shape.CircleShape
-
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.material.icons.Icons
-
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-
 import androidx.compose.material.icons.filled.*
-
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
-
 import androidx.compose.ui.Alignment
-
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.draw.clip
-
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-
 import androidx.compose.ui.text.style.TextAlign
-
 import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
 
 import androidx.compose.ui.unit.dp
 
@@ -2838,111 +2822,187 @@ private fun HighlightsPanel(route: RouteItem) {
         )
 
         Row(
-
-            modifier = Modifier.fillMaxWidth(),
-
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
-
         ) {
-
-            (route.amenities?.takeIf { it.isNotEmpty() } ?: listOf("Live Tracking", "USB Charging", "Blanket", "Reading Light")).forEach { amenity ->
-
+            val amenitiesList = route.amenities?.takeIf { it.isNotEmpty() }
+                ?: listOf("Live Tracking", "USB Charging", "Blanket", "Reading Light", "Emergency Exit")
+            amenitiesList.forEach { amenity ->
                 Surface(
-
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-
                     shape = RoundedCornerShape(8.dp)
-
                 ) {
-
                     Text(
-
                         text = amenity,
-
                         fontSize = 11.sp,
-
                         fontWeight = FontWeight.Bold,
-
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-
                     )
-
                 }
-
             }
+        }
+    }
+}
 
+@Composable
+private fun AiPunctualityPanel(route: RouteItem) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "⚡ AI Punctuality & Route Demand",
+            fontWeight = FontWeight.Black,
+            fontSize = 15.sp,
+            color = AiViolet
+        )
+        Text(
+            text = "• 96% historical on-time arrival for ${route.sourceCity} ➔ ${route.destinationCity}\n• Mid-coach berths (L4, L5, U4, U5) offer 40% lower road vibration.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun BusPhotosPanel(route: RouteItem) {
+    val stockPhotos = listOf(
+        "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1509749837427-ac94a2553d0e?auto=format&fit=crop&w=1200&q=80"
+    )
+    val parsedUrls = route.busPhotoUrl?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+    val photos = if (parsedUrls.isNotEmpty()) parsedUrls else stockPhotos
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Verified Coach Fleet (${route.operatorName})",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${route.busType} • Photos uploaded by operator",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF15803D).copy(alpha = 0.1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Default.Verified, contentDescription = null, tint = Color(0xFF15803D), modifier = Modifier.size(12.dp))
+                    Text("Verified Fleet", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
+                }
+            }
         }
 
+        // Main Image Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF0F172A))
+        ) {
+            AsyncImage(
+                model = photos[currentIndex % photos.size],
+                contentDescription = route.operatorName,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Dark gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)),
+                            startY = 100f
+                        )
+                    )
+            )
+
+            // Badges over image
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.Black.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = "Photo ${currentIndex + 1} of ${photos.size}",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    IconButton(
+                        onClick = {
+                            currentIndex = if (currentIndex > 0) currentIndex - 1 else photos.size - 1
+                        },
+                        modifier = Modifier.size(28.dp).background(Color.White.copy(alpha = 0.85f), CircleShape)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev", tint = Color.Black, modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            currentIndex = (currentIndex + 1) % photos.size
+                        },
+                        modifier = Modifier.size(28.dp).background(Color.White.copy(alpha = 0.85f), CircleShape)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = Color.Black, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        }
+
+        // Thumbnail Row
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(photos.size) { idx ->
+                val isSel = idx == currentIndex
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(2.dp, if (isSel) RedbusCrimson else Color.Transparent),
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 44.dp)
+                        .clickable { currentIndex = idx }
+                ) {
+                    AsyncImage(
+                        model = photos[idx],
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
     }
-
-}
-
-
-
-@Composable
-
-private fun AiPunctualityPanel(route: RouteItem) {
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-        Text(
-
-            text = "⚡ AI Punctuality & Route Demand",
-
-            fontWeight = FontWeight.Black,
-
-            fontSize = 15.sp,
-
-            color = AiViolet
-
-        )
-
-        Text(
-
-            text = "• 96% historical on-time arrival for ${route.sourceCity} ➔ ${route.destinationCity}\n• Mid-coach berths (L4, L5, U4, U5) offer 40% lower road vibration.",
-
-            fontSize = 12.sp,
-
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-
-        )
-
-    }
-
-}
-
-
-
-@Composable
-
-private fun BusPhotosPanel(route: RouteItem) {
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-        Text(
-
-            text = "Verified Coach Fleet (${route.operatorName})",
-
-            fontWeight = FontWeight.Black,
-
-            fontSize = 15.sp
-
-        )
-
-        Text(
-
-            text = "${route.busType} • Memory foam sleeper berths, individual charging ports & privacy curtains.",
-
-            fontSize = 12.sp,
-
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-
-        )
-
-    }
-
 }
 
 
@@ -3277,14 +3337,27 @@ private fun BusRouteTimelinePanel(route: RouteItem) {
             color = Color.Gray
         )
 
-        val stops = listOf(
-            "${route.sourceCity} (Main Terminal)",
-            "Hosur Highway Express Corridor",
-            "Krishnagiri Transit Toll Plaza",
-            "Vellore Katpadi Bypass Junction",
-            "Sriperumbudur Industrial Hub",
-            "${route.destinationCity} (Central Omni Terminal)"
-        )
+        val stops = remember(route.busRoute, route.sourceCity, route.destinationCity) {
+            if (!route.busRoute.isNullOrBlank()) {
+                val parsed = route.busRoute.split("➔", "->", ",").map { it.trim() }.filter { it.isNotBlank() }
+                if (parsed.isNotEmpty()) parsed else listOf(
+                    "${route.sourceCity} (Main Terminal)",
+                    "Hosur Highway Express Corridor",
+                    "Krishnagiri Transit Toll Plaza",
+                    "Vellore Katpadi Bypass Junction",
+                    "${route.destinationCity} (Central Omni Terminal)"
+                )
+            } else {
+                listOf(
+                    "${route.sourceCity} (Main Terminal)",
+                    "Hosur Highway Express Corridor",
+                    "Krishnagiri Transit Toll Plaza",
+                    "Vellore Katpadi Bypass Junction",
+                    "Sriperumbudur Industrial Hub",
+                    "${route.destinationCity} (Central Omni Terminal)"
+                )
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -4086,21 +4159,14 @@ private fun CustomerReviewsPanel(
         ) {
 
             Surface(
-
                 modifier = Modifier.fillMaxSize(),
-
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-
+                color = MaterialTheme.colorScheme.background
             ) {
-
                 Column(
-
                     modifier = Modifier
-
                         .fillMaxSize()
-
                         .statusBarsPadding()
-
+                        .navigationBarsPadding()
                 ) {
 
                     // Header (Image 3)
@@ -4216,13 +4282,9 @@ private fun CustomerReviewsPanel(
                     // Filters and Reviews List in LazyColumn
 
                     LazyColumn(
-
                         modifier = Modifier.fillMaxSize(),
-
-                        contentPadding = PaddingValues(16.dp),
-
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 48.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
-
                     ) {
 
                         // Filter Pills Row
