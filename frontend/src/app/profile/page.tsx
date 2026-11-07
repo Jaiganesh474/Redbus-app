@@ -32,6 +32,7 @@ import {
   Shield,
   Wallet,
   Star,
+  RefreshCw,
 } from "lucide-react";
 import AvatarSelectorModal from "@/components/AvatarSelectorModal";
 import RedbusWalletModal from "@/components/RedbusWalletModal";
@@ -39,13 +40,14 @@ import RedbusWalletModal from "@/components/RedbusWalletModal";
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const { data: latestUser } = useGetMeQuery(undefined, { skip: !isAuthenticated });
+  const { data: latestUser, refetch: refetchMe } = useGetMeQuery(undefined, { skip: !isAuthenticated });
   const activeUser = latestUser || user;
   const walletBalance = Number(activeUser?.walletBalance || 0);
   const isOperatorRole = activeUser?.role === "ROLE_OPERATOR" || activeUser?.roles?.includes("ROLE_OPERATOR");
-  const { data: operatorProfile } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated || !isOperatorRole });
+  const { data: operatorProfile, refetch: refetchOperatorProfile } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated || !isOperatorRole });
 
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   React.useEffect(() => {
     if (latestUser) {
@@ -161,6 +163,31 @@ export default function ProfilePage() {
     );
   }
 
+  const handleManualRefresh = () => {
+    setIsManualRefreshing(true);
+    refetchMe();
+    refetchTravellers();
+    if (isOperatorRole) {
+      refetchOperatorProfile();
+    }
+    setTimeout(() => {
+      setIsManualRefreshing(false);
+    }, 500);
+  };
+
+  if (isManualRefreshing) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center gap-3 px-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#d84e55]/10 border border-[#d84e55]/30 flex items-center justify-center">
+          <RefreshCw className="w-6 h-6 text-[#d84e55] animate-spin" />
+        </div>
+        <p className="text-sm font-bold text-gray-800 dark:text-slate-200">
+          Refreshing Account Profile...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/50 py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -210,6 +237,14 @@ export default function ProfilePage() {
                 <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
                 <span>redBus Member</span>
               </span>
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                className="p-2 bg-black/20 hover:bg-black/35 backdrop-blur-md text-white rounded-xl border border-white/15 transition-colors cursor-pointer"
+                title="Refresh Account"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
             </div>
           </div>
 

@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.redbus.ai.data.model.*
 import com.redbus.ai.ui.theme.RedbusCrimson
 import com.redbus.ai.ui.viewmodel.RedbusUiState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class AdminPortalTab(val label: String, val badge: String? = null) {
     OPERATORS("Operators & Governance"),
@@ -57,6 +59,17 @@ fun AdminHubScreen(
     var activeTab by remember { mutableStateOf(AdminPortalTab.OPERATORS) }
     var editingCommissionOpId by remember { mutableStateOf<Long?>(null) }
     var commissionText by remember { mutableStateOf("10") }
+    var isManualRefreshing by remember { mutableStateOf(false) }
+    val refreshScope = rememberCoroutineScope()
+
+    val triggerManualRefresh: () -> Unit = {
+        refreshScope.launch {
+            isManualRefreshing = true
+            onRefresh()
+            delay(500)
+            isManualRefreshing = false
+        }
+    }
 
     // AI Banner Studio states
     var aiPrompt by remember { mutableStateOf("Festive Diwali 25% discount for Bangalore to Goa AC sleeper buses") }
@@ -69,6 +82,33 @@ fun AdminHubScreen(
 
     LaunchedEffect(Unit) {
         onRefresh()
+    }
+
+    if (isManualRefreshing) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CircularProgressIndicator(
+                    color = RedbusCrimson,
+                    modifier = Modifier.size(40.dp),
+                    strokeWidth = 3.dp
+                )
+                Text(
+                    text = "Refreshing Admin Console...",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        return
     }
 
     val operators = uiState.adminOperators
@@ -135,7 +175,7 @@ fun AdminHubScreen(
                         }
 
                         IconButton(
-                            onClick = onRefresh,
+                            onClick = triggerManualRefresh,
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
@@ -1419,3 +1459,4 @@ fun PrimoOnTimeBadge(modifier: Modifier = Modifier) {
         }
     }
 }
+

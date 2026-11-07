@@ -4777,6 +4777,36 @@ fun ProfileAndWalletScreen(
         "മലയാളം (Malayalam)" to "മലയാളം (Malayalam)"
     )
 
+    var isRefreshingAccount by remember { mutableStateOf(false) }
+    val refreshAccountScope = rememberCoroutineScope()
+
+    if (isRefreshingAccount) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CircularProgressIndicator(
+                    color = RedbusCrimson,
+                    modifier = Modifier.size(40.dp),
+                    strokeWidth = 3.dp
+                )
+                Text(
+                    text = "Refreshing Account...",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        return
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -4886,28 +4916,19 @@ fun ProfileAndWalletScreen(
                             }
                         }
 
-                        var isRefreshingAccount by remember { mutableStateOf(false) }
-                        val refreshRotation by animateFloatAsState(
-                            targetValue = if (isRefreshingAccount) 360f else 0f,
-                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
-                            label = "refreshAnim"
-                        )
                         IconButton(onClick = {
-                            isRefreshingAccount = true
-                            onRefreshAccount()
+                            refreshAccountScope.launch {
+                                isRefreshingAccount = true
+                                onRefreshAccount()
+                                delay(500)
+                                isRefreshingAccount = false
+                            }
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
                                 contentDescription = "Sync Account",
-                                tint = Color.White,
-                                modifier = Modifier.rotate(refreshRotation)
+                                tint = Color.White
                             )
-                        }
-                        LaunchedEffect(isRefreshingAccount) {
-                            if (isRefreshingAccount) {
-                                delay(650)
-                                isRefreshingAccount = false
-                            }
                         }
                     }
 

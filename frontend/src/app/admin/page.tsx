@@ -81,6 +81,7 @@ export default function AdminDashboardPage() {
   const [commissionInput, setCommissionInput] = useState<number>(10);
   const [actionSuccess, setActionSuccess] = useState("");
   const [actionError, setActionError] = useState("");
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   const isAdmin = user?.role === "ROLE_ADMIN" || user?.roles?.includes("ROLE_ADMIN");
 
@@ -309,6 +310,32 @@ export default function AdminDashboardPage() {
   const approvedOperators = operators.filter((op) => op.status === "APPROVED");
   const primoOperators = operators.filter((op) => Boolean(op.primoCertified));
 
+  const handleManualRefresh = () => {
+    setIsManualRefreshing(true);
+    refetchStats();
+    refetchOperators();
+    refetchPrimoBuses();
+    refetchBookings();
+    refetchEarnings();
+    refetchBanners();
+    setTimeout(() => {
+      setIsManualRefreshing(false);
+    }, 500);
+  };
+
+  if (isManualRefreshing) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center gap-3 px-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#d84e55]/10 border border-[#d84e55]/30 flex items-center justify-center">
+          <RefreshCw className="w-6 h-6 text-[#d84e55] animate-spin" />
+        </div>
+        <p className="text-sm font-bold text-gray-800 dark:text-slate-200">
+          Refreshing Enterprise Control Center...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Top Banner */}
@@ -334,13 +361,7 @@ export default function AdminDashboardPage() {
             </span>
           )}
           <button
-            onClick={() => {
-              refetchStats();
-              refetchOperators();
-              refetchPrimoBuses();
-              refetchBookings();
-              refetchEarnings();
-            }}
+            onClick={handleManualRefresh}
             className="p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white transition-colors cursor-pointer"
             title="Refresh console"
           >
