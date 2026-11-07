@@ -3940,45 +3940,51 @@ fun EnhancedTicketJourneyModal(
                                                 }
                                             }
 
-                                            // 2. Middle Bus Duration Connector
+                                            // 2. Middle Bus Duration / Status Connector (Matching Image 5)
                                             Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Surface(
-                                                    shape = CircleShape,
-                                                    color = Color.Transparent,
-                                                    border = BorderStroke(1.5.dp, Color.White),
-                                                    modifier = Modifier.size(8.dp)
-                                                ) {}
                                                 Box(
                                                     modifier = Modifier
                                                         .weight(1f)
                                                         .height(1.dp)
-                                                        .background(Color.White.copy(alpha = 0.35f)),
-                                                    contentAlignment = Alignment.Center
+                                                        .background(Color.White.copy(alpha = 0.35f))
+                                                )
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                                                 ) {
                                                     Surface(
-                                                        shape = RoundedCornerShape(12.dp),
-                                                        color = Color.Black.copy(alpha = 0.25f)
+                                                        shape = RoundedCornerShape(3.dp),
+                                                        color = RedbusCrimson,
+                                                        modifier = Modifier.size(15.dp)
                                                     ) {
-                                                        Row(
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                                        ) {
-                                                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                                                            Text(
-                                                                text = if (isCompleted) "Trip Completed" else durationLabel,
-                                                                color = Color.White,
-                                                                fontSize = 10.sp,
-                                                                fontWeight = FontWeight.Bold
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(
+                                                                Icons.Default.DirectionsBus,
+                                                                contentDescription = null,
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(10.dp)
                                                             )
                                                         }
                                                     }
+                                                    Text(
+                                                        text = if (isCompleted) "Trip Completed" else durationLabel,
+                                                        color = Color.White,
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
                                                 }
-                                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, modifier = Modifier.size(6.dp)) {}
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(1.dp)
+                                                        .background(Color.White.copy(alpha = 0.35f))
+                                                )
                                             }
 
                                             // 3. Destination Row (Arrival)
@@ -4536,7 +4542,7 @@ fun RefundDetailsTrackerModal(
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Bottom Refund Breakdown Card (Dark Header + Expandable Rows)
                     Card(
@@ -4655,6 +4661,9 @@ fun RefundDetailsTrackerModal(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.navigationBarsPadding())
                 }
             }
         }
@@ -4672,8 +4681,41 @@ private fun ViewTicketDetailsModal(
     onCancelBooking: () -> Unit
 ) {
     val context = LocalContext.current
-    val ticketNumber = remember(booking.id, booking.pnr) {
-        if (booking.id > 0) "TVBS${12801000 + booking.id}" else "TVBS${booking.pnr.takeLast(8).uppercase()}"
+    val ticketNumber = remember(booking.ticketNo, booking.id, booking.pnr) {
+        booking.ticketNo?.takeIf { it.isNotBlank() }
+            ?: if (booking.id > 0) "TVBT${47600000 + booking.id}" else "TVBT${booking.pnr.takeLast(8).uppercase()}"
+    }
+
+    val isCancelled = remember(booking.status) {
+        booking.status.equals("CANCELLED", ignoreCase = true) || booking.status.equals("REFUNDED", ignoreCase = true)
+    }
+    val isCompleted = remember(booking.status, booking) {
+        !isCancelled && (booking.status.equals("COMPLETED", ignoreCase = true) || calculateTripStatus(booking) == RealtimeTripStatus.TRIP_COMPLETED)
+    }
+
+    val headerBgColor = when {
+        isCancelled -> Color(0xFFE5E7EB)
+        isCompleted -> Color(0xFF23272E)
+        else -> RedbusCrimson
+    }
+    val headerPrimaryTextColor = when {
+        isCancelled -> Color(0xFF1F2937)
+        else -> Color.White
+    }
+    val headerSecondaryTextColor = when {
+        isCancelled -> Color(0xFF4B5563)
+        isCompleted -> Color.White.copy(alpha = 0.85f)
+        else -> Color.White.copy(alpha = 0.88f)
+    }
+    val timelineDotColor = when {
+        isCancelled -> Color(0xFF9CA3AF)
+        isCompleted -> Color.White.copy(alpha = 0.6f)
+        else -> RedbusCrimson
+    }
+    val timelineLineColor = when {
+        isCancelled -> Color(0xFF9CA3AF)
+        isCompleted -> Color.White.copy(alpha = 0.35f)
+        else -> Color.White.copy(alpha = 0.7f)
     }
 
     val departureDateFormatted = remember(booking.travelDate) {
@@ -4719,13 +4761,17 @@ private fun ViewTicketDetailsModal(
                 .fillMaxSize()
                 .background(backdropColor.copy(alpha = 0.94f))
                 .systemBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp)
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 420.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Circular Close Button (✕) matching Image 5
+                // Top Circular Close Button (✕) matching Image 4 & 5
                 Surface(
                     onClick = onDismiss,
                     shape = CircleShape,
@@ -4744,37 +4790,40 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // Scrollable Middle Ticket Card Container (Properly bounded so bottom Share button is ALWAYS completely visible)
+                // Middle Ticket Card Container (Equal Spacing Above & Below, Centered)
                 Box(
                     modifier = Modifier
-                        .weight(1f, fill = false)
+                        .weight(1f)
                         .fillMaxWidth()
-                        .widthIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState()),
-                    contentAlignment = Alignment.TopCenter
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Main Perforated Ticket Card (Matching Image 5) with smooth entry animation
-                    Card(
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = ticketScale.value
-                                scaleY = ticketScale.value
-                            }
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            // 1. Top Crimson Header (Source -> Duration -> Destination)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(RedbusCrimson)
-                                    .padding(horizontal = 16.dp, vertical = 14.dp)
-                            ) {
+                        // Main Perforated Ticket Card with smooth entry animation
+                        Card(
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = ticketScale.value
+                                    scaleY = ticketScale.value
+                                }
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // 1. Header (Red for Confirmed, Charcoal for Completed, Grey for Cancelled)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(headerBgColor)
+                                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                                ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -4786,14 +4835,14 @@ private fun ViewTicketDetailsModal(
                                     ) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surface,
+                                            color = if (isCancelled) Color.White else MaterialTheme.colorScheme.surface,
                                             modifier = Modifier.size(16.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.NorthEast,
                                                     contentDescription = null,
-                                                    tint = RedbusCrimson,
+                                                    tint = timelineDotColor,
                                                     modifier = Modifier.size(10.dp)
                                                 )
                                             }
@@ -4803,19 +4852,19 @@ private fun ViewTicketDetailsModal(
                                             modifier = Modifier
                                                 .width(1.5.dp)
                                                 .height(58.dp)
-                                                .background(Color.White.copy(alpha = 0.7f))
+                                                .background(timelineLineColor)
                                         )
 
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surface,
+                                            color = if (isCancelled) Color.White else MaterialTheme.colorScheme.surface,
                                             modifier = Modifier.size(16.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.SouthEast,
                                                     contentDescription = null,
-                                                    tint = RedbusCrimson,
+                                                    tint = timelineDotColor,
                                                     modifier = Modifier.size(10.dp)
                                                 )
                                             }
@@ -4836,14 +4885,14 @@ private fun ViewTicketDetailsModal(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = booking.sourceCity,
-                                                    color = Color.White,
+                                                    color = headerPrimaryTextColor,
                                                     fontSize = 17.sp,
                                                     fontWeight = FontWeight.ExtraBold
                                                 )
                                                 Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = booking.boardingPoint.ifBlank { "${booking.sourceCity} Bypass" },
-                                                    color = Color.White.copy(alpha = 0.88f),
+                                                    color = headerSecondaryTextColor,
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
@@ -4852,20 +4901,20 @@ private fun ViewTicketDetailsModal(
                                             Column(horizontalAlignment = Alignment.End) {
                                                 Text(
                                                     text = booking.departureTime,
-                                                    color = Color.White,
+                                                    color = headerPrimaryTextColor,
                                                     fontSize = 20.sp,
                                                     fontWeight = FontWeight.Black
                                                 )
                                                 Text(
                                                     text = departureDateFormatted,
-                                                    color = Color.White.copy(alpha = 0.9f),
+                                                    color = headerSecondaryTextColor,
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
                                         }
 
-                                        // Center Duration Line: ──── 🚌 7h 10 min ────
+                                        // Center Status/Duration Line
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -4875,31 +4924,43 @@ private fun ViewTicketDetailsModal(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .height(1.dp)
-                                                    .background(Color.White.copy(alpha = 0.35f))
+                                                    .background(timelineLineColor)
                                             )
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 8.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.DirectionsBus,
-                                                    contentDescription = null,
-                                                    tint = Color.White.copy(alpha = 0.9f),
-                                                    modifier = Modifier.size(13.dp)
-                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(3.dp),
+                                                    color = RedbusCrimson,
+                                                    modifier = Modifier.size(15.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.DirectionsBus,
+                                                            contentDescription = null,
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(10.dp)
+                                                        )
+                                                    }
+                                                }
                                                 Text(
-                                                    text = durationLabel,
-                                                    color = Color.White.copy(alpha = 0.95f),
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold
+                                                    text = when {
+                                                        isCancelled -> "Booking Cancelled"
+                                                        isCompleted -> "Trip Completed"
+                                                        else -> durationLabel
+                                                    },
+                                                    color = headerPrimaryTextColor,
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold
                                                 )
                                             }
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .height(1.dp)
-                                                    .background(Color.White.copy(alpha = 0.35f))
+                                                    .background(timelineLineColor)
                                             )
                                         }
 
@@ -4912,14 +4973,14 @@ private fun ViewTicketDetailsModal(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = booking.destinationCity,
-                                                    color = Color.White,
+                                                    color = headerPrimaryTextColor,
                                                     fontSize = 17.sp,
                                                     fontWeight = FontWeight.ExtraBold
                                                 )
                                                 Spacer(modifier = Modifier.height(1.dp))
                                                 Text(
                                                     text = booking.droppingPoint.ifBlank { booking.destinationCity },
-                                                    color = Color.White.copy(alpha = 0.88f),
+                                                    color = headerSecondaryTextColor,
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
@@ -4928,13 +4989,13 @@ private fun ViewTicketDetailsModal(
                                             Column(horizontalAlignment = Alignment.End) {
                                                 Text(
                                                     text = booking.arrivalTime,
-                                                    color = Color.White,
+                                                    color = headerPrimaryTextColor,
                                                     fontSize = 20.sp,
                                                     fontWeight = FontWeight.Black
                                                 )
                                                 Text(
                                                     text = arrivalDateFormatted,
-                                                    color = Color.White.copy(alpha = 0.9f),
+                                                    color = headerSecondaryTextColor,
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
@@ -5149,52 +5210,54 @@ private fun ViewTicketDetailsModal(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
-
                 // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
-                Button(
-                    onClick = {
-                        val shareText = buildString {
-                            appendLine("🚌 redBus AI Confirmed E-Ticket")
-                            appendLine("Ticket #: $ticketNumber")
-                            appendLine("PNR #: ${booking.pnr}")
-                            appendLine("Route: ${booking.sourceCity} ➔ ${booking.destinationCity}")
-                            appendLine("Operator: ${booking.operatorName} (${booking.busType})")
-                            appendLine("Departure: ${booking.departureTime}, $departureDateFormatted (${booking.boardingPoint})")
-                            appendLine("Arrival: ${booking.arrivalTime}, $arrivalDateFormatted (${booking.droppingPoint})")
-                            appendLine("Passengers: ${passengers.joinToString { "${it.name} - Seat ${it.seatNumber}" }}")
-                            appendLine("Total Fare: ₹${String.format(Locale.US, "%.2f", booking.totalAmount)}")
-                        }
-                        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "redBus E-Ticket PNR ${booking.pnr}")
-                            putExtra(Intent.EXTRA_TEXT, shareText)
-                        }
-                        context.startActivity(Intent.createChooser(sendIntent, "Share your ticket"))
-                    },
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedbusCrimson,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = AppStrings.get("share_ticket"),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Button(
+                        onClick = {
+                            val shareText = buildString {
+                                appendLine("🚌 redBus AI Confirmed E-Ticket")
+                                appendLine("Ticket #: $ticketNumber")
+                                appendLine("PNR #: ${booking.pnr}")
+                                appendLine("Route: ${booking.sourceCity} ➔ ${booking.destinationCity}")
+                                appendLine("Operator: ${booking.operatorName} (${booking.busType})")
+                                appendLine("Departure: ${booking.departureTime}, $departureDateFormatted (${booking.boardingPoint})")
+                                appendLine("Arrival: ${booking.arrivalTime}, $arrivalDateFormatted (${booking.droppingPoint})")
+                                appendLine("Passengers: ${passengers.joinToString { "${it.name} - Seat ${it.seatNumber}" }}")
+                                appendLine("Total Fare: ₹${String.format(Locale.US, "%.2f", booking.totalAmount)}")
+                            }
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "redBus E-Ticket PNR ${booking.pnr}")
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share your ticket"))
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RedbusCrimson,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = AppStrings.get("share_ticket"),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-
-                Spacer(modifier = Modifier.height(18.dp))
             }
         }
     }

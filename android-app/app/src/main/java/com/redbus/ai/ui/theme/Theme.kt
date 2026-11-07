@@ -75,8 +75,13 @@ fun RedBusAITheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = RedbusTypography,
-        content = content
-    )
+        typography = RedbusTypography
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalTextStyle provides androidx.compose.ui.text.TextStyle(fontFamily = RedbusFontFamily)
+        ) {
+            content()
+        }
+    }
 }
 
