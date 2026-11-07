@@ -5209,8 +5209,9 @@ private fun ViewTicketDetailsModal(
                         }
                     }
                 }
+            }
 
-                // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
+            // Bottom Full-Width Red Pill Button: "Share your ticket" (Always Pinned & Fully Visible)
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
