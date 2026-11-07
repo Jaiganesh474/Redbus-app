@@ -441,7 +441,8 @@ export default function ProfilePage() {
               </div>
             </motion.div>
 
-            {/* SAVED TRAVELLERS SECTION with bottom-to-top lazy loading */}
+            {/* SAVED TRAVELLERS SECTION with bottom-to-top lazy loading (Hidden for Admin and Operator) */}
+            {user.role !== "ROLE_ADMIN" && user.role !== "ROLE_OPERATOR" && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -588,6 +589,7 @@ export default function ProfilePage() {
                 </div>
               )}
             </motion.div>
+            )}
           </div>
 
           {/* Quick Stats & Bookings Sidebar with bottom-to-top lazy loading */}
@@ -648,16 +650,19 @@ export default function ProfilePage() {
                   <Wallet className="w-3.5 h-3.5" />
                   <span>Open Wallet</span>
                 </button>
-                <Link
-                  href="/"
-                  className="py-2.5 px-3 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center space-x-1 cursor-pointer"
-                >
-                  <span>Book Bus</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                {user.role !== "ROLE_ADMIN" && user.role !== "ROLE_OPERATOR" && (
+                  <Link
+                    href="/"
+                    className="py-2.5 px-3 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center space-x-1 cursor-pointer"
+                  >
+                    <span>Book Bus</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                )}
               </div>
             </motion.div>
 
+            {user.role !== "ROLE_ADMIN" && user.role !== "ROLE_OPERATOR" && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -680,6 +685,7 @@ export default function ProfilePage() {
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </motion.div>
+            )}
 
             {/* Password Reset Direct Card */}
             <motion.div

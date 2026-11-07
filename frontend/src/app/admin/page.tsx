@@ -88,19 +88,31 @@ export default function AdminDashboardPage() {
   const {
     data: stats,
     refetch: refetchStats,
-  } = useGetAdminStatsQuery(undefined, { skip: !isAdmin });
+  } = useGetAdminStatsQuery(undefined, {
+    skip: !isAdmin,
+    pollingInterval: 8000,
+    refetchOnMountOrArgChange: true,
+  });
 
   const {
     data: operators = [],
     isLoading: isOperatorsLoading,
     refetch: refetchOperators,
-  } = useGetAdminOperatorsQuery(undefined, { skip: !isAdmin });
+  } = useGetAdminOperatorsQuery(undefined, {
+    skip: !isAdmin,
+    pollingInterval: 8000,
+    refetchOnMountOrArgChange: true,
+  });
 
   const {
     data: primoBuses = [],
     isLoading: isPrimoBusesLoading,
     refetch: refetchPrimoBuses,
-  } = useGetAdminPrimoBusesQuery(undefined, { skip: !isAdmin });
+  } = useGetAdminPrimoBusesQuery(undefined, {
+    skip: !isAdmin,
+    pollingInterval: 8000,
+    refetchOnMountOrArgChange: true,
+  });
 
   const {
     data: bookingsData,

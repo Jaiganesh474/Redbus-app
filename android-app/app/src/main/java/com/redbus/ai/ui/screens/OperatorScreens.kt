@@ -1183,6 +1183,159 @@ fun OperatorHubScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 16.dp)
         )
+
+        // Frozen Overlay Modal ONLY on Operator Hub Tab when Account is Suspended by Admin (Matching Image 5)
+        val isOperatorSuspended = uiState.operatorProfile?.status.equals("SUSPENDED", ignoreCase = true) ||
+            uiState.user?.operatorStatus.equals("SUSPENDED", ignoreCase = true)
+        if (isOperatorSuspended) {
+            val context = LocalContext.current
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F172A).copy(alpha = 0.88f))
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(2.dp, RedbusCrimson.copy(alpha = 0.5f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFFFEF2F2),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA)),
+                            modifier = Modifier.size(68.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Block,
+                                    contentDescription = "Account Suspended",
+                                    tint = RedbusCrimson,
+                                    modifier = Modifier.size(34.dp)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFFFEF2F2)
+                        ) {
+                            Text(
+                                text = "ACCOUNT FROZEN • OPERATOR HUB LOCKED",
+                                color = RedbusCrimson,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.6.sp,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "Your Account has been Suspended",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Text(
+                            text = "Your Account has been suspended. Please contact administrator with admin email redbus@admin.in for more contact.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 19.sp
+                        )
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFFEF2F2),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECACA)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    try {
+                                        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = android.net.Uri.parse("mailto:redbus@admin.in?subject=Operator%20Account%20Suspension%20Appeal")
+                                        }
+                                        context.startActivity(emailIntent)
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = RedbusCrimson,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Email,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = "ADMINISTRATOR EMAIL",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF991B1B)
+                                        )
+                                        Text(
+                                            text = "redbus@admin.in",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = RedbusCrimson
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = RedbusCrimson,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "You can still access Home, Buses, Ask Ray, and Account tabs using the bottom navigation bar.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
     }
 
     // Modal: Add Bus to Fleet
@@ -4532,12 +4685,12 @@ private fun AgencyProfileTabContent(
     onUpdateProfile: (String?, String?, String?, String?, String?, () -> Unit, (String) -> Unit) -> Unit
 ) {
     val profile = uiState.operatorProfile
-    var companyName by remember { mutableStateOf(profile?.companyName ?: uiState.user?.name ?: "Intercity Smartbus") }
-    var contactPerson by remember { mutableStateOf(profile?.contactPerson ?: "Fleet Operations Head") }
-    var phone by remember { mutableStateOf(profile?.phone ?: "+91 80 4567 8900") }
-    var email by remember { mutableStateOf(profile?.email ?: uiState.user?.email ?: "ops@intercitysmartbus.in") }
-    var bankAccountRef by remember { mutableStateOf(profile?.bankAccountRef ?: "HDFC0001234 - 50200088991122") }
-    var kycDocUrl by remember { mutableStateOf(profile?.kycDocUrl ?: "29AABCU9603R1ZM") }
+    var companyName by remember(profile?.companyName, uiState.user?.name) { mutableStateOf(profile?.companyName ?: uiState.user?.name ?: "Intercity Smartbus") }
+    var contactPerson by remember(profile?.contactPerson, uiState.user?.name) { mutableStateOf(profile?.contactPerson ?: uiState.user?.name ?: "Fleet Operations Head") }
+    var phone by remember(profile?.phone, uiState.user?.phone) { mutableStateOf(profile?.phone ?: uiState.user?.phone ?: "+91 80 4567 8900") }
+    var email by remember(profile?.email, uiState.user?.email) { mutableStateOf(profile?.email ?: uiState.user?.email ?: "ops@intercitysmartbus.in") }
+    var bankAccountRef by remember(profile?.bankAccountRef) { mutableStateOf(profile?.bankAccountRef ?: "HDFC0001234 - 50200088991122") }
+    var kycDocUrl by remember(profile?.kycDocUrl) { mutableStateOf(profile?.kycDocUrl ?: "29AABCU9603R1ZM") }
     var saveStatus by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 

@@ -5928,19 +5928,25 @@ fun ProfileAndWalletScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
+                val isNonPassengerRole = uiState.isAdmin || uiState.isOperator ||
+                    user.role.equals("ROLE_ADMIN", ignoreCase = true) ||
+                    user.role.equals("ROLE_OPERATOR", ignoreCase = true)
+
                 Card(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
-                        // 1. Bookings Button
-                        AccountMenuRowItem(
-                            icon = Icons.Default.ReceiptLong,
-                            title = "Bookings",
-                            onClick = onNavigateToBookings
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        // 1. Bookings Button (Only for Passengers — Admin and Operator cannot book tickets)
+                        if (!isNonPassengerRole) {
+                            AccountMenuRowItem(
+                                icon = Icons.Default.ReceiptLong,
+                                title = "Bookings",
+                                onClick = onNavigateToBookings
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        }
 
                         // 2. Personal information Button
                         AccountMenuRowItem(
@@ -5948,15 +5954,17 @@ fun ProfileAndWalletScreen(
                             title = "Personal information",
                             onClick = { showPersonalInformationModal = true }
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-                        // 3. Passengers Button
-                        AccountMenuRowItem(
-                            icon = Icons.Default.Group,
-                            title = "Passengers",
-                            trailingBadge = if (uiState.savedTravellers.isNotEmpty()) "${uiState.savedTravellers.size}" else null,
-                            onClick = { showPassengersModal = true }
-                        )
+                        // 3. Passengers Button (Only for Passengers — Admin and Operator cannot book tickets)
+                        if (!isNonPassengerRole) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            AccountMenuRowItem(
+                                icon = Icons.Default.Group,
+                                title = "Passengers",
+                                trailingBadge = if (uiState.savedTravellers.isNotEmpty()) "${uiState.savedTravellers.size}" else null,
+                                onClick = { showPassengersModal = true }
+                            )
+                        }
                     }
                 }
             }

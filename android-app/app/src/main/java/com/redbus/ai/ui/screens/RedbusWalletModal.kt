@@ -154,14 +154,15 @@ fun RedbusWalletModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
+                .background(Color.Black.copy(alpha = 0.85f))
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(top = 10.dp)
+                .padding(top = 6.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                color = MaterialTheme.colorScheme.background,
+                shadowElevation = 16.dp,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {

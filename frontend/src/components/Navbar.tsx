@@ -171,7 +171,7 @@ export default function Navbar() {
                 >
                   Bus Tickets
                 </Link>
-                {activeUser?.role !== "ROLE_OPERATOR" && (
+                {activeUser?.role !== "ROLE_OPERATOR" && activeUser?.role !== "ROLE_ADMIN" && (
                   <Link
                     href="/my-bookings"
                     className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1.5 ${
@@ -364,7 +364,7 @@ export default function Navbar() {
                             <span className="font-medium">My Profile</span>
                           </div>
                         </Link>
-                        {activeUser?.role !== "ROLE_OPERATOR" && (
+                        {activeUser?.role !== "ROLE_OPERATOR" && activeUser?.role !== "ROLE_ADMIN" && (
                           <Link
                             href="/my-bookings"
                             onClick={() => setUserDropdownOpen(false)}
@@ -587,7 +587,7 @@ export default function Navbar() {
                     <ChevronRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
                   </Link>
 
-                  {activeUser?.role !== "ROLE_OPERATOR" && (
+                  {activeUser?.role !== "ROLE_OPERATOR" && activeUser?.role !== "ROLE_ADMIN" && (
                     <Link
                       href="/my-bookings"
                       onClick={() => setMobileMenuOpen(false)}

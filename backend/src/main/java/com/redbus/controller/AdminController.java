@@ -52,9 +52,8 @@ public class AdminController {
                         || (op.getCompanyName() != null && op.getCompanyName().toLowerCase().contains("zingbus"));
                 boolean isAdminAutoOp = (op.getEmail() != null && op.getEmail().equalsIgnoreCase("redbus@admin.in"))
                         || (op.getCompanyName() != null && op.getCompanyName().toLowerCase().contains("redbus administrator"));
-                boolean isMockSuspended = "SUSPENDED".equalsIgnoreCase(op.getStatus()) && busCount == 0;
 
-                if ((isMockZingbus || isAdminAutoOp || isMockSuspended) && busCount == 0) {
+                if ((isMockZingbus || isAdminAutoOp) && busCount == 0) {
                     operatorRepository.delete(op);
                 }
             }
@@ -70,13 +69,27 @@ public class AdminController {
         boolean isPrimo = Boolean.TRUE.equals(op.getPrimoCertified());
         BigDecimal commRate = isPrimo ? BigDecimal.ZERO : (op.getCommissionRate() != null ? op.getCommissionRate() : new BigDecimal("10.00"));
 
+        User u = op.getUser();
+        String contactPerson = op.getContactPerson();
+        if ((contactPerson == null || contactPerson.isBlank() || "Fleet Manager".equalsIgnoreCase(contactPerson)) && u != null && u.getName() != null && !u.getName().isBlank()) {
+            contactPerson = u.getName();
+        }
+        String email = op.getEmail();
+        if ((email == null || email.isBlank()) && u != null && u.getEmail() != null && !u.getEmail().isBlank()) {
+            email = u.getEmail();
+        }
+        String phone = op.getPhone();
+        if ((phone == null || phone.isBlank() || "+91 98765 00000".equals(phone)) && u != null && u.getPhone() != null && !u.getPhone().isBlank()) {
+            phone = u.getPhone();
+        }
+
         return OperatorDto.builder()
                 .id(op.getId())
-                .userId(op.getUser() != null ? op.getUser().getId() : null)
+                .userId(u != null ? u.getId() : null)
                 .companyName(op.getCompanyName())
-                .contactPerson(op.getContactPerson())
-                .email(op.getEmail())
-                .phone(op.getPhone())
+                .contactPerson(contactPerson)
+                .email(email)
+                .phone(phone)
                 .kycDocUrl(op.getKycDocUrl())
                 .bankAccountRef(op.getBankAccountRef())
                 .commissionRate(commRate)

@@ -564,6 +564,9 @@ class RedbusViewModel(
                             authSuccessMessage = "Profile updated successfully!"
                         )
                     }
+                    if (_uiState.value.isOperator) {
+                        fetchOperatorDashboardData()
+                    }
                 }
                 .onFailure { err ->
                     _uiState.update {
@@ -2137,12 +2140,22 @@ class RedbusViewModel(
                 )
             ).fold(
                 onSuccess = { updated ->
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { state ->
+                        val syncedUser = state.user?.copy(
+                            name = updated.contactPerson?.takeIf { it.isNotBlank() } ?: state.user.name,
+                            phone = updated.phone?.takeIf { it.isNotBlank() } ?: state.user.phone,
+                            operatorStatus = updated.status ?: state.user.operatorStatus
+                        )
+                        if (syncedUser != null) {
+                            SessionManager.updateUser(syncedUser)
+                        }
+                        state.copy(
+                            user = syncedUser ?: state.user,
                             operatorProfile = updated,
                             operatorActionMessage = "Operator profile updated successfully"
                         )
                     }
+                    fetchOperatorDashboardData()
                     onSuccess()
                 },
                 onFailure = { err ->

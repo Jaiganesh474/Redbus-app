@@ -676,6 +676,16 @@ public class AuthService {
 
         User updated = userRepository.save(user);
 
+        operatorRepository.findByUserId(updated.getId()).ifPresent(op -> {
+            if (request.getName() != null && !request.getName().isBlank()) {
+                op.setContactPerson(request.getName().trim());
+            }
+            if (request.getPhone() != null && !request.getPhone().isBlank()) {
+                op.setPhone(request.getPhone().trim());
+            }
+            operatorRepository.save(op);
+        });
+
         if (passwordModified) {
             try {
                 emailService.sendPasswordResetSuccessEmail(updated);

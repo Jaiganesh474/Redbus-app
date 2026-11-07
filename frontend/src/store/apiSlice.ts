@@ -164,7 +164,7 @@ export const apiSlice = createApi({
         method: "PUT",
         body: data,
       }),
-      invalidatesTags: ["Auth"],
+      invalidatesTags: ["Auth", "OperatorProfile", "AdminOperators", "Admin"],
     }),
     uploadAvatar: builder.mutation<{ avatarUrl: string; fileName: string; message: string }, FormData>({
       query: (formData) => ({
@@ -328,7 +328,7 @@ export const apiSlice = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["OperatorProfile", "Auth"],
+      invalidatesTags: ["OperatorProfile", "Auth", "AdminOperators", "Admin", "OperatorBuses", "OperatorAnalytics", "Route"],
     }),
     getOperatorRefunds: builder.query<OperatorRefund[], void>({
       query: () => "/operator/refunds",
@@ -559,14 +559,14 @@ export const apiSlice = createApi({
         url: `/admin/operators/${id}/verify`,
         method: "PUT",
       }),
-      invalidatesTags: ["AdminOperators", "Admin"],
+      invalidatesTags: ["AdminOperators", "Admin", "OperatorProfile", "Auth"],
     }),
     suspendOperator: builder.mutation<Operator, number>({
       query: (id) => ({
         url: `/admin/operators/${id}/suspend`,
         method: "PUT",
       }),
-      invalidatesTags: ["AdminOperators", "Admin"],
+      invalidatesTags: ["AdminOperators", "Admin", "OperatorProfile", "Auth"],
     }),
     updateOperatorCommission: builder.mutation<Operator, { id: number; commissionRate: number }>({
       query: ({ id, commissionRate }) => ({

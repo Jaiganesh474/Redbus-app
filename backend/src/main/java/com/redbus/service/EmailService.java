@@ -56,7 +56,7 @@ public class EmailService {
                     .map(p -> p.getName() + " (Seat " + p.getSeatNumber() + ")")
                     .collect(Collectors.joining(", "));
 
-            String subject = "🎫 Confirmed: Your redBus Ticket for " + booking.getRoute().getSourceCity() +
+            String subject = "🎫 Booking Confirmed: Your redBus journey Ticket for " + booking.getRoute().getSourceCity() +
                     " to " + booking.getRoute().getDestinationCity() + " [PNR: " + booking.getPnr() + "]";
 
             String htmlContent = buildTicketEmailTemplate(booking, passengersList);
@@ -107,7 +107,7 @@ public class EmailService {
                     ? String.join(", ", oldSeats)
                     : newSeatsStr;
 
-            String subject = "📅 Rescheduled: Your Updated redBus Ticket for " + booking.getRoute().getSourceCity() +
+            String subject = "📅 Booking Rescheduled: As per your request the updated redBus Ticket for " + booking.getRoute().getSourceCity() +
                     " to " + booking.getRoute().getDestinationCity() + " (" + newDate + ") [PNR: " + booking.getPnr() + "]";
 
             String baseHtml = buildTicketEmailTemplate(booking, passengersList);
@@ -117,7 +117,7 @@ public class EmailService {
                       📅 Journey Date Updated Successfully (Free Date Change)
                     </div>
                     <p style="margin:0;font-size:13px;color:#047857;line-height:1.55;font-weight:600;">
-                      Your bus journey for PNR <strong>%s</strong> has been rescheduled from <strong>%s</strong> (Seat: %s) to <strong>%s</strong> (Seat: %s). Your previous seat(s) on %s have been released, and your updated seat(s) are confirmed. Please use the updated E-Ticket PDF attached to this email for boarding.
+                      Your bus journey for PNR <strong>%s</strong> has been rescheduled from <strong>%s</strong> (Seat: %s) to <strong>%s</strong> (Seat: %s). Your previous seat(s) on %s have been released, and your updated seat(s) are confirmed. Please use the updated E-Ticket PDF attached to this email for smooth onboarding.
                     </p>
                   </div>
                   <div class="section-title">Journey & Bus Details</div>""".formatted(
@@ -165,7 +165,7 @@ public class EmailService {
                     .map(p -> p.getName() + " (Seat " + p.getSeatNumber() + ")")
                     .collect(Collectors.joining(", "));
 
-            String subject = "🚫 Cancelled: Your redBus Ticket for " + booking.getRoute().getSourceCity() +
+            String subject = "🚫 Booking Cancelled: Your redBus journey Ticket for " + booking.getRoute().getSourceCity() +
                     " to " + booking.getRoute().getDestinationCity() + " [PNR: " + booking.getPnr() + "]";
 
             String htmlContent = buildCancellationEmailTemplate(booking, passengersList, refundAmount);
@@ -1379,7 +1379,7 @@ public class EmailService {
                         <tr><td class="label">Trip Guarantee Selected</td><td class="value">%s</td></tr>
                       </table>
 
-                      <div class="section-title">Automatic Refund & Cashback Breakdown</div>
+                      <div class="section-title">Automatic Refund & Cashback Amount</div>
                       <table class="details-table">
                         <tr><td class="label">Original Ticket Amount Paid</td><td class="value">₹%s</td></tr>
                         %s
@@ -1433,15 +1433,14 @@ public class EmailService {
                 log.warn("Could not generate PDF for operator cancellation email PNR {}: {}", booking.getPnr(), e.getMessage());
             }
 
-            String subject = "⚠️ Apology: Bus Cancelled by Operator & ₹" + totalRefund.setScale(2, java.math.RoundingMode.HALF_UP) + " Refund Credited (PNR: " + booking.getPnr() + ")";
+            String subject = "⚠️ Apology: Bus has been Cancelled by Operator & ₹" + totalRefund.setScale(2, java.math.RoundingMode.HALF_UP) + " Refund Credited (PNR: " + booking.getPnr() + ")";
             String attachmentName = "redbus_cancelled_refund_" + booking.getPnr() + ".pdf";
             String recipientName = booking.getUser() != null ? booking.getUser().getName() : "Valued Traveler";
 
-            if (isSmtpConfigured()) {
-                boolean sent = sendViaSmtp(recipientEmail, subject, htmlContent, pdfBytes, attachmentName);
-                if (sent) return true;
+            if (sendViaSmtp(recipientEmail, subject, htmlContent, pdfBytes, attachmentName)) {
+                return true;
             }
-            if (isBrevoApiConfigured()) {
+            if (!"mock-key".equalsIgnoreCase(brevoApiKey) && !brevoApiKey.isBlank()) {
                 return sendViaBrevoApi(recipientEmail, recipientName, subject, htmlContent, pdfBytes, attachmentName);
             }
             log.info("[VIRTUAL EMAIL] Sent Operator Bus Cancelled & Refund Email for PNR {} (ARN: {}) to {}", booking.getPnr(), arn, recipientEmail);

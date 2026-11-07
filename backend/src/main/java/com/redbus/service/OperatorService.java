@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class OperatorService {
 
     private final OperatorRepository operatorRepository;
+    private final UserRepository userRepository;
     private final BusRepository busRepository;
     private final SeatRepository seatRepository;
     private final RouteRepository routeRepository;
@@ -565,7 +566,15 @@ public class OperatorService {
                 .orElseThrow(() -> new com.redbus.exception.ResourceNotFoundException("Operator not found with id: " + operatorId));
 
         if (req.getCompanyName() != null && !req.getCompanyName().isBlank()) {
-            op.setCompanyName(req.getCompanyName().trim());
+            String newCompany = req.getCompanyName().trim();
+            op.setCompanyName(newCompany);
+            List<Bus> opBuses = busRepository.findByOperatorId(operatorId);
+            for (Bus b : opBuses) {
+                b.setOperatorName(newCompany);
+            }
+            if (!opBuses.isEmpty()) {
+                busRepository.saveAll(opBuses);
+            }
         }
         if (req.getContactPerson() != null && !req.getContactPerson().isBlank()) {
             op.setContactPerson(req.getContactPerson().trim());
@@ -589,6 +598,9 @@ public class OperatorService {
             op.setKycDocUrl(req.getKycDocUrl().trim());
         }
 
+        if (op.getUser() != null) {
+            userRepository.save(op.getUser());
+        }
         Operator saved = operatorRepository.save(op);
         return mapToOperatorDto(saved);
     }

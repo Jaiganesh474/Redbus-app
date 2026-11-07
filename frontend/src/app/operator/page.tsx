@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { useAppSelector } from "@/store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { updateUser } from "@/store/authSlice";
 import {
   useGetOperatorAnalyticsQuery,
   useGetOperatorBusesQuery,
@@ -91,6 +92,7 @@ import {
 } from "lucide-react";
 
 export default function OperatorPortalPage() {
+  const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
   React.useEffect(() => {
@@ -252,7 +254,11 @@ export default function OperatorPortalPage() {
     data: operatorProfile,
     isLoading: isLoadingProfile,
     refetch: refetchProfile,
-  } = useGetOperatorProfileQuery(undefined, { skip: !isAuthenticated });
+  } = useGetOperatorProfileQuery(undefined, {
+    skip: !isAuthenticated,
+    pollingInterval: 8000,
+    refetchOnMountOrArgChange: true,
+  });
 
   const [updateOperatorProfileMutation, { isLoading: isUpdatingProfile }] = useUpdateOperatorProfileMutation();
 
@@ -425,7 +431,7 @@ export default function OperatorPortalPage() {
   const [isProfileFormInitialized, setIsProfileFormInitialized] = useState(false);
 
   React.useEffect(() => {
-    if (operatorProfile && !isProfileFormInitialized) {
+    if (operatorProfile) {
       setProfileCompanyName(operatorProfile.companyName || "");
       setProfileContactPerson(operatorProfile.contactPerson || "");
       setProfilePhone(operatorProfile.phone || "");
@@ -433,8 +439,11 @@ export default function OperatorPortalPage() {
       setProfileBankAccountRef(operatorProfile.bankAccountRef || "");
       setProfileKycDocUrl(operatorProfile.kycDocUrl || "");
       setIsProfileFormInitialized(true);
+      if (user && operatorProfile.status && user.operatorStatus !== operatorProfile.status) {
+        dispatch(updateUser({ ...user, operatorStatus: operatorProfile.status as any }));
+      }
     }
-  }, [operatorProfile, isProfileFormInitialized]);
+  }, [operatorProfile]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -460,9 +469,21 @@ export default function OperatorPortalPage() {
         kycDocUrl: profileKycDocUrl.trim(),
       }).unwrap();
 
+      if (user) {
+        dispatch(
+          updateUser({
+            ...user,
+            name: profileContactPerson.trim(),
+            phone: profilePhone.trim() || user.phone,
+            email: profileEmail.trim() || user.email,
+          })
+        );
+      }
+
       setFormSuccess("Operator profile & business details updated successfully!");
       refetchProfile();
       refetchAnalytics();
+      refetchBuses();
       setTimeout(() => setFormSuccess(""), 5000);
     } catch (err: any) {
       setFormError(err?.data?.message || "Failed to update profile. Please try again.");
@@ -828,9 +849,69 @@ export default function OperatorPortalPage() {
     );
   }
 
+  const isOperatorSuspended =
+    operatorProfile?.status?.toUpperCase() === "SUSPENDED" ||
+    user?.operatorStatus?.toUpperCase() === "SUSPENDED";
+
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="min-h-screen bg-gray-50/50 py-8 relative">
+      {/* Frozen Overlay Modal ONLY on Operator Hub Tab when Account is Suspended by Admin */}
+      {isOperatorSuspended && (
+        <div className="fixed inset-x-0 bottom-0 top-16 z-40 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-red-500/40 max-w-lg w-full p-6 sm:p-8 text-center space-y-5 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-red-600 via-[#d84e55] to-amber-500" />
+            <div className="w-20 h-20 rounded-3xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto shadow-inner">
+              <ShieldAlert className="w-10 h-10 animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 text-[11px] font-black uppercase tracking-wider">
+                Account Frozen • Operator Hub Locked
+              </span>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                Your Account has been Suspended
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                Your Account has been suspended. Please contact administrator with admin email{" "}
+                <a
+                  href="mailto:redbus@admin.in"
+                  className="font-black text-[#d84e55] dark:text-red-400 underline hover:text-red-700"
+                >
+                  redbus@admin.in
+                </a>{" "}
+                for more contact.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-red-50/80 dark:bg-slate-800/80 border border-red-200/80 dark:border-slate-700 flex items-center justify-between gap-3 text-left">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[#d84e55] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">
+                    Administrator Support Email
+                  </p>
+                  <p className="text-sm font-black text-gray-900 dark:text-white truncate">
+                    redbus@admin.in
+                  </p>
+                </div>
+              </div>
+              <a
+                href="mailto:redbus@admin.in?subject=Operator%20Account%20Suspension%20Appeal"
+                className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-red-200 dark:border-slate-700 text-xs font-extrabold text-[#d84e55] dark:text-red-400 hover:bg-red-50 transition-colors shrink-0 shadow-2xs"
+              >
+                Email Admin
+              </a>
+            </div>
+
+            <p className="text-xs text-gray-400 dark:text-slate-400">
+              Your Operator Hub controls are currently frozen. You can still browse other tabs such as Bus Tickets, Help &amp; FAQs, and Account Profile from the navigation bar above.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 ${isOperatorSuspended ? "pointer-events-none select-none opacity-40 blur-[2px]" : ""}`}>
         {/* Operator Portal Banner Header */}
         <div className="bg-gradient-to-r from-gray-900 via-slate-900 to-[#d84e55] rounded-3xl shadow-xl p-6 sm:p-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
