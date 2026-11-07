@@ -1343,7 +1343,7 @@ fun CheckoutScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Selected by $livePassengerCount live passenger${if (livePassengerCount == 1) "" else "s"} in this month",
+                                    text = "Selected by $livePassengerCount live passenger${if (livePassengerCount == 1L) "" else "s"} in this month",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF047857),
