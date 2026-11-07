@@ -1594,253 +1594,138 @@ private fun SingleDeckChassisColumn(
                     if (is2x2) {
 
                         // 2 on Left, Aisle, 2 on Right (2+2 Seater matching ZingBus)
-
                         val s1 = rowList.getOrNull(0)
-
                         val s2 = rowList.getOrNull(1)
-
                         val s3 = rowList.getOrNull(2)
-
                         val s4 = rowList.getOrNull(3)
 
-
+                        val resS1 = resolveSeatWithAdjacentRestriction(s1, s2)
+                        val resS2 = resolveSeatWithAdjacentRestriction(s2, s1)
+                        val resS3 = resolveSeatWithAdjacentRestriction(s3, s4)
+                        val resS4 = resolveSeatWithAdjacentRestriction(s4, s3)
 
                         Row(
-
                             modifier = Modifier.fillMaxWidth(),
-
                             horizontalArrangement = Arrangement.SpaceBetween,
-
                             verticalAlignment = Alignment.CenterVertically
-
                         ) {
-
                             // Left Pair (2 Seats)
-
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                                if (s1 != null) {
-
+                                if (resS1 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s1,
-
+                                        seat = resS1,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s1, selectedSeats),
-
-                                        onClick = { onToggleSeat(s1) }
-
+                                        isSelected = isSeatSelected(resS1, selectedSeats),
+                                        onClick = { onToggleSeat(resS1) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
 
-
-
-                                if (s2 != null) {
-
+                                if (resS2 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s2,
-
+                                        seat = resS2,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s2, selectedSeats),
-
-                                        onClick = { onToggleSeat(s2) }
-
+                                        isSelected = isSeatSelected(resS2, selectedSeats),
+                                        onClick = { onToggleSeat(resS2) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
-
                             }
-
-
 
                             // Center Aisle
-
                             Box(
-
                                 modifier = Modifier
-
                                     .width(28.dp)
-
                                     .height(30.dp),
-
                                 contentAlignment = Alignment.Center
-
                             ) {
-
                                 Text(
-
                                     text = "· ·",
-
                                     fontSize = 11.sp,
-
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-
                                     fontWeight = FontWeight.Bold
-
                                 )
-
                             }
-
-
 
                             // Right Pair (2 Seats)
-
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                                if (s3 != null) {
-
+                                if (resS3 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s3,
-
+                                        seat = resS3,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s3, selectedSeats),
-
-                                        onClick = { onToggleSeat(s3) }
-
+                                        isSelected = isSeatSelected(resS3, selectedSeats),
+                                        onClick = { onToggleSeat(resS3) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
 
-
-
-                                if (s4 != null) {
-
+                                if (resS4 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s4,
-
+                                        seat = resS4,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s4, selectedSeats),
-
-                                        onClick = { onToggleSeat(s4) }
-
+                                        isSelected = isSeatSelected(resS4, selectedSeats),
+                                        onClick = { onToggleSeat(resS4) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
-
                             }
-
                         }
 
                     } else {
-
                         // 1 on Left, Aisle, 2 on Right (2+1 Single Deck Sleeper)
-
                         val s1 = rowList.getOrNull(0)
-
                         val s2 = rowList.getOrNull(1)
-
                         val s3 = rowList.getOrNull(2)
 
-
+                        val resS2 = resolveSeatWithAdjacentRestriction(s2, s3)
+                        val resS3 = resolveSeatWithAdjacentRestriction(s3, s2)
 
                         Row(
-
                             modifier = Modifier.fillMaxWidth(),
-
                             horizontalArrangement = Arrangement.SpaceBetween,
-
                             verticalAlignment = Alignment.CenterVertically
-
                         ) {
-
                             if (s1 != null) {
-
                                 SleeperBerthItem(
-
                                     seat = s1,
-
                                     fallbackPrice = basePrice,
-
                                     isSelected = isSeatSelected(s1, selectedSeats),
-
                                     onClick = { onToggleSeat(s1) }
-
                                 )
-
                             } else {
-
                                 Spacer(modifier = Modifier.width(42.dp))
-
                             }
-
-
 
                             Spacer(modifier = Modifier.width(16.dp))
 
-
-
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                                if (s2 != null) {
-
+                                if (resS2 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s2,
-
+                                        seat = resS2,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s2, selectedSeats),
-
-                                        onClick = { onToggleSeat(s2) }
-
+                                        isSelected = isSeatSelected(resS2, selectedSeats),
+                                        onClick = { onToggleSeat(resS2) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
 
-
-
-                                if (s3 != null) {
-
+                                if (resS3 != null) {
                                     SleeperBerthItem(
-
-                                        seat = s3,
-
+                                        seat = resS3,
                                         fallbackPrice = basePrice,
-
-                                        isSelected = isSeatSelected(s3, selectedSeats),
-
-                                        onClick = { onToggleSeat(s3) }
-
+                                        isSelected = isSeatSelected(resS3, selectedSeats),
+                                        onClick = { onToggleSeat(resS3) }
                                     )
-
                                 } else {
-
                                     Spacer(modifier = Modifier.width(42.dp))
-
                                 }
-
                             }
-
                         }
-
                     }
 
                 }
@@ -2066,101 +1951,56 @@ private fun DeckChassisColumn(
                 rows.forEach { rowList ->
 
                     val leftSeat = rowList.find { it.colNum == 1 } ?: rowList.getOrNull(0)
-
                     val rightSeat1 = rowList.find { it.colNum == 2 } ?: rowList.getOrNull(1)
-
                     val rightSeat2 = rowList.find { it.colNum == 3 } ?: rowList.getOrNull(2)
 
-
+                    val resR1 = resolveSeatWithAdjacentRestriction(rightSeat1, rightSeat2)
+                    val resR2 = resolveSeatWithAdjacentRestriction(rightSeat2, rightSeat1)
 
                     Row(
-
                         modifier = Modifier.fillMaxWidth(),
-
                         horizontalArrangement = Arrangement.SpaceBetween,
-
                         verticalAlignment = Alignment.CenterVertically
-
                     ) {
-
                         // Left Single Sleeper Berth (Col 1: L1, L4, L7, L10, L13)
-
                         if (leftSeat != null) {
-
                             SleeperBerthItem(
-
                                 seat = leftSeat,
-
                                 fallbackPrice = basePrice,
-
                                 isSelected = isSeatSelected(leftSeat, selectedSeats),
-
                                 onClick = { onToggleSeat(leftSeat) }
-
                             )
-
                         } else {
-
                             Spacer(modifier = Modifier.width(42.dp))
-
                         }
-
-
 
                         // Aisle Space
-
                         Spacer(modifier = Modifier.width(8.dp))
 
-
-
                         // Right Double Sleeper Berths (Col 2 & Col 3: L2 & L3, L5 & L6...)
-
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-
-                            if (rightSeat1 != null) {
-
+                            if (resR1 != null) {
                                 SleeperBerthItem(
-
-                                    seat = rightSeat1,
-
+                                    seat = resR1,
                                     fallbackPrice = basePrice,
-
-                                    isSelected = isSeatSelected(rightSeat1, selectedSeats),
-
-                                    onClick = { onToggleSeat(rightSeat1) }
-
+                                    isSelected = isSeatSelected(resR1, selectedSeats),
+                                    onClick = { onToggleSeat(resR1) }
                                 )
-
                             } else {
-
                                 Spacer(modifier = Modifier.width(42.dp))
-
                             }
 
-
-
-                            if (rightSeat2 != null) {
-
+                            if (resR2 != null) {
                                 SleeperBerthItem(
-
-                                    seat = rightSeat2,
-
+                                    seat = resR2,
                                     fallbackPrice = basePrice,
-
-                                    isSelected = isSeatSelected(rightSeat2, selectedSeats),
-
-                                    onClick = { onToggleSeat(rightSeat2) }
-
+                                    isSelected = isSeatSelected(resR2, selectedSeats),
+                                    onClick = { onToggleSeat(resR2) }
                                 )
-
                             } else {
-
                                 Spacer(modifier = Modifier.width(42.dp))
-
                             }
-
                         }
-
                     }
 
                 }
@@ -2197,186 +2037,137 @@ private fun DeckChassisColumn(
 
 
 
+private fun resolveSeatWithAdjacentRestriction(seat: SeatItem?, partner: SeatItem?): SeatItem? {
+    if (seat == null) return null
+    if (!seat.genderRestriction.isNullOrBlank() && !seat.genderRestriction.equals("NONE", ignoreCase = true)) {
+        return seat
+    }
+    if (partner == null) return seat
+    val partnerIsSold = partner.status.equals("BOOKED", ignoreCase = true) || partner.status.equals("LOCKED", ignoreCase = true)
+    if (!partnerIsSold) return seat
+    val partnerIsFemale = partner.bookedGender.equals("FEMALE", ignoreCase = true) || partner.seatNumber.equals("U5", ignoreCase = true) || partner.seatNumber.equals("L2", ignoreCase = true)
+    val restriction = if (partnerIsFemale) "FEMALE" else "MALE"
+    return seat.copy(genderRestriction = restriction)
+}
+
 @Composable
-
 private fun SleeperBerthItem(
-
     seat: SeatItem,
-
     fallbackPrice: Double,
-
     isSelected: Boolean,
-
     onClick: () -> Unit
-
 ) {
-
     val isSold = !isSelected && (seat.status.equals("BOOKED", ignoreCase = true) || seat.status.equals("LOCKED", ignoreCase = true))
+    val isSoldFemale = isSold && (seat.bookedGender.equals("FEMALE", ignoreCase = true) || seat.seatNumber.equals("U5", ignoreCase = true) || seat.seatNumber.equals("L2", ignoreCase = true))
+    val isSoldMale = isSold && !isSoldFemale
 
-    val isFemale = seat.genderRestriction.equals("FEMALE", ignoreCase = true) ||
-
-            seat.bookedGender.equals("FEMALE", ignoreCase = true)
-
-
+    val isFemaleReserved = !isSold && !isSelected && seat.genderRestriction.equals("FEMALE", ignoreCase = true)
+    val isMaleReserved = !isSold && !isSelected && seat.genderRestriction.equals("MALE", ignoreCase = true)
 
     val borderColor = when {
-
-        isSold && isFemale -> Color(0xFFF472B6)
-
-        isSold -> MaterialTheme.colorScheme.outline
-
         isSelected -> Color(0xFF15803D)
-
+        isSoldFemale -> Color(0xFFF472B6)
+        isSoldMale -> Color(0xFF60A5FA)
+        isFemaleReserved -> Color(0xFFEC4899)
+        isMaleReserved -> Color(0xFF2563EB)
         else -> Color(0xFF10B981)
-
     }
-
-
 
     val containerColor = when {
-
-        isSold && isFemale -> Color(0xFFFDF2F8)
-
-        isSold -> MaterialTheme.colorScheme.surface
-
         isSelected -> Color(0xFF15803D)
-
+        isSoldFemale -> Color(0xFFFDF2F8)
+        isSoldMale -> Color(0xFFEFF6FF)
         else -> MaterialTheme.colorScheme.surface
-
     }
-
-
 
     val pillowColor = when {
-
-        isSold && isFemale -> Color(0xFFFBCFE8)
-
-        isSold -> MaterialTheme.colorScheme.surfaceVariant
-
         isSelected -> Color(0xFF6EE7B7)
-
+        isSoldFemale -> Color(0xFFFBCFE8)
+        isSoldMale -> Color(0xFFBFDBFE)
+        isFemaleReserved -> Color(0xFFFCE7F3)
+        isMaleReserved -> Color(0xFFDBEAFE)
         else -> Color(0xFFD1FAE5)
-
     }
 
-
-
     val priceText = if (isSold) "Sold" else "₹${(if (seat.price > 0) seat.price else fallbackPrice).roundToInt()}"
-
     val priceColor = when {
-
-        isSold -> MaterialTheme.colorScheme.onSurfaceVariant
-
         isSelected -> Color.White
-
+        isSold -> MaterialTheme.colorScheme.onSurfaceVariant
+        isFemaleReserved -> Color(0xFFBE185D)
+        isMaleReserved -> Color(0xFF1D4ED8)
         else -> MaterialTheme.colorScheme.onSurface
-
     }
 
     val seatNumColor = when {
-
         isSelected -> Color(0xFFD1FAE5)
-
         else -> MaterialTheme.colorScheme.onSurfaceVariant
-
     }
 
-
-
     Box(
-
         modifier = Modifier
-
             .width(42.dp)
-
             .height(74.dp)
-
             .clip(RoundedCornerShape(8.dp))
-
             .background(containerColor)
-
             .border(1.8.dp, borderColor, RoundedCornerShape(8.dp))
-
             .clickable(enabled = !isSold, onClick = onClick)
-
             .padding(vertical = 5.dp, horizontal = 2.dp)
-
     ) {
-
         // Top Pillow Bar inside Sleeper Berth
-
         Box(
-
             modifier = Modifier
-
                 .align(Alignment.TopCenter)
-
                 .width(22.dp)
-
                 .height(4.dp)
-
                 .clip(RoundedCornerShape(2.dp))
-
                 .background(pillowColor)
-
         )
 
-
-
-        // Center Icon when Selected or Sold
-
+        // Center Icon when Selected, Sold or Reserved
         if (isSelected) {
-
             Icon(
-
                 imageVector = Icons.Default.CheckCircle,
-
                 contentDescription = null,
-
                 tint = Color.White,
-
                 modifier = Modifier
-
                     .size(14.dp)
-
                     .align(Alignment.Center)
-
             )
-
         } else if (isSold) {
-
             Icon(
-
                 imageVector = Icons.Default.Person,
-
                 contentDescription = null,
-
-                tint = if (isFemale) Color(0xFFF472B6) else MaterialTheme.colorScheme.outline,
-
+                tint = if (isSoldFemale) Color(0xFFF472B6) else Color(0xFF60A5FA),
                 modifier = Modifier
-
                     .size(13.dp)
-
                     .align(Alignment.Center)
-
             )
-
+        } else if (isFemaleReserved) {
+            Icon(
+                imageVector = Icons.Default.Face3,
+                contentDescription = null,
+                tint = Color(0xFFEC4899),
+                modifier = Modifier
+                    .size(13.dp)
+                    .align(Alignment.Center)
+            )
+        } else if (isMaleReserved) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                tint = Color(0xFF2563EB),
+                modifier = Modifier
+                    .size(13.dp)
+                    .align(Alignment.Center)
+            )
         }
 
-
-
         // Bottom Price + Seat Number (Exact match to screenshot: ₹850 above L1)
-
         Column(
-
             modifier = Modifier.align(Alignment.BottomCenter),
-
             horizontalAlignment = Alignment.CenterHorizontally
-
         ) {
-
             Text(
-
                 text = priceText,
 
                 fontSize = 10.sp,

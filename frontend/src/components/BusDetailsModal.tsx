@@ -702,8 +702,8 @@ export default function BusDetailsModal({
         pillowStyle += "bg-pink-200 dark:bg-pink-800/60";
       } else {
         containerStyle +=
-          "border border-gray-200 dark:border-slate-700 bg-gray-50/90 dark:bg-slate-800/60 cursor-not-allowed";
-        pillowStyle += "bg-gray-200 dark:bg-slate-600";
+          "border border-blue-200 dark:border-blue-900/40 bg-blue-50/75 dark:bg-blue-950/25 cursor-not-allowed";
+        pillowStyle += "bg-blue-200 dark:bg-blue-800/60";
       }
       priceOrLabel = "Sold";
       priceColor = "text-gray-400 dark:text-slate-500 font-medium";
@@ -712,6 +712,16 @@ export default function BusDetailsModal({
         "bg-[#15803d] border-2 border-[#15803d] text-white shadow-md scale-105 ring-2 ring-emerald-400/40 cursor-pointer";
       pillowStyle += "bg-emerald-300";
       priceColor = "text-white font-black";
+    } else if (seat.genderRestriction === "FEMALE") {
+      containerStyle +=
+        "bg-white dark:bg-slate-800 border-2 border-pink-500 hover:border-pink-600 hover:shadow-md hover:bg-pink-50/40 dark:hover:bg-pink-950/20 cursor-pointer active:scale-95";
+      pillowStyle += "bg-pink-100 dark:bg-pink-800/50";
+      priceColor = "text-pink-600 dark:text-pink-400 font-extrabold";
+    } else if (seat.genderRestriction === "MALE") {
+      containerStyle +=
+        "bg-white dark:bg-slate-800 border-2 border-blue-600 hover:border-blue-700 hover:shadow-md hover:bg-blue-50/40 dark:hover:bg-blue-950/20 cursor-pointer active:scale-95";
+      pillowStyle += "bg-blue-100 dark:bg-blue-800/50";
+      priceColor = "text-blue-600 dark:text-blue-400 font-extrabold";
     } else {
       containerStyle +=
         "bg-white dark:bg-slate-800 border-2 border-emerald-500 hover:border-emerald-600 hover:shadow-md hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 cursor-pointer active:scale-95";
@@ -734,7 +744,7 @@ export default function BusDetailsModal({
             isFemale ? (
               <UserIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-pink-400 dark:text-pink-300" />
             ) : (
-              <UserIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-gray-400 dark:text-slate-500" />
+              <UserIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-400 dark:text-blue-300" />
             )
           ) : isSelected ? (
             <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" />
@@ -762,8 +772,16 @@ export default function BusDetailsModal({
     const isSelected = !isSold && selectedSeats.some((s) => s.seatId === seat.seatId);
     const isFemale = seat.genderRestriction === "FEMALE" || seat.bookedGender === "FEMALE";
 
-    const strokeColor = isSold ? (isFemale ? "#f472b6" : "#cbd5e1") : isSelected ? "#15803d" : "#10b981";
-    const fillColor = isSold ? (isFemale ? "#fdf2f8" : "#f8fafc") : isSelected ? "#dcfce7" : "#ffffff";
+    const strokeColor = isSold
+      ? (isFemale ? "#f472b6" : "#60a5fa")
+      : isSelected
+      ? "#15803d"
+      : seat.genderRestriction === "FEMALE"
+      ? "#ec4899"
+      : seat.genderRestriction === "MALE"
+      ? "#2563eb"
+      : "#10b981";
+    const fillColor = isSold ? (isFemale ? "#fdf2f8" : "#eff6ff") : isSelected ? "#dcfce7" : "#ffffff";
     const priceColor = isSold
       ? "text-gray-400 font-medium"
       : isSelected

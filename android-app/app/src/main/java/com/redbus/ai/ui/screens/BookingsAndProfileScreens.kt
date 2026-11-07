@@ -2212,6 +2212,17 @@ private fun BookedSeatLayoutModal(
         listOf("S21", "S22", "AISLE", "S23", "S24")
     )
 
+    val isSeatFemale: (String) -> Boolean = remember(booking.passengers) {
+        { seatNum ->
+            val pass = booking.passengers.orEmpty().firstOrNull { it.seatNumber.trim().equals(seatNum.trim(), ignoreCase = true) }
+            if (pass != null) {
+                pass.gender.startsWith("F", ignoreCase = true)
+            } else {
+                seatNum.equals("U5", ignoreCase = true) || seatNum.equals("L2", ignoreCase = true)
+            }
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -2308,7 +2319,7 @@ private fun BookedSeatLayoutModal(
                                         ) {
                                             // Single Berth Left (L1, L4, ...)
                                             val isBookedLeft = bookedSeatNumbers.any { it.equals(row.first, ignoreCase = true) }
-                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft)
+                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft, isFemale = isSeatFemale(row.first))
 
                                             Spacer(modifier = Modifier.width(6.dp))
 
@@ -2316,8 +2327,8 @@ private fun BookedSeatLayoutModal(
                                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 val isBookedMid = bookedSeatNumbers.any { it.equals(row.second, ignoreCase = true) }
                                                 val isBookedRight = bookedSeatNumbers.any { it.equals(row.third, ignoreCase = true) }
-                                                BerthItem(seatNum = row.second, isBooked = isBookedMid)
-                                                BerthItem(seatNum = row.third, isBooked = isBookedRight)
+                                                BerthItem(seatNum = row.second, isBooked = isBookedMid, isFemale = isSeatFemale(row.second))
+                                                BerthItem(seatNum = row.third, isBooked = isBookedRight, isFemale = isSeatFemale(row.third))
                                             }
                                         }
                                     }
@@ -2382,7 +2393,7 @@ private fun BookedSeatLayoutModal(
                                         ) {
                                             // Single Berth Left (U1, U4, ...)
                                             val isBookedLeft = bookedSeatNumbers.any { it.equals(row.first, ignoreCase = true) }
-                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft)
+                                            BerthItem(seatNum = row.first, isBooked = isBookedLeft, isFemale = isSeatFemale(row.first))
 
                                             Spacer(modifier = Modifier.width(6.dp))
 
@@ -2390,8 +2401,8 @@ private fun BookedSeatLayoutModal(
                                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 val isBookedMid = bookedSeatNumbers.any { it.equals(row.second, ignoreCase = true) }
                                                 val isBookedRight = bookedSeatNumbers.any { it.equals(row.third, ignoreCase = true) }
-                                                BerthItem(seatNum = row.second, isBooked = isBookedMid)
-                                                BerthItem(seatNum = row.third, isBooked = isBookedRight)
+                                                BerthItem(seatNum = row.second, isBooked = isBookedMid, isFemale = isSeatFemale(row.second))
+                                                BerthItem(seatNum = row.third, isBooked = isBookedRight, isFemale = isSeatFemale(row.third))
                                             }
                                         }
                                     }
@@ -2427,10 +2438,13 @@ private fun BookedSeatLayoutModal(
                                             Spacer(modifier = Modifier.width(20.dp))
                                         } else {
                                             val isBooked = bookedSeatNumbers.any { it.equals(seatNum, ignoreCase = true) }
+                                            val isFemale = isSeatFemale(seatNum)
+                                            val bookedColor = if (isFemale) Color(0xFFEC4899) else Color(0xFF2563EB)
+                                            val bookedBorder = if (isFemale) Color(0xFFBE185D) else Color(0xFF1D4ED8)
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
-                                                color = if (isBooked) Color(0xFFEC4899) else Color(0xFFE2E8F0),
-                                                border = BorderStroke(1.dp, if (isBooked) Color(0xFFBE185D) else Color(0xFFCBD5E1)),
+                                                color = if (isBooked) bookedColor else Color(0xFFE2E8F0),
+                                                border = BorderStroke(1.dp, if (isBooked) bookedBorder else Color(0xFFCBD5E1)),
                                                 modifier = Modifier
                                                     .width(46.dp)
                                                     .height(40.dp)
@@ -2464,28 +2478,50 @@ private fun BookedSeatLayoutModal(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f), modifier = Modifier.padding(vertical = 10.dp))
 
-                // Clean Legend (Image 3)
+                // Clean Gender-Aware Legend (Image 3)
+                val hasFemaleBooked = bookedSeatNumbers.any { isSeatFemale(it) }
+                val hasMaleBooked = bookedSeatNumbers.any { !isSeatFemale(it) }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFEC4899),
-                            modifier = Modifier.size(14.dp)
-                        ) {}
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Your Booked Seat (${bookedSeatNumbers.joinToString(", ").ifEmpty { "Yours" }})",
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                    if (hasFemaleBooked) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFFEC4899),
+                                modifier = Modifier.size(14.dp)
+                            ) {}
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Your Seat (Female)",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
                     }
 
-                    Spacer(modifier = Modifier.width(20.dp))
+                    if (hasMaleBooked || !hasFemaleBooked) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFF2563EB),
+                                modifier = Modifier.size(14.dp)
+                            ) {}
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Your Seat (Male)",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                    }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
@@ -2504,13 +2540,16 @@ private fun BookedSeatLayoutModal(
 }
 
 @Composable
-private fun BerthItem(seatNum: String, isBooked: Boolean) {
+private fun BerthItem(seatNum: String, isBooked: Boolean, isFemale: Boolean = false) {
+    val bookedColor = if (isFemale) Color(0xFFEC4899) else Color(0xFF2563EB)
+    val bookedBorder = if (isFemale) Color(0xFFBE185D) else Color(0xFF1D4ED8)
+
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = if (isBooked) Color(0xFFEC4899) else Color(0xFFE2E8F0),
+        color = if (isBooked) bookedColor else Color(0xFFE2E8F0),
         border = BorderStroke(
             if (isBooked) 1.5.dp else 1.dp,
-            if (isBooked) Color(0xFFBE185D) else Color(0xFFCBD5E1)
+            if (isBooked) bookedBorder else Color(0xFFCBD5E1)
         ),
         shadowElevation = if (isBooked) 4.dp else 0.dp,
         modifier = Modifier

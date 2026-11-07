@@ -171,10 +171,19 @@ function CheckoutContent() {
   const filledCount = passengers.filter((p) => p.name && p.name.trim().length > 0).length;
   const totalSeats = selectedSeats.length > 0 ? selectedSeats.length : 1;
 
+  const femaleOnlySeat = selectedSeats.find(
+    (s) => s.genderRestriction === "FEMALE" || s.seatNumber === "U6" || s.seatNumber === "L3"
+  );
+  const maleOnlySeat = selectedSeats.find(
+    (s) => s.genderRestriction === "MALE"
+  );
+  const requiresFemale = Boolean(femaleOnlySeat);
+  const requiresMale = !requiresFemale && Boolean(maleOnlySeat);
+
   const handleOpenAddPassenger = () => {
     setModalPassengerName("");
     setModalPassengerAge("25");
-    setModalPassengerGender("MALE");
+    setModalPassengerGender(requiresFemale ? "FEMALE" : "MALE");
     setModalSaveToTravellers(true);
     setShowAddPassengerModal(true);
   };
@@ -779,10 +788,22 @@ function CheckoutContent() {
           >
             {/* Header: Passenger details + Counter matching Image 2 */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="font-extrabold text-lg text-gray-900 flex items-center space-x-2">
-                <UserIcon className="w-5 h-5 text-[#d84e55]" />
-                <span>Passenger details</span>
-              </h3>
+              <div>
+                <h3 className="font-extrabold text-lg text-gray-900 flex items-center space-x-2">
+                  <UserIcon className="w-5 h-5 text-[#d84e55]" />
+                  <span>Passenger details</span>
+                </h3>
+                {requiresFemale && (
+                  <p className="text-xs font-bold text-pink-600 mt-0.5">
+                    Select 1 Female passenger
+                  </p>
+                )}
+                {requiresMale && (
+                  <p className="text-xs font-bold text-blue-600 mt-0.5">
+                    Select 1 Male passenger
+                  </p>
+                )}
+              </div>
               <span className="text-xs font-bold text-gray-500">
                 {filledCount}/{totalSeats} Selected
               </span>
@@ -796,33 +817,63 @@ function CheckoutContent() {
                 );
                 const isSelected = assignedIdx >= 0;
                 const assignedSeatNumber = isSelected ? passengers[assignedIdx]?.seatNumber : null;
+                const isFemale = traveller.gender?.toUpperCase().startsWith("F");
+                const isAllowed = requiresFemale ? isFemale : requiresMale ? !isFemale : true;
 
                 return (
                   <div
                     key={traveller.id}
-                    onClick={() => handleToggleSavedTraveller(traveller)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-red-50/50 border-[#d84e55] shadow-xs"
-                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                    onClick={() => {
+                      if (!isAllowed) {
+                        setErrorMessage(
+                          requiresFemale
+                            ? "This seat is reserved for female passengers only."
+                            : "This seat is reserved for male passengers only."
+                        );
+                        return;
+                      }
+                      handleToggleSavedTraveller(traveller);
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                      !isAllowed
+                        ? "opacity-40 bg-gray-50 border-gray-200 cursor-not-allowed"
+                        : isSelected
+                        ? "bg-red-50/50 border-[#d84e55] shadow-xs cursor-pointer"
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center space-x-3.5">
                       <input
                         type="checkbox"
                         readOnly
+                        disabled={!isAllowed}
                         checked={isSelected}
-                        className="w-5 h-5 rounded text-[#d84e55] focus:ring-[#d84e55] cursor-pointer"
+                        className="w-5 h-5 rounded text-[#d84e55] focus:ring-[#d84e55] cursor-pointer disabled:cursor-not-allowed"
                       />
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        !isAllowed
+                          ? "bg-slate-100 text-slate-400"
+                          : isFemale
+                          ? "bg-pink-100 text-pink-600"
+                          : "bg-blue-100 text-blue-600"
+                      }`}>
                         <UserIcon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900 leading-tight">
-                          {traveller.name}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className={`text-sm font-bold leading-tight ${!isAllowed ? "text-gray-400" : "text-gray-900"}`}>
+                            {traveller.name}
+                          </p>
+                          {!isAllowed && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              requiresFemale ? "bg-pink-100 text-pink-700" : "bg-blue-100 text-blue-700"
+                            }`}>
+                              {requiresFemale ? "Female only seat" : "Male only seat"}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 font-medium mt-0.5">
-                          {traveller.age} Yrs, {traveller.gender === "FEMALE" ? "Female" : "Male"}
+                          {traveller.age} Yrs, {isFemale ? "Female" : "Male"}
                         </p>
                       </div>
                     </div>
@@ -2066,8 +2117,8 @@ function CheckoutContent() {
                       onChange={(e) => setModalPassengerGender(e.target.value as any)}
                       className="w-full px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-[#d84e55] focus:bg-white"
                     >
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
+                      {!requiresFemale && <option value="MALE">Male</option>}
+                      {!requiresMale && <option value="FEMALE">Female</option>}
                     </select>
                   </div>
                 </div>

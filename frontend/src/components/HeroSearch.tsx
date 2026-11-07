@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowRight,
   Bus,
+  User,
 } from "lucide-react";
 
 export default function HeroSearch() {
@@ -29,6 +30,18 @@ export default function HeroSearch() {
   const [showDateModal, setShowDateModal] = useState(false);
   const [nlpQuery, setNlpQuery] = useState("");
   const [isNlpLoading, setIsNlpLoading] = useState(false);
+  const [bookingForWomen, setBookingForWomen] = useState(false);
+  const [womenToast, setWomenToast] = useState<string | null>(null);
+
+  const toggleBookingForWomen = () => {
+    const nextState = !bookingForWomen;
+    setBookingForWomen(nextState);
+    const msg = nextState ? "Booking for women enabled" : "Booking for women disabled";
+    setWomenToast(msg);
+    setTimeout(() => {
+      setWomenToast(null);
+    }, 2500);
+  };
 
   const { data: availableCities = ["Bangalore", "Chennai", "Mumbai", "Pune", "Delhi", "Jaipur", "Hyderabad", "Coimbatore"] } = useGetAvailableCitiesQuery();
   const [parseNlpMutation] = useParseNlpQueryMutation();
@@ -256,6 +269,39 @@ export default function HeroSearch() {
               </div>
             </div>
 
+            {/* Booking for women Toggle Row */}
+            <div className="md:col-span-12 py-1 px-1 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-7 h-7 rounded-full bg-pink-100 dark:bg-pink-950 flex items-center justify-center text-pink-600">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
+                    Booking for women
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    Prioritizes solo women reserved seats & safe travel partners
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleBookingForWomen}
+                role="switch"
+                aria-checked={bookingForWomen}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer ${
+                  bookingForWomen ? "bg-[#d84e55]" : "bg-gray-300 dark:bg-slate-700"
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                    bookingForWomen ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
             {/* Search Button */}
             <div className="md:col-span-12 mt-1 sm:mt-2">
               <button
@@ -267,6 +313,14 @@ export default function HeroSearch() {
               </button>
             </div>
           </form>
+
+          {/* Floating Toast for Booking for women enabled/disabled */}
+          {womenToast && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-neutral-900/95 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-2xl flex items-center space-x-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>{womenToast}</span>
+            </div>
+          )}
         </div>
 
         {/* Popular Route Badges */}

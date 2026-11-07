@@ -732,6 +732,17 @@ fun CheckoutScreen(
                         val totalSeats = if (uiState.selectedSeats.isNotEmpty()) uiState.selectedSeats.size else 1
                         val filledCount = uiState.passengers.count { it.name.isNotBlank() }
 
+                        val femaleOnlySeat = uiState.selectedSeats.firstOrNull {
+                            it.genderRestriction.equals("FEMALE", ignoreCase = true) ||
+                            it.seatNumber.equals("U6", ignoreCase = true) ||
+                            it.seatNumber.equals("L3", ignoreCase = true)
+                        }
+                        val maleOnlySeat = uiState.selectedSeats.firstOrNull {
+                            it.genderRestriction.equals("MALE", ignoreCase = true)
+                        }
+                        val requiresFemale = uiState.isBookingForWomen || femaleOnlySeat != null
+                        val requiresMale = !requiresFemale && maleOnlySeat != null
+
                         Column {
                             Text(
                                 text = "Passenger details",
@@ -745,6 +756,23 @@ fun CheckoutScreen(
                                 color = Color.Gray,
                                 fontWeight = FontWeight.Normal
                             )
+                            if (requiresFemale) {
+                                Text(
+                                    text = "Select 1 Female passenger",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFE11D48),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            } else if (requiresMale) {
+                                Text(
+                                    text = "Select 1 Male passenger",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2563EB),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
                         }
 
                         // Button: + Add new passenger (Full-width pill above list, matching Video 1)
@@ -756,7 +784,7 @@ fun CheckoutScreen(
                                 .clickable {
                                     newPassengerName = ""
                                     newPassengerAge = ""
-                                    newPassengerGender = "MALE"
+                                    newPassengerGender = if (requiresFemale) "FEMALE" else if (requiresMale) "MALE" else "MALE"
                                     showAddPassengerDialog = true
                                 }
                         ) {
@@ -794,11 +822,26 @@ fun CheckoutScreen(
                         displayTravellers.forEachIndexed { tIdx, traveller ->
                             val isAssigned = uiState.passengers.any { it.name.equals(traveller.name, ignoreCase = true) }
                             val isFemale = traveller.gender.startsWith("F", ignoreCase = true)
+                            val isAllowed = when {
+                                requiresFemale -> isFemale
+                                requiresMale -> !isFemale
+                                else -> true
+                            }
 
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .then(if (!isAllowed) Modifier.alpha(0.38f) else Modifier)
                                     .clickable {
+                                        if (!isAllowed) {
+                                            val alertMsg = if (requiresFemale) {
+                                                "This seat is reserved for female passengers only"
+                                            } else {
+                                                "This seat is reserved for male passengers only"
+                                            }
+                                            Toast.makeText(context, alertMsg, Toast.LENGTH_SHORT).show()
+                                            return@clickable
+                                        }
                                         if (isAssigned) {
                                             val pIdx = uiState.passengers.indexOfFirst { it.name.equals(traveller.name, ignoreCase = true) }
                                             if (pIdx >= 0) {
@@ -821,41 +864,68 @@ fun CheckoutScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    // Circular Avatar: Light Purple for Male, Light Pink for Female
+                                    // Circular Avatar: Light Purple for Male, Light Pink for Female, Gray when disabled
                                     Surface(
                                         shape = CircleShape,
-                                        color = if (isFemale) Color(0xFFFCE7F3) else Color(0xFFEDE9FE),
+                                        color = if (!isAllowed) Color(0xFFF1F5F9) else if (isFemale) Color(0xFFFCE7F3) else Color(0xFFEDE9FE),
                                         modifier = Modifier.size(38.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 imageVector = Icons.Default.Person,
                                                 contentDescription = null,
-                                                tint = if (isFemale) Color(0xFFBE185D) else Color(0xFF4338CA),
+                                                tint = if (!isAllowed) Color(0xFF94A3B8) else if (isFemale) Color(0xFFBE185D) else Color(0xFF4338CA),
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
 
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Text(
-                                            text = traveller.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = traveller.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = if (!isAllowed) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            if (!isAllowed) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = if (requiresFemale) Color(0xFFFCE7F3) else Color(0xFFEFF6FF),
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = if (requiresFemale) "Female only seat" else "Male only seat",
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (requiresFemale) Color(0xFFBE185D) else Color(0xFF1D4ED8),
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
                                         val genderLabel = if (isFemale) "Female" else "Male"
                                         Text(
                                             text = "$genderLabel, ${traveller.age} Years",
                                             fontSize = 12.sp,
-                                            color = Color.Gray
+                                            color = if (!isAllowed) Color(0xFFCBD5E1) else Color.Gray
                                         )
                                     }
                                 }
 
                                 Checkbox(
                                     checked = isAssigned,
+                                    enabled = isAllowed,
                                     onCheckedChange = { checked ->
+                                        if (!isAllowed) {
+                                            val alertMsg = if (requiresFemale) {
+                                                "This seat is reserved for female passengers only"
+                                            } else {
+                                                "This seat is reserved for male passengers only"
+                                            }
+                                            Toast.makeText(context, alertMsg, Toast.LENGTH_SHORT).show()
+                                            return@Checkbox
+                                        }
                                         if (!checked) {
                                             val pIdx = uiState.passengers.indexOfFirst { it.name.equals(traveller.name, ignoreCase = true) }
                                             if (pIdx >= 0) {
@@ -2837,11 +2907,13 @@ fun CheckoutScreen(
                         Text("Gender:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         FilterChip(
                             selected = newPassengerGender == "MALE",
+                            enabled = !requiresFemale,
                             onClick = { newPassengerGender = "MALE" },
                             label = { Text("Male") }
                         )
                         FilterChip(
                             selected = newPassengerGender == "FEMALE",
+                            enabled = !requiresMale,
                             onClick = { newPassengerGender = "FEMALE" },
                             label = { Text("Female") }
                         )

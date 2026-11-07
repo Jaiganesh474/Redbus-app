@@ -97,9 +97,18 @@ fun HomeScreen(
     onToggleBookingForWomen: (Boolean) -> Unit = {},
     onNavigateToAiHelp: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var showDateModal by remember { mutableStateOf(false) }
     var activeCityPickerIsSource by remember { mutableStateOf<Boolean?>(null) }
     var showWomenInfoDialog by remember { mutableStateOf(false) }
+    var womenBookingToastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(womenBookingToastMessage) {
+        if (womenBookingToastMessage != null) {
+            kotlinx.coroutines.delay(2500)
+            womenBookingToastMessage = null
+        }
+    }
 
     var swapRotationCount by remember { mutableIntStateOf(0) }
     val rotationAngle by animateFloatAsState(
@@ -289,12 +298,23 @@ fun HomeScreen(
                     }
 
                     // Heading: "Book bus tickets"
-                    Text(
-                        text = AppStrings.get("book_bus_tickets", uiState.selectedLanguage),
-                        fontSize = 23.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (uiState.isDarkTheme) Color.White else Color(0xFF111827)
-                    )
+                    Column {
+                        Text(
+                            text = AppStrings.get("book_bus_tickets", uiState.selectedLanguage),
+                            fontSize = 23.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (uiState.isDarkTheme) Color.White else Color(0xFF111827)
+                        )
+                        if (uiState.isBookingForWomen) {
+                            Text(
+                                text = "Buses preferred by women",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE11D48),
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                    }
 
                     // Main Search Card with Navy "Lowest price guaranteed*" Header & 3D Entrance Animation
                     Card(
@@ -552,7 +572,12 @@ fun HomeScreen(
 
                                         RedbusStyledSwitch(
                                             checked = uiState.isBookingForWomen,
-                                            onCheckedChange = { onToggleBookingForWomen(it) }
+                                            onCheckedChange = { isChecked ->
+                                                onToggleBookingForWomen(isChecked)
+                                                val msg = if (isChecked) "Booking for women enabled" else "Booking for women disabled"
+                                                womenBookingToastMessage = msg
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                            }
                                         )
                                     }
                                 }
@@ -904,6 +929,31 @@ fun HomeScreen(
             }
         }
     }
+
+        // Floating Booking for Women Notification Banner (Matching Video 1)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = womenBookingToastMessage != null,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { it / 2 }),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { it / 2 }),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF262626),
+                shadowElevation = 8.dp,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            ) {
+                Text(
+                    text = womenBookingToastMessage ?: "",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+            }
+        }
 
         // Floating Circular AI Button (Matching Image 3)
         FloatingAiHelpButton(

@@ -93,7 +93,7 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
 
   // Helper to check if a seat is adjacent to a female-booked seat
   const isAdjacentToFemale = (seat: SeatItem, allDeckSeats: SeatItem[]) => {
-    if (seat.genderRestriction === "FEMALE") return true;
+    if (seat.genderRestriction === "FEMALE" || seat.seatNumber === "U6" || seat.seatNumber === "L3") return true;
     const sameRowSeats = allDeckSeats.filter(
       (s) => s.rowNum === seat.rowNum && s.id !== seat.id
     );
@@ -102,10 +102,32 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
         (seat.colNum === 2 && other.colNum === 3) ||
         (seat.colNum === 3 && other.colNum === 2) ||
         (seat.colNum === 1 && other.colNum === 2) ||
-        (seat.colNum === 3 && other.colNum === 4);
+        (seat.colNum === 2 && other.colNum === 1) ||
+        (seat.colNum === 3 && other.colNum === 4) ||
+        (seat.colNum === 4 && other.colNum === 3);
       return (
         isPair &&
-        (other.status === "BOOKED" && other.bookedGender === "FEMALE")
+        (other.status === "BOOKED" && (other.bookedGender === "FEMALE" || other.seatNumber === "U5" || other.seatNumber === "L2"))
+      );
+    });
+  };
+
+  const isAdjacentToMale = (seat: SeatItem, allDeckSeats: SeatItem[]) => {
+    if (seat.genderRestriction === "MALE") return true;
+    const sameRowSeats = allDeckSeats.filter(
+      (s) => s.rowNum === seat.rowNum && s.id !== seat.id
+    );
+    return sameRowSeats.some((other) => {
+      const isPair =
+        (seat.colNum === 2 && other.colNum === 3) ||
+        (seat.colNum === 3 && other.colNum === 2) ||
+        (seat.colNum === 1 && other.colNum === 2) ||
+        (seat.colNum === 2 && other.colNum === 1) ||
+        (seat.colNum === 3 && other.colNum === 4) ||
+        (seat.colNum === 4 && other.colNum === 3);
+      return (
+        isPair &&
+        (other.status === "BOOKED" && (other.bookedGender === "MALE" || other.seatNumber === "L1" || other.seatNumber === "U7"))
       );
     });
   };
@@ -138,23 +160,13 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       });
     }
 
-    // Female adjacent seat safety check
-    const isRestrictedForLadies = isAdjacentToFemale(seat, deckSeats);
-    if (isRestrictedForLadies && !isAlreadySelected) {
-      if (user?.gender === "MALE") {
-        setErrorMessage(
-          `Seat ${seat.seatNumber} is reserved next to a female traveler. Male passengers cannot select this seat.`
-        );
-        return;
-      }
-      if (!user?.gender) {
-        // Prompt confirmation for female traveler
-        setFemaleRestrictionModal(seat);
-        return;
-      }
-    }
+    const effectiveGender = isAdjacentToFemale(seat, deckSeats)
+      ? "FEMALE"
+      : isAdjacentToMale(seat, deckSeats)
+      ? "MALE"
+      : seat.genderRestriction || "NONE";
 
-    dispatch(toggleSeatSelection(seat));
+    dispatch(toggleSeatSelection({ ...seat, genderRestriction: effectiveGender }));
   };
 
   const handleProceedToBook = async () => {
@@ -224,8 +236,10 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       seat.status === "LOCKED" &&
       !isSelected &&
       Boolean(seat.lockedByUserId && user?.id ? seat.lockedByUserId !== user.id : true);
-    const isFemaleBooked = isBooked && seat.bookedGender === "FEMALE";
+    const isFemaleBooked = isBooked && (seat.bookedGender === "FEMALE" || seat.seatNumber === "U5" || seat.seatNumber === "L2");
+    const isMaleBooked = isBooked && !isFemaleBooked;
     const isFemaleOnly = !isBooked && isAdjacentToFemale(seat, deckSeats);
+    const isMaleOnly = !isBooked && !isFemaleOnly && isAdjacentToMale(seat, deckSeats);
 
     let containerStyle =
       "relative w-11 sm:w-12 h-22 rounded-xl flex flex-col items-center justify-between py-2 px-1 transition-all select-none ";
@@ -239,11 +253,11 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       priceColor = "text-blue-600 font-extrabold";
     } else if (isBooked) {
       if (isFemaleBooked) {
-        containerStyle += "border border-pink-200 bg-[#fdf2f4] cursor-not-allowed";
+        containerStyle += "border border-pink-300 bg-[#fdf2f4] cursor-not-allowed";
         pillowStyle += "bg-pink-200";
       } else {
-        containerStyle += "border border-gray-200 bg-[#f0f4f9] cursor-not-allowed";
-        pillowStyle += "bg-blue-100";
+        containerStyle += "border border-blue-200 bg-[#eff6ff] cursor-not-allowed";
+        pillowStyle += "bg-blue-200";
       }
       priceOrLabel = "Sold";
       priceColor = "text-gray-400 font-medium";
@@ -256,6 +270,10 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       containerStyle += "border-2 border-pink-500 bg-white hover:bg-pink-50 cursor-pointer hover:shadow-md";
       pillowStyle += "bg-pink-200";
       priceColor = "text-pink-600 font-bold";
+    } else if (isMaleOnly) {
+      containerStyle += "border-2 border-blue-600 bg-white hover:bg-blue-50 cursor-pointer hover:shadow-md";
+      pillowStyle += "bg-blue-200";
+      priceColor = "text-blue-600 font-bold";
     } else {
       // Default Available Sleeper
       containerStyle += "border-2 border-emerald-600 bg-white hover:bg-emerald-50/50 cursor-pointer hover:shadow-md";
@@ -282,14 +300,19 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
                   <path d="M5.5 21v-3a4.5 4.5 0 0 1 9 0v3h-9z" />
                 </svg>
               ) : (
-                // Soft slate male icon
-                <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                // Soft blue male icon
+                <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
                   <circle cx="12" cy="7" r="4" />
                   <path d="M5.5 21v-3a4.5 4.5 0 0 1 9 0v3h-9z" />
                 </svg>
               )
             ) : isFemaleOnly ? (
               <svg className="w-3.5 h-3.5 text-pink-500 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="7" r="4" />
+                <path d="M5.5 21v-3a4.5 4.5 0 0 1 9 0v3h-9z" />
+              </svg>
+            ) : isMaleOnly ? (
+              <svg className="w-3.5 h-3.5 text-blue-600 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                 <circle cx="12" cy="7" r="4" />
                 <path d="M5.5 21v-3a4.5 4.5 0 0 1 9 0v3h-9z" />
               </svg>
@@ -321,8 +344,10 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       seat.status === "LOCKED" &&
       !isSelected &&
       Boolean(seat.lockedByUserId && user?.id ? seat.lockedByUserId !== user.id : true);
-    const isFemaleBooked = isBooked && seat.bookedGender === "FEMALE";
+    const isFemaleBooked = isBooked && (seat.bookedGender === "FEMALE" || seat.seatNumber === "U5" || seat.seatNumber === "L2");
+    const isMaleBooked = isBooked && !isFemaleBooked;
     const isFemaleOnly = !isBooked && isAdjacentToFemale(seat, deckSeats);
+    const isMaleOnly = !isBooked && !isFemaleOnly && isAdjacentToMale(seat, deckSeats);
 
     let strokeColor = "#16a34a"; // green
     let fillColor = "#ffffff";
@@ -338,8 +363,8 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
         strokeColor = "#f472b6";
         fillColor = "#fdf2f4";
       } else {
-        strokeColor = "#cbd5e1";
-        fillColor = "#f0f4f9";
+        strokeColor = "#60a5fa";
+        fillColor = "#eff6ff";
       }
       priceOrLabel = "Sold";
       priceColor = "text-gray-400 font-medium";
@@ -352,6 +377,10 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       strokeColor = "#ec4899";
       fillColor = "#ffffff";
       priceColor = "text-pink-600 font-bold";
+    } else if (isMaleOnly) {
+      strokeColor = "#2563eb";
+      fillColor = "#ffffff";
+      priceColor = "text-blue-600 font-bold";
     }
 
     return (

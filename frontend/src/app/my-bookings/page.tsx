@@ -2197,6 +2197,18 @@ export default function MyBookingsPage() {
           booking.busType.toLowerCase().includes("sleeper") ||
           bookedSeats.some((s) => s.toUpperCase().startsWith("U") || s.toUpperCase().startsWith("L"));
 
+        const isSeatFemale = (seatNum: string) => {
+          const p = (booking.passengers || []).find(
+            (pass) => pass.seatNumber && pass.seatNumber.trim().toUpperCase() === seatNum.trim().toUpperCase()
+          );
+          if (p && p.gender) {
+            return p.gender.toUpperCase().startsWith("F");
+          }
+          return ["U5", "U6", "L2", "L3"].includes(seatNum.trim().toUpperCase());
+        };
+        const hasFemaleBooked = bookedSeats.some((s) => isSeatFemale(s));
+        const hasMaleBooked = bookedSeats.some((s) => !isSeatFemale(s));
+
         // Lower Deck 1+2 Sleeper Layout (Image 4: L1-L15)
         const lowerDeckRows = [
           { left: "L1", right1: "L2", right2: "L3" },
@@ -2267,7 +2279,9 @@ export default function MyBookingsPage() {
                             <div
                               className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
                                 bookedSeats.includes(r.left)
-                                  ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                  ? isSeatFemale(r.left)
+                                    ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                    : "bg-blue-600 border border-blue-700 text-white shadow-md shadow-blue-500/30 scale-105"
                                   : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
                               }`}
                             >
@@ -2290,7 +2304,9 @@ export default function MyBookingsPage() {
                                   key={s}
                                   className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
                                     bookedSeats.includes(s)
-                                      ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                      ? isSeatFemale(s)
+                                        ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                        : "bg-blue-600 border border-blue-700 text-white shadow-md shadow-blue-500/30 scale-105"
                                       : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
                                   }`}
                                 >
@@ -2329,7 +2345,9 @@ export default function MyBookingsPage() {
                             <div
                               className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
                                 bookedSeats.includes(r.left)
-                                  ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                  ? isSeatFemale(r.left)
+                                    ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                    : "bg-blue-600 border border-blue-700 text-white shadow-md shadow-blue-500/30 scale-105"
                                   : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
                               }`}
                             >
@@ -2352,7 +2370,9 @@ export default function MyBookingsPage() {
                                   key={s}
                                   className={`w-9 h-14 rounded-lg flex flex-col items-center justify-between p-1 transition-all ${
                                     bookedSeats.includes(s)
-                                      ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                      ? isSeatFemale(s)
+                                        ? "bg-pink-600 border border-pink-700 text-white shadow-md shadow-pink-500/30 scale-105"
+                                        : "bg-blue-600 border border-blue-700 text-white shadow-md shadow-blue-500/30 scale-105"
                                       : "bg-slate-200/90 border border-slate-300/80 text-slate-400"
                                   }`}
                                 >
@@ -2392,7 +2412,9 @@ export default function MyBookingsPage() {
                                 key={s}
                                 className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
                                   bookedSeats.includes(s)
-                                    ? "bg-pink-600 text-white shadow-sm font-black"
+                                    ? isSeatFemale(s)
+                                      ? "bg-pink-600 text-white shadow-sm font-black"
+                                      : "bg-blue-600 text-white shadow-sm font-black"
                                     : "bg-slate-200 text-slate-500"
                                 }`}
                               >
@@ -2407,7 +2429,9 @@ export default function MyBookingsPage() {
                                 key={s}
                                 className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
                                   bookedSeats.includes(s)
-                                    ? "bg-pink-600 text-white shadow-sm font-black"
+                                    ? isSeatFemale(s)
+                                      ? "bg-pink-600 text-white shadow-sm font-black"
+                                      : "bg-blue-600 text-white shadow-sm font-black"
                                     : "bg-slate-200 text-slate-500"
                                 }`}
                               >
@@ -2422,12 +2446,26 @@ export default function MyBookingsPage() {
                 )}
               </div>
 
-              {/* Clean Legend (Image 3) */}
-              <div className="flex items-center justify-center gap-5 text-xs font-bold pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3.5 h-3.5 rounded-sm bg-pink-600" />
-                  <span className="text-slate-800">Your Booked Seat ({bookedSeats.join(", ") || "Yours"})</span>
-                </div>
+              {/* Clean Legend (Image 5) */}
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-bold pt-2 border-t border-gray-100">
+                {hasFemaleBooked && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3.5 h-3.5 rounded-sm bg-pink-600" />
+                    <span className="text-slate-800">Your Seat (Female)</span>
+                  </div>
+                )}
+                {hasMaleBooked && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3.5 h-3.5 rounded-sm bg-blue-600" />
+                    <span className="text-slate-800">Your Seat (Male)</span>
+                  </div>
+                )}
+                {!hasFemaleBooked && !hasMaleBooked && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3.5 h-3.5 rounded-sm bg-pink-600" />
+                    <span className="text-slate-800">Your Seat ({bookedSeats.join(", ") || "Yours"})</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5">
                   <div className="w-3.5 h-3.5 rounded-sm bg-slate-200" />
                   <span className="text-slate-400 font-medium">Other Berths</span>

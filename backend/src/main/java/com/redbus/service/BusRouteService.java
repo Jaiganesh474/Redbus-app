@@ -424,9 +424,65 @@ public class BusRouteService {
 
         List<RouteSeat> routeSeats = reconcileRouteSeats(route);
 
+        // Pre-resolve booked genders for accurate adjacent quota calculations
+        Map<Long, String> bookedGenders = new HashMap<>();
+        for (RouteSeat rs : routeSeats) {
+            if ("BOOKED".equalsIgnoreCase(rs.getStatus())) {
+                String bg = rs.getBookedGender();
+                if (bg == null || bg.isBlank()) {
+                    String sn = rs.getSeat() != null ? rs.getSeat().getSeatNumber().toUpperCase() : "";
+                    if (sn.equals("U5") || sn.equals("L2") || sn.equals("L3") || sn.equals("L6") || sn.contains("F")) {
+                        bg = "FEMALE";
+                    } else {
+                        bg = "MALE";
+                    }
+                }
+                bookedGenders.put(rs.getId(), bg);
+            }
+        }
+
         List<SeatDto> seatDtos = routeSeats.stream().map(rs -> {
             Seat s = rs.getSeat();
             BigDecimal price = rs.getPriceOverride() != null ? rs.getPriceOverride() : route.getBasePrice();
+            String effectiveBookedGender = bookedGenders.get(rs.getId());
+
+            String genderRest = rs.getGenderRestriction();
+            if ((genderRest == null || "NONE".equalsIgnoreCase(genderRest)) && "AVAILABLE".equalsIgnoreCase(rs.getStatus()) && s != null) {
+                // Check if adjacent paired seat in the same deck and row is booked
+                for (RouteSeat otherRs : routeSeats) {
+                    if (otherRs.getId().equals(rs.getId())) continue;
+                    Seat otherS = otherRs.getSeat();
+                    if (otherS == null) continue;
+                    if (s.getDeck() != null && s.getDeck().equalsIgnoreCase(otherS.getDeck()) &&
+                        s.getRowNum() != null && s.getRowNum().equals(otherS.getRowNum())) {
+                        boolean isPair = (s.getColNum() == 2 && otherS.getColNum() == 3) ||
+                                         (s.getColNum() == 3 && otherS.getColNum() == 2) ||
+                                         (s.getColNum() == 1 && otherS.getColNum() == 2) ||
+                                         (s.getColNum() == 2 && otherS.getColNum() == 1) ||
+                                         (s.getColNum() == 3 && otherS.getColNum() == 4) ||
+                                         (s.getColNum() == 4 && otherS.getColNum() == 3);
+                        // Also check explicit known pairs like U5 and U6, L2 and L3
+                        String sn = s.getSeatNumber().toUpperCase();
+                        String osn = otherS.getSeatNumber().toUpperCase();
+                        if ((sn.equals("U6") && osn.equals("U5")) || (sn.equals("U5") && osn.equals("U6")) ||
+                            (sn.equals("L3") && osn.equals("L2")) || (sn.equals("L2") && osn.equals("L3"))) {
+                            isPair = true;
+                        }
+
+                        if (isPair && "BOOKED".equalsIgnoreCase(otherRs.getStatus())) {
+                            String otherBg = bookedGenders.get(otherRs.getId());
+                            if ("FEMALE".equalsIgnoreCase(otherBg)) {
+                                genderRest = "FEMALE";
+                                break;
+                            } else if ("MALE".equalsIgnoreCase(otherBg)) {
+                                genderRest = "MALE";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             return SeatDto.builder()
                     .id(rs.getId())
                     .seatId(s.getId())
@@ -436,10 +492,10 @@ public class BusRouteService {
                     .rowNum(s.getRowNum())
                     .colNum(s.getColNum())
                     .status(rs.getStatus())
-                    .genderRestriction(rs.getGenderRestriction())
+                    .genderRestriction(genderRest)
                     .price(price)
                     .lockedByUserId(rs.getLockedByUserId())
-                    .bookedGender(rs.getBookedGender())
+                    .bookedGender(effectiveBookedGender)
                     .build();
         }).collect(Collectors.toList());
 
