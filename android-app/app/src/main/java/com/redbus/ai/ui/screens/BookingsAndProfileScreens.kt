@@ -4778,6 +4778,22 @@ fun ProfileAndWalletScreen(
         "മലയാളം (Malayalam)" to "മലയാളം (Malayalam)"
     )
 
+    val activeLanguageKey = uiState.selectedLanguage.ifBlank { "English" }
+    var pendingLanguage by remember(activeLanguageKey) { mutableStateOf(activeLanguageKey) }
+    var pendingDialogLanguage by remember(activeLanguageKey, showLanguageSelectionDialog) { mutableStateOf(activeLanguageKey) }
+
+    fun getLanguageConfirmText(langKey: String): String {
+        val lower = langKey.lowercase()
+        return when {
+            lower.contains("tamil") || lower.contains("தமிழ்") -> "தமிழுக்கு மாறுங்கள்"
+            lower.contains("hindi") || lower.contains("हिंदी") -> "हिंदी में बदलें"
+            lower.contains("kannada") || lower.contains("ಕನ್ನಡ") -> "ಕನ್ನಡಕ್ಕೆ ಬದಲಾಯಿಸಿ"
+            lower.contains("telugu") || lower.contains("తెలుగు") -> "తెలుగులోకి మార్చండి"
+            lower.contains("malayalam") || lower.contains("മലയാളം") -> "മലയാളത്തിലേക്ക് മാറുക"
+            else -> "Switch to English"
+        }
+    }
+
     var isRefreshingAccount by remember { mutableStateOf(false) }
     val refreshAccountScope = rememberCoroutineScope()
 
@@ -5019,7 +5035,7 @@ fun ProfileAndWalletScreen(
 
         // 2. "Try redBus in your language" Strip (Matching Image 2)
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = AppStrings.get("try_redbus_in_your_language", uiState.selectedLanguage),
                     fontSize = 16.sp,
@@ -5032,10 +5048,9 @@ fun ProfileAndWalletScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(supportedLanguages) { (key, label) ->
-                        val isSelected = uiState.selectedLanguage.equals(key, ignoreCase = true) ||
-                                (key == "English" && uiState.selectedLanguage.isBlank())
+                        val isSelected = pendingLanguage.equals(key, ignoreCase = true)
                         Surface(
-                            onClick = { onSelectLanguage(key) },
+                            onClick = { pendingLanguage = key },
                             shape = RoundedCornerShape(10.dp),
                             color = if (isSelected) RedbusCrimson else MaterialTheme.colorScheme.surface,
                             border = BorderStroke(
@@ -5050,6 +5065,29 @@ fun ProfileAndWalletScreen(
                                 fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (!pendingLanguage.equals(activeLanguageKey, ignoreCase = true)) {
+                    Surface(
+                        onClick = { onSelectLanguage(pendingLanguage) },
+                        shape = RoundedCornerShape(50),
+                        color = Color(0xFFFDE2E4),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Text(
+                                text = getLanguageConfirmText(pendingLanguage),
+                                color = Color(0xFF111827),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -6243,8 +6281,7 @@ fun ProfileAndWalletScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     supportedLanguages.forEach { (key, label) ->
-                        val isSelected = uiState.selectedLanguage.equals(key, ignoreCase = true) ||
-                                (key == "English" && uiState.selectedLanguage.isBlank())
+                        val isSelected = pendingDialogLanguage.equals(key, ignoreCase = true)
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) RedbusCrimson.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface,
@@ -6255,8 +6292,7 @@ fun ProfileAndWalletScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onSelectLanguage(key)
-                                    showLanguageSelectionDialog = false
+                                    pendingDialogLanguage = key
                                 }
                         ) {
                             Row(
@@ -6279,7 +6315,26 @@ fun ProfileAndWalletScreen(
                     }
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onSelectLanguage(pendingDialogLanguage)
+                        showLanguageSelectionDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RedbusCrimson),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Text(
+                        text = if (!pendingDialogLanguage.equals(activeLanguageKey, ignoreCase = true)) {
+                            getLanguageConfirmText(pendingDialogLanguage)
+                        } else {
+                            "Confirm"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            },
             dismissButton = {
                 TextButton(onClick = { showLanguageSelectionDialog = false }) {
                     Text("Close")
