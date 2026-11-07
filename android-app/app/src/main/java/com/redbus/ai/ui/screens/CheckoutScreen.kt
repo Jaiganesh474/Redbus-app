@@ -27,6 +27,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 
 import android.widget.FrameLayout
+import android.widget.Toast
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.foundation.background
 
@@ -131,6 +134,18 @@ fun CheckoutScreen(
 ) {
 
     val route = uiState.selectedRoute ?: return
+    val context = LocalContext.current
+
+    val femaleOnlySeat = uiState.selectedSeats.firstOrNull {
+        it.genderRestriction.equals("FEMALE", ignoreCase = true) ||
+        it.seatNumber.equals("U6", ignoreCase = true) ||
+        it.seatNumber.equals("L3", ignoreCase = true)
+    }
+    val maleOnlySeat = uiState.selectedSeats.firstOrNull {
+        it.genderRestriction.equals("MALE", ignoreCase = true)
+    }
+    val requiresFemale = uiState.isBookingForWomen || femaleOnlySeat != null
+    val requiresMale = !requiresFemale && maleOnlySeat != null
 
     var couponInput by remember { mutableStateOf("") }
 
@@ -731,17 +746,6 @@ fun CheckoutScreen(
                     ) {
                         val totalSeats = if (uiState.selectedSeats.isNotEmpty()) uiState.selectedSeats.size else 1
                         val filledCount = uiState.passengers.count { it.name.isNotBlank() }
-
-                        val femaleOnlySeat = uiState.selectedSeats.firstOrNull {
-                            it.genderRestriction.equals("FEMALE", ignoreCase = true) ||
-                            it.seatNumber.equals("U6", ignoreCase = true) ||
-                            it.seatNumber.equals("L3", ignoreCase = true)
-                        }
-                        val maleOnlySeat = uiState.selectedSeats.firstOrNull {
-                            it.genderRestriction.equals("MALE", ignoreCase = true)
-                        }
-                        val requiresFemale = uiState.isBookingForWomen || femaleOnlySeat != null
-                        val requiresMale = !requiresFemale && maleOnlySeat != null
 
                         Column {
                             Text(
