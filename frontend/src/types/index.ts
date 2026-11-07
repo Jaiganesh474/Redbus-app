@@ -161,10 +161,13 @@ export interface BookingDetails {
   freeCancellationFee?: number;
   hasTripGuarantee?: boolean;
   tripGuaranteeFee?: number;
+  tripGuaranteeCashback?: number;
   serviceFee?: number;
   walletAmountUsed?: number;
   cancellationReason?: string;
   refundAmount?: number;
+  refundArn?: string;
+  ticketNo?: string;
   userRating?: number;
   userReview?: string;
   createdAt: string;

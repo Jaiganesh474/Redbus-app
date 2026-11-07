@@ -256,9 +256,15 @@ data class BookingDetails(
     val freeCancellationFee: Double? = 0.0,
     val hasTripGuarantee: Boolean? = false,
     val tripGuaranteeFee: Double? = 0.0,
+    val tripGuaranteeCashback: Double? = 0.0,
     val serviceFee: Double? = 0.0,
     val walletAmountUsed: Double? = 0.0,
     val refundAmount: Double? = null,
+    val refundArn: String? = null,
+    val refundRequestedAt: String? = null,
+    val refundApprovedAt: String? = null,
+    val cancellationReason: String? = null,
+    val ticketNo: String? = null,
     val userRating: Int? = null,
     val userReview: String? = null,
     val createdAt: String = "",
@@ -315,6 +321,7 @@ data class CancelBookingResponse(
     val pnr: String = "",
     val status: String = "",
     val refundAmount: Double = 0.0,
+    val refundArn: String? = null,
     val walletBalance: Double? = null,
     val message: String = ""
 )

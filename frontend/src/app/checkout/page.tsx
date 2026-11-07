@@ -701,7 +701,7 @@ function CheckoutContent() {
           className="inline-flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer hover:border-gray-300"
         >
           <ArrowLeft className="w-4 h-4 text-[#d84e55]" />
-          <span> Back & Change Seats</span>
+          <span> Back </span>
         </button>
         <span className="text-xs text-gray-400 font-medium">
           Returning to search releases your locked seats automatically.
@@ -942,10 +942,11 @@ function CheckoutContent() {
             {/* Social Proof Pill Banner */}
             <div className="bg-[#eaf5ea] text-[#2c7a36] text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center gap-2">
               <span>
-                  {tripGuaranteeBuyers > 0
-                    ? `Bought by ${tripGuaranteeBuyers.toLocaleString()} passenger${tripGuaranteeBuyers === 1 ? '' : 's'} this month`
-                    : `Selected by live passengers this month`}
-                </span>
+                {(() => {
+                  const livePassengerCount = Math.max(0, tripGuaranteeBuyers) + (hasTripGuarantee === true ? Math.max(1, selectedSeats.length) : 0);
+                  return `Selected by ${livePassengerCount.toLocaleString()} live passenger${livePassengerCount === 1 ? "" : "s"} in this month`;
+                })()}
+              </span>
             </div>
 
             {/* Radio Choice Options */}

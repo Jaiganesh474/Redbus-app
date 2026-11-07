@@ -17,6 +17,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     Optional<Booking> findByPnr(String pnr);
 
+    Optional<Booking> findByRefundArn(String refundArn);
+
     Page<Booking> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     List<Booking> findByStatusAndCreatedAtBefore(String status, java.time.LocalDateTime createdAt);
@@ -43,6 +45,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.hasTripGuarantee = true")
     long countTripGuaranteeBookings();
+
+    @Query("SELECT COUNT(bp) FROM Booking b JOIN b.passengers bp WHERE b.hasTripGuarantee = true AND b.createdAt >= :startOfMonth")
+    long countTripGuaranteePassengersSince(@Param("startOfMonth") java.time.LocalDateTime startOfMonth);
+
+    @Query("SELECT COUNT(bp) FROM Booking b JOIN b.passengers bp WHERE b.hasTripGuarantee = true")
+    long countAllTripGuaranteePassengers();
 
     @Query("SELECT DISTINCT b FROM Booking b LEFT JOIN FETCH b.passengers bp WHERE b.route.id = :routeId AND b.status = 'CONFIRMED'")
     List<Booking> findConfirmedBookingsByRouteId(@Param("routeId") Long routeId);

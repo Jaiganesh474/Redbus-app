@@ -110,6 +110,13 @@ public class Booking {
     @Column(name = "refund_approved_at")
     private LocalDateTime refundApprovedAt;
 
+    @Column(name = "refund_arn", length = 25)
+    private String refundArn;
+
+    @Column(name = "trip_guarantee_cashback", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal tripGuaranteeCashback = BigDecimal.ZERO;
+
     @Column(name = "wallet_amount_used", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal walletAmountUsed = BigDecimal.ZERO;

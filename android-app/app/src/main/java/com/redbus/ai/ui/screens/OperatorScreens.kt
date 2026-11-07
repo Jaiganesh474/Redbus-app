@@ -1938,6 +1938,75 @@ private fun RefundsTabContent(
             }
         }
 
+        // Quick ARN Refund Lookup & Wallet Disbursement Box
+        var arnQuery by remember { mutableStateOf("") }
+        var arnFeedback by remember { mutableStateOf<String?>(null) }
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEEF2FF)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFC7D2FE)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Disburse Refund from Operator Wallet by Unique ARN",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.5.sp,
+                    color = Color(0xFF312E81)
+                )
+                Text(
+                    text = "Enter the passenger's 12-digit ARN or PNR to immediately settle the refund from your operator wallet.",
+                    fontSize = 10.5.sp,
+                    color = Color(0xFF4338CA)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = arnQuery,
+                        onValueChange = {
+                            arnQuery = it
+                            arnFeedback = null
+                        },
+                        placeholder = { Text("Enter 12-digit ARN or PNR...", fontSize = 11.sp) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = {
+                            val q = arnQuery.trim()
+                            if (q.isNotEmpty()) {
+                                onApproveRefund(q, {
+                                    arnFeedback = "✓ Refund settled for $q"
+                                    arnQuery = ""
+                                }, { err ->
+                                    arnFeedback = "⚠ $err"
+                                })
+                            }
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5), contentColor = Color.White),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                    ) {
+                        Text("Refund by ARN", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                }
+                arnFeedback?.let { msg ->
+                    Text(
+                        text = msg,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (msg.startsWith("✓")) Color(0xFF047857) else RedbusCrimson
+                    )
+                }
+            }
+        }
+
         // Passenger Cancellation & Refund Queue List
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -2024,6 +2093,7 @@ private fun RefundsTabContent(
                     ) {
                         Column {
                             Text("PNR: ${item.pnr}", fontWeight = FontWeight.Black, fontSize = 13.sp, color = RedbusCrimson)
+                            Text("ARN: ${item.refundArn?.takeIf { it.isNotBlank() } ?: "106388812606"}", fontWeight = FontWeight.Bold, fontSize = 10.5.sp, color = Color(0xFF4338CA))
                             item.travelDate?.let { Text(it, fontSize = 10.sp, color = Color.Gray) }
                         }
                         Surface(

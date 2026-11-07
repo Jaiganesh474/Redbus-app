@@ -469,6 +469,13 @@ public class EmailService {
             invoiceRows.append("<tr><td class='label'>Free Cancellation Guarantee</td><td class='value' style='color:#059669;'>+₹").append(cancelFee).append("</td></tr>");
         }
 
+        if (Boolean.TRUE.equals(booking.getHasTripGuarantee())) {
+            java.math.BigDecimal tgFee = booking.getTripGuaranteeFee() != null && booking.getTripGuaranteeFee().compareTo(java.math.BigDecimal.ZERO) > 0
+                    ? booking.getTripGuaranteeFee()
+                    : new java.math.BigDecimal("21.00").multiply(java.math.BigDecimal.valueOf(seatCount));
+            invoiceRows.append("<tr><td class='label'>Trip Guarantee Protection</td><td class='value' style='color:#059669;'>+₹").append(tgFee).append("</td></tr>");
+        }
+
         if (booking.getDiscountAmount() != null && booking.getDiscountAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
             invoiceRows.append("<tr><td class='label'>Coupon Discount (").append(booking.getCouponCode() != null ? booking.getCouponCode() : "PROMO").append(")</td><td class='value' style='color:#059669;'>-₹").append(booking.getDiscountAmount()).append("</td></tr>");
         }
@@ -496,6 +503,19 @@ public class EmailService {
         }
         invoiceRows.append("<tr><td class='label'>Payment Method</td><td class='value' style='color:#1e40af;'>").append(paymentModeText).append("</td></tr>");
         invoiceRows.append("<tr><td class='label' style='font-size:15px;font-weight:800;color:#111827;'>Total Amount Paid</td><td class='value' style='color:#e23744;font-size:20px;font-weight:900;'>₹").append(booking.getTotalAmount()).append("</td></tr>");
+
+        String freeCancelStatusHtml = Boolean.TRUE.equals(booking.getHasFreeCancellation())
+                ? "<span style='color:#059669;font-weight:800;'>YES (100% Refund Protection)</span>"
+                : "<span style='color:#6b7280;font-weight:600;'>NO</span>";
+
+        int cashbackPct = 20 + (int) ((((booking.getRoute().getId() != null ? booking.getRoute().getId() : 1L) * 7L) + (seatCount * 5L)) % 11L);
+        java.math.BigDecimal estCashback = totalBaseFare.multiply(java.math.BigDecimal.valueOf(cashbackPct))
+                .divide(java.math.BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP)
+                .max(new java.math.BigDecimal("230"));
+
+        String tripGuaranteeStatusHtml = Boolean.TRUE.equals(booking.getHasTripGuarantee())
+                ? "<span style='color:#059669;font-weight:800;'>YES (Full Refund + ₹" + estCashback + " Cashback if Operator Cancels)</span>"
+                : "<span style='color:#6b7280;font-weight:600;'>NO</span>";
 
         return """
             <!DOCTYPE html>
@@ -656,6 +676,8 @@ public class EmailService {
                     <tr><td class="label">Boarding Point</td><td class="value">%s</td></tr>
                     <tr><td class="label">Dropping Point</td><td class="value">%s</td></tr>
                     <tr><td class="label">Passenger(s)</td><td class="value">%s</td></tr>
+                    <tr><td class="label">Free Cancellation Selected</td><td class="value">%s</td></tr>
+                    <tr><td class="label">Trip Guarantee Selected</td><td class="value">%s</td></tr>
                   </table>
 
                   <div class="section-title">Payment & Tax Invoice Breakdown</div>
@@ -686,6 +708,8 @@ public class EmailService {
                 booking.getBoardingPoint(),
                 booking.getDroppingPoint(),
                 passengersList,
+                freeCancelStatusHtml,
+                tripGuaranteeStatusHtml,
                 invoiceRows.toString(),
                 java.time.Year.now().getValue()
         );
@@ -1037,6 +1061,11 @@ public class EmailService {
         String freeCancelNote = Boolean.TRUE.equals(booking.getHasFreeCancellation())
                 ? "100% Free Cancellation Protection was applied to this booking."
                 : "Standard time-based cancellation policy was applied.";
+        String arn = booking.getRefundArn() != null && !booking.getRefundArn().isBlank()
+                ? booking.getRefundArn()
+                : String.format("%012d", 106388000000L + (((booking.getId() != null ? booking.getId() * 12606L : 12606L) + Math.abs(booking.getPnr().hashCode() % 900000L)) % 99999999L));
+        String tgStatus = Boolean.TRUE.equals(booking.getHasTripGuarantee()) ? "YES" : "NO";
+        String fcStatus = Boolean.TRUE.equals(booking.getHasFreeCancellation()) ? "YES" : "NO";
 
         return """
             <!DOCTYPE html>
@@ -1207,8 +1236,11 @@ public class EmailService {
                     <tr><td class="label">Travel Date</td><td class="value">%s at %s</td></tr>
                     <tr><td class="label">Bus Operator</td><td class="value">%s (%s)</td></tr>
                     <tr><td class="label">Passenger(s)</td><td class="value">%s</td></tr>
+                    <tr><td class="label">Free Cancellation Selected</td><td class="value">%s</td></tr>
+                    <tr><td class="label">Trip Guarantee Selected</td><td class="value">%s</td></tr>
                     <tr><td class="label">Paid Amount</td><td class="value">₹%s</td></tr>
                     <tr><td class="label">Refund Status</td><td class="value" style="color:#059669;font-weight:800;">%s (Processed)</td></tr>
+                    <tr><td class="label">Unique Refund ARN</td><td class="value" style="font-family:monospace;font-weight:900;color:#1d4ed8;">%s</td></tr>
                     <tr><td class="label">Reason</td><td class="value">%s</td></tr>
                     <tr><td class="label">Policy Note</td><td class="value" style="font-size:12px;color:#6b7280;">%s</td></tr>
                   </table>
@@ -1232,11 +1264,192 @@ public class EmailService {
                 booking.getRoute().getBus().getOperatorName(),
                 booking.getRoute().getBus().getBusType(),
                 passengersList,
+                fcStatus,
+                tgStatus,
                 booking.getTotalAmount().add(booking.getWalletAmountUsed() != null ? booking.getWalletAmountUsed() : java.math.BigDecimal.ZERO),
                 refundText,
+                arn,
                 booking.getCancellationReason() != null ? booking.getCancellationReason() : "Customer Request",
                 freeCancelNote
         );
+    }
+
+    public boolean sendOperatorBusCancelledEmail(
+            Booking booking,
+            java.math.BigDecimal originalPaidTotal,
+            java.math.BigDecimal tripGuaranteeBonus,
+            java.math.BigDecimal totalRefund,
+            String arn
+    ) {
+        try {
+            String recipientEmail = booking.getContactEmail() != null ? booking.getContactEmail().trim() : "customer@redbus.in";
+            String passengersList = booking.getPassengers().stream()
+                    .map(bp -> bp.getName() + " (Seat " + bp.getSeatNumber() + ", " + bp.getAge() + "y, " + bp.getGender() + ")")
+                    .collect(Collectors.joining("<br/>"));
+
+            String opName = booking.getRoute().getBus() != null ? booking.getRoute().getBus().getOperatorName() : "Bus Operator";
+            String busType = booking.getRoute().getBus() != null ? booking.getRoute().getBus().getBusType() : "AC Sleeper";
+            boolean hasTg = Boolean.TRUE.equals(booking.getHasTripGuarantee());
+            boolean hasFc = Boolean.TRUE.equals(booking.getHasFreeCancellation());
+            String tgBadge = hasTg
+                    ? "<span style='color:#059669;font-weight:800;'>YES (100% Full Refund + ₹" + tripGuaranteeBonus.setScale(2, java.math.RoundingMode.HALF_UP) + " Extra Cashback Applied)</span>"
+                    : "<span style='color:#6b7280;font-weight:600;'>NO (100% Full Ticket Fare Refunded)</span>";
+            String fcBadge = hasFc ? "YES" : "NO";
+            String bonusRowHtml = hasTg && tripGuaranteeBonus != null && tripGuaranteeBonus.compareTo(java.math.BigDecimal.ZERO) > 0
+                    ? "<tr><td class='label'>Trip Guarantee Cashback Bonus</td><td class='value' style='color:#059669;font-weight:900;'>+₹" + tripGuaranteeBonus.setScale(2, java.math.RoundingMode.HALF_UP) + "</td></tr>"
+                    : "";
+
+            String htmlContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap');
+                    * { box-sizing: border-box; }
+                    body {
+                      font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                      margin: 0; padding: 24px 12px; background-color: #f4f6f8; color: #1c1c1c;
+                    }
+                    .container {
+                      max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden;
+                      border: 1px solid #eaeaea; box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+                    }
+                    .header {
+                      background: linear-gradient(135deg, #dc2626 0%%, #991b1b 100%%);
+                      padding: 28px 24px; color: #ffffff; text-align: center;
+                    }
+                    .header h1 { margin: 0; font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 900; }
+                    .header p { margin: 6px 0 0; font-size: 13px; font-weight: 600; opacity: 0.95; }
+                    .body { padding: 26px 24px; }
+                    .apology-box {
+                      background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 16px;
+                      padding: 16px; margin-bottom: 20px; color: #991b1b; font-size: 13px; line-height: 1.55;
+                    }
+                    .refund-card {
+                      background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%);
+                      border: 1.5px solid #86efac; border-radius: 16px; padding: 18px; margin-bottom: 20px;
+                    }
+                    .section-title {
+                      font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+                      color: #4b5563; margin: 18px 0 10px 0; border-bottom: 1.5px solid #f3f4f6; padding-bottom: 6px;
+                    }
+                    .details-table { width: 100%%; border-collapse: collapse; margin-bottom: 16px; }
+                    .details-table td { padding: 9px 0; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+                    .label { color: #6b7280; width: 42%%; font-weight: 500; }
+                    .value { font-weight: 700; color: #111827; }
+                    .footer {
+                      background: #fafafa; padding: 18px 24px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #f0f0f0;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="header">
+                      <h1>redBus</h1>
+                      <p>Important Notice: Bus Journey Cancelled by Operator & Instant Refund Credited</p>
+                    </div>
+                    <div class="body">
+                      <div class="apology-box">
+                        <strong>🙏 Sincere Apologies for the Inconvenience:</strong><br/>
+                        We are very sorry to inform you that the bus operator (<strong>%s</strong>) has cancelled the scheduled bus journey from <strong>%s ➔ %s</strong> on <strong>%s</strong> due to operational reasons.<br/><br/>
+                        To ensure you are never at a loss, we have <strong>automatically processed your full ticket refund%s</strong> directly to your account!
+                      </div>
+
+                      <div class="refund-card">
+                        <div style="font-weight:900;color:#166534;font-size:16px;margin-bottom:6px;">
+                          ✔ ₹%s Refunded Automatically (Lightning Fast Refund)
+                        </div>
+                        <div style="font-size:12px;color:#15803d;line-height:1.5;">
+                          • <strong>Unique Refund ARN:</strong> <span style="font-family:monospace;font-weight:900;">%s</span><br/>
+                          • <strong>Refund Status:</strong> COMPLETED & CREDITED<br/>
+                          • <strong>Updated redBus Wallet Balance:</strong> ₹%s
+                        </div>
+                      </div>
+
+                      <div class="section-title">Cancelled Ticket & Bus Details</div>
+                      <table class="details-table">
+                        <tr><td class="label">Booking PNR</td><td class="value" style="color:#dc2626;font-weight:900;">%s</td></tr>
+                        <tr><td class="label">Route</td><td class="value">%s ➔ %s</td></tr>
+                        <tr><td class="label">Scheduled Date & Time</td><td class="value">%s at %s</td></tr>
+                        <tr><td class="label">Cancelled By Operator</td><td class="value">%s (%s)</td></tr>
+                        <tr><td class="label">Passenger(s) & Seats</td><td class="value">%s</td></tr>
+                        <tr><td class="label">Free Cancellation Selected</td><td class="value">%s</td></tr>
+                        <tr><td class="label">Trip Guarantee Selected</td><td class="value">%s</td></tr>
+                      </table>
+
+                      <div class="section-title">Automatic Refund & Cashback Breakdown</div>
+                      <table class="details-table">
+                        <tr><td class="label">Original Ticket Amount Paid</td><td class="value">₹%s</td></tr>
+                        %s
+                        <tr><td class="label">Cancellation Charges</td><td class="value" style="color:#059669;">₹0.00 (Waived - Operator Cancelled)</td></tr>
+                        <tr><td class="label" style="font-weight:800;color:#111827;">Total Refund Credited</td><td class="value" style="color:#059669;font-size:18px;font-weight:900;">₹%s</td></tr>
+                        <tr><td class="label">Unique ARN Reference</td><td class="value" style="font-family:monospace;color:#1d4ed8;">%s</td></tr>
+                      </table>
+
+                      <p style="font-size:12px;color:#6b7280;line-height:1.5;">
+                        Once again, we deeply regret the inconvenience caused by the operator's schedule cancellation. You can use your refunded balance immediately to book any alternative bus on redBus.
+                      </p>
+                    </div>
+                    <div class="footer">
+                      redBus India • 24x7 Priority Support • © %d redBus
+                    </div>
+                  </div>
+                </body>
+                </html>
+                """.formatted(
+                    opName,
+                    booking.getRoute().getSourceCity(),
+                    booking.getRoute().getDestinationCity(),
+                    booking.getRoute().getTravelDate(),
+                    hasTg ? " along with your Trip Guarantee Extra Cashback Bonus" : "",
+                    totalRefund.setScale(2, java.math.RoundingMode.HALF_UP),
+                    arn,
+                    booking.getUser() != null && booking.getUser().getWalletBalance() != null
+                            ? booking.getUser().getWalletBalance().setScale(2, java.math.RoundingMode.HALF_UP)
+                            : totalRefund.setScale(2, java.math.RoundingMode.HALF_UP),
+                    booking.getPnr(),
+                    booking.getRoute().getSourceCity(),
+                    booking.getRoute().getDestinationCity(),
+                    booking.getRoute().getTravelDate(),
+                    booking.getRoute().getDepartureTime(),
+                    opName,
+                    busType,
+                    passengersList,
+                    fcBadge,
+                    tgBadge,
+                    originalPaidTotal.setScale(2, java.math.RoundingMode.HALF_UP),
+                    bonusRowHtml,
+                    totalRefund.setScale(2, java.math.RoundingMode.HALF_UP),
+                    arn,
+                    java.time.Year.now().getValue()
+            );
+
+            byte[] pdfBytes = null;
+            try {
+                pdfBytes = pdfService.generateTicketPdf(booking);
+            } catch (Exception e) {
+                log.warn("Could not generate PDF for operator cancellation email PNR {}: {}", booking.getPnr(), e.getMessage());
+            }
+
+            String subject = "⚠️ Apology: Bus Cancelled by Operator & ₹" + totalRefund.setScale(2, java.math.RoundingMode.HALF_UP) + " Refund Credited (PNR: " + booking.getPnr() + ")";
+            String attachmentName = "redbus_cancelled_refund_" + booking.getPnr() + ".pdf";
+            String recipientName = booking.getUser() != null ? booking.getUser().getName() : "Valued Traveler";
+
+            if (isSmtpConfigured()) {
+                boolean sent = sendViaSmtp(recipientEmail, subject, htmlContent, pdfBytes, attachmentName);
+                if (sent) return true;
+            }
+            if (isBrevoApiConfigured()) {
+                return sendViaBrevoApi(recipientEmail, recipientName, subject, htmlContent, pdfBytes, attachmentName);
+            }
+            log.info("[VIRTUAL EMAIL] Sent Operator Bus Cancelled & Refund Email for PNR {} (ARN: {}) to {}", booking.getPnr(), arn, recipientEmail);
+            return true;
+        } catch (Exception e) {
+            log.error("Error sending operator bus cancelled email for PNR {}", booking.getPnr(), e);
+            return false;
+        }
     }
 
     private String buildWelcomeAndVerifiedEmailTemplate(String name, String email, String bookingUrl) {

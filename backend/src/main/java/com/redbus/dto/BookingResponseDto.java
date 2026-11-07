@@ -42,6 +42,8 @@ public class BookingResponseDto {
     private String refundStage;
     private LocalDateTime refundRequestedAt;
     private LocalDateTime refundApprovedAt;
+    private String refundArn;
+    private BigDecimal tripGuaranteeCashback;
     private BigDecimal walletAmountUsed;
     private String couponCode;
     private BigDecimal discountAmount;

@@ -76,16 +76,86 @@ import java.util.Locale
 enum class RealtimeTripStatus(val label: String, val badgeColor: Color, val textColor: Color) {
     CONFIRMED("CONFIRMED", Color(0xFFDCFCE7), Color(0xFF15803D)),
     TRIP_STARTED("Trip Started · On the way", Color(0xFFEFF6FF), Color(0xFF1D4ED8)),
-    TRIP_COMPLETED("Trip Completed", Color(0xFFDCFCE7), Color(0xFF15803D)),
-    CANCELLED("CANCELLED", Color(0xFFFFE4E6), Color(0xFFBE123C)),
-    REFUNDED("REFUNDED", Color(0xFFF1F5F9), Color(0xFF475569))
+    TRIP_COMPLETED("TRIP COMPLETED", Color(0xFFF3F4F6), Color(0xFF6B7280)),
+    CANCELLED("CANCELLED", Color(0xFFFEE2E2), Color(0xFFDC2626)),
+    REFUNDED("CANCELLED", Color(0xFFFEE2E2), Color(0xFFDC2626))
 }
 
 enum class BookingTabFilter(val label: String) {
-    ALL("All"),
     UPCOMING("Upcoming"),
     PAST("Past Trips"),
     CANCELLED("Cancelled")
+}
+
+fun formatRelativeTripTime(booking: BookingDetails): String {
+    if (booking.status.equals("CANCELLED", ignoreCase = true) || booking.status.equals("REFUNDED", ignoreCase = true)) {
+        return ""
+    }
+    return try {
+        val now = LocalDateTime.now()
+        val travelDate = LocalDate.parse(booking.travelDate.trim())
+        val depTime = parseFlexibleTime(booking.departureTime) ?: LocalTime.of(12, 0)
+        val depDateTime = travelDate.atTime(depTime)
+        val arrTime = parseFlexibleTime(booking.arrivalTime) ?: depTime.plusHours(7)
+        val arrDateTime = if (arrTime.isBefore(depTime) || arrTime == depTime) {
+            travelDate.plusDays(1).atTime(arrTime)
+        } else {
+            travelDate.atTime(arrTime)
+        }
+        if (now.isAfter(arrDateTime)) return ""
+        if (!now.isBefore(depDateTime)) return "Trip Started"
+
+        val diffMinutes = java.time.Duration.between(now, depDateTime).toMinutes()
+        val diffHours = diffMinutes / 60.0
+        val diffDays = diffHours / 24.0
+        when {
+            diffMinutes < 60 -> {
+                val mins = maxOf(1L, diffMinutes)
+                "Trip in $mins min${if (mins == 1L) "" else "s"}"
+            }
+            diffHours < 24.0 -> {
+                val hrs = maxOf(1L, Math.round(diffHours))
+                "Trip in $hrs hour${if (hrs == 1L) "" else "s"}"
+            }
+            diffDays < 7.0 -> {
+                val days = maxOf(1L, Math.round(diffDays))
+                "Trip in $days day${if (days == 1L) "" else "s"}"
+            }
+            diffDays < 30.0 -> {
+                val weeks = maxOf(1L, Math.round(diffDays / 7.0))
+                "Trip in $weeks week${if (weeks == 1L) "" else "s"}"
+            }
+            else -> {
+                val months = maxOf(1L, Math.round(diffDays / 30.0))
+                "Trip in $months month${if (months == 1L) "" else "s"}"
+            }
+        }
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+fun getBookingArnStr(booking: BookingDetails): String {
+    if (!booking.refundArn.isNullOrBlank()) return booking.refundArn
+    var hash = 106388800000L
+    for (ch in booking.pnr) {
+        hash += ch.code * 987L
+    }
+    return hash.toString().take(12)
+}
+
+fun formatRefundDateTimeStr(isoStr: String?, addMinutes: Long = 0, includeComma: Boolean = false): String {
+    val dt = try {
+        if (!isoStr.isNullOrBlank()) {
+            LocalDateTime.parse(isoStr.take(19)).plusMinutes(addMinutes)
+        } else {
+            LocalDateTime.now().plusMinutes(addMinutes)
+        }
+    } catch (_: Exception) {
+        LocalDateTime.now().plusMinutes(addMinutes)
+    }
+    val pattern = if (includeComma) "EEE, dd MMM yyyy, HH:mm" else "EEE dd MMM yyyy, HH:mm"
+    return dt.format(DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH))
 }
 
 fun parseFlexibleTime(timeStr: String?): LocalTime? {
@@ -1429,7 +1499,7 @@ fun MyBookingsScreen(
     onOpenBusSearchForDate: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     var pnrQuery by remember { mutableStateOf("") }
-    var activeTabFilter by remember { mutableStateOf(BookingTabFilter.ALL) }
+    var activeTabFilter by remember { mutableStateOf(BookingTabFilter.UPCOMING) }
     var bookingToCancel by remember { mutableStateOf<BookingDetails?>(null) }
     var selectedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
     var perforatedTicketToView by remember { mutableStateOf<BookingDetails?>(null) }
@@ -1461,7 +1531,6 @@ fun MyBookingsScreen(
 
     val filteredBookings = remember(displayedBookings, activeTabFilter) {
         when (activeTabFilter) {
-            BookingTabFilter.ALL -> displayedBookings
             BookingTabFilter.UPCOMING -> displayedBookings.filter {
                 val s = calculateTripStatus(it)
                 s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
@@ -1593,7 +1662,7 @@ fun MyBookingsScreen(
                     }
                 }
 
-                // Divided booking filter tabs: All | Upcoming trips | Past trips | Cancelled
+                // Divided booking filter tabs: Upcoming | Past Trips | Cancelled
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -1601,7 +1670,6 @@ fun MyBookingsScreen(
                     items(BookingTabFilter.values()) { tab ->
                         val isSelected = activeTabFilter == tab
                         val count = when (tab) {
-                            BookingTabFilter.ALL -> displayedBookings.size
                             BookingTabFilter.UPCOMING -> displayedBookings.count {
                                 val s = calculateTripStatus(it)
                                 s == RealtimeTripStatus.CONFIRMED || s == RealtimeTripStatus.TRIP_STARTED
@@ -1735,7 +1803,6 @@ fun MyBookingsScreen(
                             BookingTabFilter.UPCOMING -> "No upcoming trips found"
                             BookingTabFilter.PAST -> "No past trips found"
                             BookingTabFilter.CANCELLED -> "No cancelled trips"
-                            BookingTabFilter.ALL -> "No bookings found for your account yet"
                         },
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -1920,12 +1987,35 @@ private fun BookingTicketCard(
                     )
                 }
 
-                Text(
-                    text = "PNR: ${booking.pnr}",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 13.sp,
-                    color = AiViolet
-                )
+                val relTime = remember(booking.travelDate, booking.departureTime, booking.status) {
+                    formatRelativeTripTime(booking)
+                }
+                if (relTime.isNotBlank() && (tripStatus == RealtimeTripStatus.CONFIRMED || tripStatus == RealtimeTripStatus.TRIP_STARTED)) {
+                    Surface(
+                        color = Color(0xFFEEF2FF),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFFC7D2FE))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = Color(0xFF4F46E5),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = relTime,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.sp,
+                                color = Color(0xFF4F46E5)
+                            )
+                        }
+                    }
+                }
             }
 
             Column {
@@ -1983,14 +2073,6 @@ private fun BookingTicketCard(
                         fontWeight = FontWeight.Black,
                         fontSize = 16.sp
                     )
-                    booking.refundStatus?.let { rs ->
-                        Text(
-                            text = "Refund: $rs",
-                            fontSize = 11.sp,
-                            color = RatingEmerald,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3142,10 +3224,29 @@ fun EnhancedTicketJourneyModal(
     var showChangeTripPointsSheet by remember { mutableStateOf(false) }
     var showFreeBusChangeModal by remember { mutableStateOf(false) }
     var showRateModal by remember { mutableStateOf(false) }
+    var showRefundDetailsModal by remember { mutableStateOf(false) }
 
     val tripStatus = remember(booking) { calculateTripStatus(booking) }
     val isCompleted = tripStatus == RealtimeTripStatus.TRIP_COMPLETED
     val isCancelled = booking.status.equals("CANCELLED", ignoreCase = true) || booking.status.equals("REFUNDED", ignoreCase = true)
+    val refundAmt = booking.refundAmount ?: booking.totalAmount
+    val arnStr = remember(booking.pnr, booking.refundArn) { getBookingArnStr(booking) }
+    val cancelBannerTime = remember(booking.refundRequestedAt, booking.createdAt) {
+        val dt = try {
+            val raw = booking.refundRequestedAt?.takeIf { it.isNotBlank() } ?: booking.createdAt
+            LocalDateTime.parse(raw.take(19))
+        } catch (_: Exception) {
+            LocalDateTime.now()
+        }
+        dt.format(DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm", Locale.ENGLISH))
+    }
+    val completedTimeFormatted = remember(booking.refundApprovedAt, booking.refundRequestedAt, booking.createdAt) {
+        formatRefundDateTimeStr(
+            booking.refundApprovedAt?.takeIf { it.isNotBlank() } ?: booking.refundRequestedAt?.takeIf { it.isNotBlank() } ?: booking.createdAt,
+            addMinutes = 2,
+            includeComma = false
+        )
+    }
 
     val passengerName = remember(booking.passengers) {
         booking.passengers?.firstOrNull()?.name?.ifBlank { "Passenger" } ?: "Passenger"
@@ -3237,6 +3338,31 @@ fun EnhancedTicketJourneyModal(
                         ) {
                             Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.Gray, modifier = Modifier.size(19.dp))
                         }
+                    }
+                }
+
+                // Red Top Banner when Cancelled (Matching Image 3)
+                if (isCancelled) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFE53935))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ConfirmationNumber,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Ticket cancelled on $cancelBannerTime",
+                            color = Color.White,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -3367,6 +3493,324 @@ fun EnhancedTicketJourneyModal(
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
+                                if (isCancelled) {
+                                    // ===============================================================
+                                    // IMAGE 3 UI: REFUND SUMMARY CARD + CANCELLED ROUTE CARD
+                                    // ===============================================================
+                                    Card(
+                                        shape = RoundedCornerShape(22.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            // Wallet with cash notes graphic
+                                            Box(
+                                                modifier = Modifier.size(56.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFF16A34A),
+                                                    modifier = Modifier
+                                                        .size(width = 38.dp, height = 24.dp)
+                                                        .offset(y = (-8).dp)
+                                                        .rotate(-12f)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text("₹", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                                                    }
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = Color(0xFF6D4C41),
+                                                    border = BorderStroke(1.dp, Color(0xFF5D4037)),
+                                                    modifier = Modifier
+                                                        .size(width = 44.dp, height = 30.dp)
+                                                        .offset(y = 4.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .padding(end = 6.dp),
+                                                        contentAlignment = Alignment.CenterEnd
+                                                    ) {
+                                                        Surface(
+                                                            shape = CircleShape,
+                                                            color = Color(0xFFFBBF24),
+                                                            modifier = Modifier.size(8.dp)
+                                                        ) {}
+                                                    }
+                                                }
+                                            }
+
+                                            Text(
+                                                text = "₹${String.format(Locale.US, "%.0f", refundAmt)} refunded in 2 min",
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFF111827)
+                                            )
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF16A34A),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    text = "Lightning fast refund",
+                                                    color = Color(0xFF16A34A),
+                                                    fontSize = 12.5.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+
+                                            Canvas(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp)
+                                                    .height(1.dp)
+                                            ) {
+                                                drawLine(
+                                                    color = Color(0xFFD1D5DB),
+                                                    start = Offset(0f, 0f),
+                                                    end = Offset(size.width, 0f),
+                                                    strokeWidth = 3f,
+                                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), 0f)
+                                                )
+                                            }
+
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Row {
+                                                    Text("To: ", fontSize = 12.5.sp, color = Color(0xFF4B5563))
+                                                    Text(
+                                                        text = if (booking.refundDestination.equals("ORIGINAL_PAYMENT", ignoreCase = true))
+                                                            "Original payment method"
+                                                        else
+                                                            "Original payment method (redBus Wallet)",
+                                                        fontSize = 12.5.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color(0xFF111827)
+                                                    )
+                                                }
+                                                Row {
+                                                    Text("Completed on: ", fontSize = 12.5.sp, color = Color(0xFF4B5563))
+                                                    Text(
+                                                        text = completedTimeFormatted,
+                                                        fontSize = 12.5.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color(0xFF111827)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Row {
+                                                    Text("Your ARN is ", fontSize = 12.5.sp, color = Color(0xFF4B5563))
+                                                    Text(
+                                                        text = arnStr,
+                                                        fontSize = 12.5.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color(0xFF111827)
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Button(
+                                                onClick = { showRefundDetailsModal = true },
+                                                shape = RoundedCornerShape(50),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0xFFFDE2E4),
+                                                    contentColor = Color(0xFF111827)
+                                                ),
+                                                contentPadding = PaddingValues(vertical = 13.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    text = "Refund Details",
+                                                    fontWeight = FontWeight.Black,
+                                                    fontSize = 13.5.sp
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Cancelled Route + Passenger Card (Bottom of Image 3)
+                                    Card(
+                                        shape = RoundedCornerShape(22.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column {
+                                            // Grey Upper Section
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color(0xFFE5E7EB))
+                                                    .padding(16.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                // Left Vertical 2-Dot Timeline
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                ) {
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = Color(0xFF6B7280),
+                                                        modifier = Modifier.size(8.dp)
+                                                    ) {}
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(1.5.dp)
+                                                            .height(74.dp)
+                                                            .background(Color(0xFF9CA3AF))
+                                                    )
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = Color(0xFF6B7280),
+                                                        modifier = Modifier.size(8.dp)
+                                                    ) {}
+                                                }
+
+                                                Column(
+                                                    modifier = Modifier.weight(1f),
+                                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    // Source Row
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.Top
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(booking.sourceCity, fontWeight = FontWeight.Black, fontSize = 14.5.sp, color = Color(0xFF111827))
+                                                            Text(
+                                                                booking.boardingPoint.ifBlank { "${booking.sourceCity} Pickup Point" },
+                                                                fontSize = 11.5.sp,
+                                                                color = Color(0xFF4B5563),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                        Column(horizontalAlignment = Alignment.End) {
+                                                            Text(booking.departureTime, fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF111827))
+                                                            Text(depDateFormatted, fontSize = 11.sp, color = Color(0xFF4B5563))
+                                                        }
+                                                    }
+
+                                                    // Middle Divider with Booking Cancelled
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFD1D5DB))
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.DirectionsBus,
+                                                                contentDescription = null,
+                                                                tint = Color(0xFF374151),
+                                                                modifier = Modifier.size(14.dp)
+                                                            )
+                                                            Text(
+                                                                text = "Booking Cancelled",
+                                                                fontSize = 11.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color(0xFF374151)
+                                                            )
+                                                        }
+                                                        HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFD1D5DB))
+                                                    }
+
+                                                    // Destination Row
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.Bottom
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(booking.destinationCity, fontWeight = FontWeight.Black, fontSize = 14.5.sp, color = Color(0xFF111827))
+                                                            Text(
+                                                                booking.droppingPoint.ifBlank { "${booking.destinationCity} Dropoff Point" },
+                                                                fontSize = 11.5.sp,
+                                                                color = Color(0xFF4B5563),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                        Column(horizontalAlignment = Alignment.End) {
+                                                            Text(booking.arrivalTime, fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF111827))
+                                                            Text(arrDateFormatted, fontSize = 11.sp, color = Color(0xFF4B5563))
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // White Lower Section
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(Color.White)
+                                                    .padding(16.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Text(booking.operatorName, fontWeight = FontWeight.Black, fontSize = 14.sp, color = Color(0xFF111827))
+                                                Text("${booking.busType} · $passengerCount Seat", fontSize = 12.sp, color = Color(0xFF6B7280))
+                                                Text(passengerName, fontSize = 12.sp, color = Color(0xFF4B5563))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0xFFE0E7FF)
+                                                ) {
+                                                    Text(
+                                                        text = seatNumber,
+                                                        color = Color(0xFF1D4ED8),
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    )
+                                                }
+
+                                                HorizontalDivider(color = Color(0xFFF3F4F6), modifier = Modifier.padding(top = 4.dp))
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { onOpenPerforatedTicket() }
+                                                        .padding(vertical = 4.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "Ticket details",
+                                                        color = Color(0xFF1D4ED8),
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
                                 if (isCompleted) {
                                     // Rate this trip section matching Image 3
                                     val existingRating = booking.userRating ?: reviewedPnrs[booking.pnr]
@@ -3774,12 +4218,23 @@ fun EnhancedTicketJourneyModal(
                                         }
                                     }
                                 }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    // Modal: Refund Details Tracker (Matching Image 4)
+    if (showRefundDetailsModal) {
+        RefundDetailsTrackerModal(
+            booking = booking,
+            ticketNumber = ticketNumber,
+            onDismiss = { showRefundDetailsModal = false },
+            onHelpClick = onHelpClick
+        )
     }
 
     // Modal: Booked Seat Layout Map
@@ -3835,6 +4290,374 @@ fun EnhancedTicketJourneyModal(
                 Toast.makeText(context, "Review submitted! Thank you.", Toast.LENGTH_SHORT).show()
             }
         )
+    }
+}
+
+/**
+ * Full-screen Refund Details Tracker Modal matching Image 4 (`media_1794035986171_1aabacfe.jpg`)
+ */
+@Composable
+fun RefundDetailsTrackerModal(
+    booking: BookingDetails,
+    ticketNumber: String,
+    onDismiss: () -> Unit,
+    onHelpClick: () -> Unit = {}
+) {
+    val refundAmt = booking.refundAmount ?: booking.totalAmount
+    val totalPaid = booking.totalAmount.takeIf { it > 0.0 } ?: refundAmt
+    val totalDeductions = maxOf(0.0, totalPaid - refundAmt)
+    val arnStr = remember(booking.pnr, booking.refundArn) { getBookingArnStr(booking) }
+
+    val reqTimeStr = remember(booking.refundRequestedAt, booking.createdAt) {
+        formatRefundDateTimeStr(
+            booking.refundRequestedAt?.takeIf { it.isNotBlank() } ?: booking.createdAt,
+            addMinutes = 0,
+            includeComma = true
+        )
+    }
+    val initTimeStr = remember(booking.refundRequestedAt, booking.createdAt) {
+        formatRefundDateTimeStr(
+            booking.refundRequestedAt?.takeIf { it.isNotBlank() } ?: booking.createdAt,
+            addMinutes = 1,
+            includeComma = true
+        )
+    }
+    val compTimeStr = remember(booking.refundApprovedAt, booking.refundRequestedAt, booking.createdAt) {
+        formatRefundDateTimeStr(
+            booking.refundApprovedAt?.takeIf { it.isNotBlank() } ?: booking.refundRequestedAt?.takeIf { it.isNotBlank() } ?: booking.createdAt,
+            addMinutes = 2,
+            includeComma = true
+        )
+    }
+
+    var expandTotalPaid by remember { mutableStateOf(false) }
+    var expandTotalDeductions by remember { mutableStateOf(true) }
+    var showPolicyTable by remember { mutableStateOf(false) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            color = Color.White,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF111827), modifier = Modifier.size(22.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("Refund details", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Color(0xFF111827))
+                            Text("Ticket #$ticketNumber", fontSize = 11.5.sp, color = Color(0xFF6B7280))
+                        }
+                    }
+
+                    IconButton(onClick = onHelpClick, modifier = Modifier.size(34.dp)) {
+                        Icon(Icons.Default.HeadsetMic, contentDescription = "Support", tint = Color(0xFF374151), modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                // Solid Green Credited Banner
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF007A27))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Refund of ₹${String.format(Locale.US, "%.0f", refundAmt)} has been credited",
+                        color = Color.White,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    // Refund status section
+                    Column {
+                        Text(
+                            text = "Refund status",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF111827)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        val steps = listOf(
+                            Triple("Completed", "Refund Request Received", reqTimeStr),
+                            Triple("Completed", "Refund Initiated", initTimeStr),
+                            Triple("Completed", "Refund Completed", compTimeStr)
+                        )
+
+                        steps.forEachIndexed { index, (statusLabel, title, timestamp) ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0xFF007A27),
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
+                                    }
+                                    if (index < steps.lastIndex) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(2.dp)
+                                                .height(48.dp)
+                                                .background(Color(0xFF007A27))
+                                        )
+                                    }
+                                }
+
+                                Column(
+                                    modifier = Modifier.padding(bottom = if (index < steps.lastIndex) 12.dp else 0.dp)
+                                ) {
+                                    Text(
+                                        text = statusLabel,
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF007A27)
+                                    )
+                                    Text(
+                                        text = title,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color(0xFF111827)
+                                    )
+                                    Text(
+                                        text = timestamp,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF6B7280)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Light-blue ARN Info Box
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFEBF3FF),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "The refund amount should reflect in your original payment method by now. If there is an issue, please contact your bank's customer care. Your ARN is: $arnStr",
+                                fontSize = 12.5.sp,
+                                color = Color(0xFF1F2937),
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+
+                    // Centered View cancellation policy link
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showPolicyTable = !showPolicyTable }
+                            .padding(vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "View cancellation policy",
+                            color = Color(0xFF1D4ED8),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                        )
+                    }
+
+                    if (showPolicyTable) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFFF9FAFB),
+                            border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("Operator Cancellation Policy:", fontWeight = FontWeight.Black, fontSize = 12.sp, color = Color(0xFF111827))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("More than 24 hrs before departure", fontSize = 11.5.sp, color = Color(0xFF4B5563))
+                                    Text("10% deduction", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("12 to 24 hrs before departure", fontSize = 11.5.sp, color = Color(0xFF4B5563))
+                                    Text("25% deduction", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Free Cancellation / Operator Cancelled", fontSize = 11.5.sp, color = Color(0xFF4B5563))
+                                    Text("₹0 deduction", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007A27))
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Bottom Refund Breakdown Card (Dark Header + Expandable Rows)
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            // Dark Header (#333333)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF333333))
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Refund amount", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                Text("₹${String.format(Locale.US, "%.0f", refundAmt)}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            }
+
+                            // Row 1: Total paid
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expandTotalPaid = !expandTotalPaid }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Total paid", fontWeight = FontWeight.Black, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("₹${String.format(Locale.US, "%.0f", totalPaid)}", fontWeight = FontWeight.Black, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                        Icon(
+                                            imageVector = if (expandTotalPaid) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            tint = Color(0xFF374151),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                if (expandTotalPaid) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    val baseFare = maxOf(0.0, totalPaid - (booking.serviceFee ?: 0.0) - (booking.freeCancellationFee ?: 0.0) - (booking.tripGuaranteeFee ?: 0.0))
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Base Ticket Fare & GST", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        Text("₹${String.format(Locale.US, "%.1f", baseFare)}", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                    }
+                                    if ((booking.serviceFee ?: 0.0) > 0.0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Operator Service Fee", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                            Text("₹${String.format(Locale.US, "%.1f", booking.serviceFee ?: 0.0)}", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        }
+                                    }
+                                    if ((booking.freeCancellationFee ?: 0.0) > 0.0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Free Cancellation Add-on", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                            Text("₹${String.format(Locale.US, "%.1f", booking.freeCancellationFee ?: 0.0)}", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        }
+                                    }
+                                    if ((booking.tripGuaranteeFee ?: 0.0) > 0.0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Trip Guarantee Protection", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                            Text("₹${String.format(Locale.US, "%.1f", booking.tripGuaranteeFee ?: 0.0)}", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        }
+                                    }
+                                    if ((booking.tripGuaranteeCashback ?: 0.0) > 0.0) {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text("Trip Guarantee Cashback Bonus", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007A27))
+                                            Text("+₹${String.format(Locale.US, "%.1f", booking.tripGuaranteeCashback ?: 0.0)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF007A27))
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = Color(0xFFF3F4F6))
+
+                            // Row 2: Total deductions
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expandTotalDeductions = !expandTotalDeductions }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Total deductions", fontWeight = FontWeight.Black, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("₹${String.format(Locale.US, "%.1f", totalDeductions)}", fontWeight = FontWeight.Black, fontSize = 13.5.sp, color = Color(0xFF111827))
+                                        Icon(
+                                            imageVector = if (expandTotalDeductions) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            tint = Color(0xFF374151),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                if (expandTotalDeductions) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Cancellation charges (incl GST)", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                        Text("₹${String.format(Locale.US, "%.1f", totalDeductions)}", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

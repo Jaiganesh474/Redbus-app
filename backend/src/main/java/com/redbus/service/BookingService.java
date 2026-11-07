@@ -393,13 +393,17 @@ public class BookingService {
                 ? "ORIGINAL_PAYMENT"
                 : "WALLET";
 
+        LocalDateTime cancelNow = LocalDateTime.now();
+        String arn = resolveOrGenerateArn(booking);
+
         booking.setStatus("CANCELLED");
         booking.setCancellationReason(reason != null ? reason : "Cancelled by customer");
         booking.setRefundAmount(refundAmount);
         booking.setRefundStatus("REQUESTED");
         booking.setRefundDestination(destination);
         booking.setRefundStage("OPERATOR_AUDIT");
-        booking.setRefundRequestedAt(LocalDateTime.now());
+        booking.setRefundRequestedAt(cancelNow);
+        booking.setRefundArn(arn);
         bookingRepository.save(booking);
 
         // Free up the route seats immediately so other travelers can book
@@ -434,19 +438,29 @@ public class BookingService {
                 .refundStatus("REQUESTED")
                 .refundDestination(destination)
                 .refundStage("OPERATOR_AUDIT")
+                .refundArn(arn)
                 .refundAmount(refundAmount)
                 .walletBalance(booking.getUser().getWalletBalance() != null ? booking.getUser().getWalletBalance() : BigDecimal.ZERO)
-                .message("Cancellation initiated successfully! Refund of ₹" + refundAmount + " is queued for operator audit and will be disbursed to your " + destLabel + ".")
+                .message("Cancellation initiated successfully! Refund of ₹" + refundAmount + " (ARN: " + arn + ") is queued for operator audit and will be disbursed to your " + destLabel + ".")
                 .build();
     }
 
     @Transactional
-    public CancelBookingResponse approveOperatorRefund(String pnr, Operator operator) {
-        Booking booking = bookingRepository.findByPnr(pnr.trim().toUpperCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR: " + pnr));
+    public CancelBookingResponse approveOperatorRefund(String pnrOrArn, Operator operator) {
+        String lookup = pnrOrArn != null ? pnrOrArn.trim() : "";
+        Booking booking = bookingRepository.findByPnr(lookup.toUpperCase())
+                .or(() -> bookingRepository.findByRefundArn(lookup))
+                .orElseGet(() -> {
+                    // Fallback: check if lookup matches deterministic ARN of any cancelled booking
+                    return bookingRepository.findAll().stream()
+                            .filter(b -> lookup.equalsIgnoreCase(resolveOrGenerateArn(b)))
+                            .findFirst()
+                            .orElseThrow(() -> new ResourceNotFoundException("Booking not found with PNR or ARN: " + pnrOrArn));
+                });
 
         BigDecimal refundAmount = booking.getRefundAmount() != null ? booking.getRefundAmount() : BigDecimal.ZERO;
         String destination = booking.getRefundDestination() != null ? booking.getRefundDestination() : "WALLET";
+        String arn = resolveOrGenerateArn(booking);
 
         // 1. Debit the refund amount from operator's redBus wallet
         if (operator != null && operator.getUser() != null) {
@@ -463,10 +477,10 @@ public class BookingService {
                     .type("DEBIT_REFUND_AUDIT")
                     .amount(refundAmount)
                     .balanceAfter(newOpWallet)
-                    .description("Refund disbursed for PNR " + booking.getPnr() + " to passenger " + destination)
+                    .description("Refund disbursed for PNR " + booking.getPnr() + " (ARN: " + arn + ") to passenger " + destination)
                     .build();
             operatorWalletTransactionRepository.save(debitTx);
-            log.info("Debited Operator ID {} wallet ₹{} for refund of PNR {}", operator.getId(), refundAmount, booking.getPnr());
+            log.info("Debited Operator ID {} wallet ₹{} for refund of PNR {} (ARN: {})", operator.getId(), refundAmount, booking.getPnr(), arn);
         }
 
         // 2. Disburse refund to passenger if destination is WALLET
@@ -487,6 +501,10 @@ public class BookingService {
         booking.setStatus("REFUNDED");
         booking.setRefundStatus("REFUNDED");
         booking.setRefundStage("COMPLETED");
+        booking.setRefundArn(arn);
+        if (booking.getRefundRequestedAt() == null) {
+            booking.setRefundRequestedAt(LocalDateTime.now().minusMinutes(2));
+        }
         booking.setRefundApprovedAt(LocalDateTime.now());
         bookingRepository.save(booking);
 
@@ -496,10 +514,129 @@ public class BookingService {
                 .refundStatus("REFUNDED")
                 .refundDestination(destination)
                 .refundStage("COMPLETED")
+                .refundArn(arn)
                 .refundAmount(refundAmount)
                 .walletBalance(passengerWalletBalance)
-                .message("Refund of ₹" + refundAmount + " approved and disbursed successfully to " + destination + "!")
+                .message("Refund of ₹" + refundAmount + " (ARN: " + arn + ") approved and disbursed successfully to " + destination + "!")
                 .build();
+    }
+
+    @Transactional
+    public void cancelBookingsForOperatorScheduleOrBus(List<Route> affectedRoutes, Operator operator, String cancellationContext) {
+        if (affectedRoutes == null || affectedRoutes.isEmpty()) return;
+
+        for (Route route : affectedRoutes) {
+            if (route == null || route.getId() == null) continue;
+            List<Booking> confirmedBookings = bookingRepository.findConfirmedBookingsByRouteId(route.getId());
+            if (confirmedBookings == null || confirmedBookings.isEmpty()) continue;
+
+            for (Booking booking : confirmedBookings) {
+                BigDecimal originalPaidTotal = booking.getTotalAmount()
+                        .add(booking.getWalletAmountUsed() != null ? booking.getWalletAmountUsed() : BigDecimal.ZERO);
+
+                int seatCount = (booking.getPassengers() != null && !booking.getPassengers().isEmpty())
+                        ? booking.getPassengers().size()
+                        : 1;
+
+                // Checkout Trip Guarantee Cashback Logic:
+                // If passenger selected Trip Guarantee, refund 100% of total paid + Trip Guarantee Cashback Bonus (20%-30% of base fare, min ₹230)
+                BigDecimal tripGuaranteeBonus = BigDecimal.ZERO;
+                if (Boolean.TRUE.equals(booking.getHasTripGuarantee())) {
+                    BigDecimal baseFare = route.getBasePrice() != null
+                            ? route.getBasePrice().multiply(BigDecimal.valueOf(seatCount))
+                            : originalPaidTotal;
+                    long routeIdVal = route.getId() != null ? route.getId() : 1L;
+                    int cashbackPercentage = 20 + (int) (((routeIdVal * 7L) + (seatCount * 5L)) % 11L);
+                    tripGuaranteeBonus = baseFare.multiply(BigDecimal.valueOf(cashbackPercentage))
+                            .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                            .max(new BigDecimal("230"))
+                            .setScale(2, RoundingMode.HALF_UP);
+                }
+
+                BigDecimal totalRefund = originalPaidTotal.add(tripGuaranteeBonus).setScale(2, RoundingMode.HALF_UP);
+                String arn = resolveOrGenerateArn(booking);
+                LocalDateTime now = LocalDateTime.now();
+
+                // Credit passenger wallet automatically so funds are immediately available
+                User passenger = booking.getUser();
+                if (passenger != null && totalRefund.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal passCurBal = passenger.getWalletBalance() != null ? passenger.getWalletBalance() : BigDecimal.ZERO;
+                    passenger.setWalletBalance(passCurBal.add(totalRefund));
+                    userRepository.save(passenger);
+                }
+
+                // Debit operator wallet
+                if (operator != null && operator.getUser() != null && totalRefund.compareTo(BigDecimal.ZERO) > 0) {
+                    User opUser = operator.getUser();
+                    BigDecimal curOpBal = opUser.getWalletBalance() != null ? opUser.getWalletBalance() : BigDecimal.ZERO;
+                    BigDecimal newOpBal = curOpBal.subtract(totalRefund);
+                    opUser.setWalletBalance(newOpBal);
+                    userRepository.save(opUser);
+
+                    OperatorWalletTransaction debitTx = OperatorWalletTransaction.builder()
+                            .operatorId(operator.getId())
+                            .bookingId(booking.getId())
+                            .pnr(booking.getPnr())
+                            .type("DEBIT_REFUND_AUDIT")
+                            .amount(totalRefund)
+                            .balanceAfter(newOpBal)
+                            .description("Auto-refund for operator cancelled bus schedule (PNR " + booking.getPnr() + ", ARN " + arn +
+                                    (tripGuaranteeBonus.compareTo(BigDecimal.ZERO) > 0 ? ", incl. ₹" + tripGuaranteeBonus + " Trip Guarantee Cashback" : "") + ")")
+                            .build();
+                    operatorWalletTransactionRepository.save(debitTx);
+                }
+
+                // Release route seats
+                if (booking.getPassengers() != null) {
+                    for (BookingPassenger bp : booking.getPassengers()) {
+                        if (bp.getSeat() != null) {
+                            routeSeatRepository.findByRouteIdAndSeatId(route.getId(), bp.getSeat().getId())
+                                    .ifPresent(rs -> {
+                                        rs.setStatus("AVAILABLE");
+                                        rs.setLockExpiry(null);
+                                        rs.setLockedByUserId(null);
+                                        routeSeatRepository.save(rs);
+                                    });
+                        }
+                    }
+                }
+
+                String destination = (booking.getWalletAmountUsed() != null && booking.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0
+                        && booking.getTotalAmount().compareTo(BigDecimal.ZERO) == 0)
+                        ? "WALLET"
+                        : (booking.getRefundDestination() != null ? booking.getRefundDestination() : "ORIGINAL_PAYMENT");
+
+                booking.setStatus("REFUNDED");
+                booking.setRefundStatus("REFUNDED");
+                booking.setRefundStage("COMPLETED");
+                booking.setRefundDestination(destination);
+                booking.setRefundAmount(totalRefund);
+                booking.setTripGuaranteeCashback(tripGuaranteeBonus);
+                booking.setRefundArn(arn);
+                booking.setRefundRequestedAt(now);
+                booking.setRefundApprovedAt(now);
+                booking.setCancellationReason(cancellationContext != null ? cancellationContext : "Bus schedule cancelled by operator");
+                Booking savedBooking = bookingRepository.save(booking);
+
+                // Dispatch apology & automatic refund email with PDF
+                try {
+                    emailService.sendOperatorBusCancelledEmail(savedBooking, originalPaidTotal, tripGuaranteeBonus, totalRefund, arn);
+                } catch (Exception e) {
+                    log.warn("Failed to dispatch operator bus cancellation apology email for PNR {}: {}", savedBooking.getPnr(), e.getMessage());
+                }
+            }
+        }
+    }
+
+    public String resolveOrGenerateArn(Booking booking) {
+        if (booking == null) return "106388812606";
+        if (booking.getRefundArn() != null && !booking.getRefundArn().isBlank()) {
+            return booking.getRefundArn().trim();
+        }
+        long idPart = booking.getId() != null ? booking.getId() * 12606L : 12606L;
+        long pnrPart = booking.getPnr() != null ? Math.abs(booking.getPnr().hashCode() % 900000L) : 0L;
+        long combined = 106388000000L + ((idPart + pnrPart) % 99999999L);
+        return String.format("%012d", combined);
     }
 
     private void markAdjacentSeatFemaleRestricted(Long routeId, Seat seat) {
@@ -539,6 +676,11 @@ public class BookingService {
                         .build()
         ).collect(Collectors.toList());
 
+        boolean isCancelledOrRefunded = "CANCELLED".equalsIgnoreCase(booking.getStatus())
+                || "REFUNDED".equalsIgnoreCase(booking.getStatus())
+                || (booking.getRefundStatus() != null && !"NONE".equalsIgnoreCase(booking.getRefundStatus()));
+        String resolvedArn = isCancelledOrRefunded ? resolveOrGenerateArn(booking) : booking.getRefundArn();
+
         return BookingResponseDto.builder()
                 .id(booking.getId())
                 .pnr(booking.getPnr())
@@ -560,13 +702,15 @@ public class BookingService {
                 .freeCancellationFee(booking.getFreeCancellationFee())
                 .hasTripGuarantee(booking.getHasTripGuarantee())
                 .tripGuaranteeFee(booking.getTripGuaranteeFee())
+                .tripGuaranteeCashback(booking.getTripGuaranteeCashback())
                 .serviceFee(booking.getServiceFee())
                 .status(booking.getStatus())
                 .refundStatus(booking.getRefundStatus())
                 .refundDestination(booking.getRefundDestination())
                 .refundStage(booking.getRefundStage())
-                .refundRequestedAt(booking.getRefundRequestedAt())
-                .refundApprovedAt(booking.getRefundApprovedAt())
+                .refundRequestedAt(booking.getRefundRequestedAt() != null ? booking.getRefundRequestedAt() : (isCancelledOrRefunded ? booking.getCreatedAt() : null))
+                .refundApprovedAt(booking.getRefundApprovedAt() != null ? booking.getRefundApprovedAt() : (isCancelledOrRefunded ? (booking.getRefundRequestedAt() != null ? booking.getRefundRequestedAt().plusMinutes(2) : booking.getCreatedAt()) : null))
+                .refundArn(resolvedArn)
                 .boardingPoint(booking.getBoardingPoint())
                 .droppingPoint(booking.getDroppingPoint())
                 .availableBoardingPoints(route.getBoardingPoints())

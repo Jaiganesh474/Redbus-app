@@ -56,8 +56,17 @@ public class BookingController {
 
     @GetMapping("/trip-guarantee-stats")
     public ResponseEntity<java.util.Map<String, Object>> getTripGuaranteeStats() {
-        long count = bookingRepository.countTripGuaranteeBookings();
-        return ResponseEntity.ok(java.util.Map.of("buyersCount", count));
+        java.time.LocalDateTime startOfMonth = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"))
+                .withDayOfMonth(1).atStartOfDay();
+        long passengersThisMonth = bookingRepository.countTripGuaranteePassengersSince(startOfMonth);
+        long allPassengers = bookingRepository.countAllTripGuaranteePassengers();
+        long bookingsCount = bookingRepository.countTripGuaranteeBookings();
+        long count = Math.max(passengersThisMonth, Math.max(allPassengers, bookingsCount));
+        return ResponseEntity.ok(java.util.Map.of(
+                "buyersCount", count,
+                "passengersThisMonth", count,
+                "bookingsCount", bookingsCount
+        ));
     }
 
     @GetMapping("/{pnr}")

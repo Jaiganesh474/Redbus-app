@@ -16,6 +16,7 @@ public class CancelBookingResponse {
     private String refundStatus;
     private String refundDestination;
     private String refundStage;
+    private String refundArn;
     private BigDecimal refundAmount;
     private BigDecimal walletBalance;
     private String message;

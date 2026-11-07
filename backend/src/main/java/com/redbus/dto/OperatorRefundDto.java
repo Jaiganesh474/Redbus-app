@@ -30,6 +30,7 @@ public class OperatorRefundDto {
     private String refundDestination; // 'WALLET' or 'ORIGINAL_PAYMENT'
     private String refundStatus; // 'REQUESTED', 'AUDIT_PENDING', 'APPROVED', 'REFUNDED'
     private String refundStage; // 'REQUESTED', 'OPERATOR_AUDIT', 'REFUND_PROCESSING', 'COMPLETED'
+    private String refundArn;
     private String cancellationReason;
     private LocalDateTime requestedAt;
     private LocalDateTime approvedAt;

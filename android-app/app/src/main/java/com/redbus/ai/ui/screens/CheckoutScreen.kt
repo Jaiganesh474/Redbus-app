@@ -1336,35 +1336,19 @@ fun CheckoutScreen(
 
 
                             // Social proof pill (Matching 1st image)
-
+                            val livePassengerCount = uiState.tripGuaranteeBuyers + (if (uiState.hasTripGuarantee) maxOf(1, uiState.selectedSeats.size) else 0)
                             Surface(
-
                                 shape = RoundedCornerShape(8.dp),
-
                                 color = Color(0xFFECFDF5),
-
                                 modifier = Modifier.fillMaxWidth()
-
                             ) {
-
                                 Text(
-
-                                    text = if (uiState.tripGuaranteeBuyers > 0) {
-                                        "Bought by ${uiState.tripGuaranteeBuyers} passengers this month"
-                                    } else {
-                                        "Selected by live passengers this month"
-                                    },
-
+                                    text = "Selected by $livePassengerCount live passenger${if (livePassengerCount == 1) "" else "s"} in this month",
                                     fontSize = 11.sp,
-
-                                    fontWeight = FontWeight.Medium,
-
+                                    fontWeight = FontWeight.Bold,
                                     color = Color(0xFF047857),
-
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-
                                 )
-
                             }
 
                         }

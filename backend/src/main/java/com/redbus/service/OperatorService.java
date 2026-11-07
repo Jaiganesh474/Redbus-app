@@ -27,6 +27,7 @@ public class OperatorService {
     private final RouteRepository routeRepository;
     private final RouteSeatRepository routeSeatRepository;
     private final ScheduleRepository scheduleRepository;
+    private final BookingService bookingService;
 
     @Transactional
     public Operator getOrCreateOperatorForUser(User user) {
@@ -250,9 +251,36 @@ public class OperatorService {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found with ID: " + scheduleId));
 
-        if (!schedule.getOperator().getId().equals(operatorId)) {
+        if (operatorId != null && schedule.getOperator() != null && !schedule.getOperator().getId().equals(operatorId)) {
             throw new IllegalArgumentException("Unauthorized to delete this schedule");
         }
+
+        Operator op = schedule.getOperator();
+        String opName = (op != null && op.getCompanyName() != null) ? op.getCompanyName()
+                : (schedule.getBus() != null ? schedule.getBus().getOperatorName() : "Bus Operator");
+
+        List<Route> affectedRoutes = new ArrayList<>();
+        if (schedule.getRoute() != null) {
+            affectedRoutes.add(schedule.getRoute());
+        }
+        if (schedule.getBus() != null) {
+            List<Route> busRoutes = routeRepository.findAll().stream()
+                    .filter(r -> r.getBus() != null && r.getBus().getId().equals(schedule.getBus().getId()))
+                    .filter(r -> schedule.getSourceCity() == null || schedule.getSourceCity().equalsIgnoreCase(r.getSourceCity()))
+                    .filter(r -> schedule.getDestinationCity() == null || schedule.getDestinationCity().equalsIgnoreCase(r.getDestinationCity()))
+                    .collect(Collectors.toList());
+            for (Route br : busRoutes) {
+                if (affectedRoutes.stream().noneMatch(ar -> ar.getId().equals(br.getId()))) {
+                    affectedRoutes.add(br);
+                }
+            }
+        }
+
+        bookingService.cancelBookingsForOperatorScheduleOrBus(
+                affectedRoutes,
+                op,
+                "Bus schedule cancelled by operator (" + opName + ")"
+        );
 
         schedule.setStatus("INACTIVE");
         scheduleRepository.save(schedule);
@@ -498,8 +526,37 @@ public class OperatorService {
         if (operatorId != null && bus.getOperatorId() != null && !bus.getOperatorId().equals(operatorId)) {
             throw new com.redbus.exception.BadRequestException("You are not authorized to delete this bus");
         }
-        seatRepository.deleteByBusId(bus.getId());
-        busRepository.delete(bus);
+
+        Operator op = operatorId != null ? operatorRepository.findById(operatorId).orElse(null) : null;
+        String opName = bus.getOperatorName() != null ? bus.getOperatorName()
+                : (op != null && op.getCompanyName() != null ? op.getCompanyName() : "Bus Operator");
+
+        List<Route> busRoutes = routeRepository.findAll().stream()
+                .filter(r -> r.getBus() != null && r.getBus().getId().equals(bus.getId()))
+                .collect(Collectors.toList());
+
+        bookingService.cancelBookingsForOperatorScheduleOrBus(
+                busRoutes,
+                op,
+                "Bus journey cancelled by operator (" + opName + ")"
+        );
+
+        List<Schedule> busSchedules = scheduleRepository.findAll().stream()
+                .filter(s -> s.getBus() != null && s.getBus().getId().equals(bus.getId()))
+                .collect(Collectors.toList());
+        for (Schedule s : busSchedules) {
+            s.setStatus("INACTIVE");
+            scheduleRepository.save(s);
+        }
+
+        try {
+            seatRepository.deleteByBusId(bus.getId());
+            busRepository.delete(bus);
+        } catch (Exception e) {
+            // If historic bookings reference this bus/route, mark bus inactive so history is preserved
+            bus.setActive(false);
+            busRepository.save(bus);
+        }
     }
 
     @Transactional

@@ -132,6 +132,7 @@ data class OperatorRefundDto(
     val refundDestination: String? = "WALLET",
     val refundStatus: String = "REQUESTED",
     val refundStage: String? = "REQUESTED",
+    val refundArn: String? = null,
     val cancellationReason: String? = null,
     val requestedAt: String? = null,
     val approvedAt: String? = null
