@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Bus,
   User,
+  X,
 } from "lucide-react";
 
 export default function HeroSearch() {
@@ -28,6 +29,8 @@ export default function HeroSearch() {
   const [destination, setDestination] = useState(searchState.destinationCity || "");
   const [date, setDate] = useState(searchState.travelDate || getTodayDateStr());
   const [showDateModal, setShowDateModal] = useState(false);
+  const [showWomenModal, setShowWomenModal] = useState(false);
+  const [swapRotation, setSwapRotation] = useState(0);
   const [nlpQuery, setNlpQuery] = useState("");
   const [isNlpLoading, setIsNlpLoading] = useState(false);
   const [bookingForWomen, setBookingForWomen] = useState(false);
@@ -43,10 +46,24 @@ export default function HeroSearch() {
     }, 2500);
   };
 
+  const formatHeroDate = (dateStr: string) => {
+    if (!dateStr) return { dateFormatted: "", dayTag: "" };
+    const parts = dateStr.split("-");
+    if (parts.length < 3) return { dateFormatted: dateStr, dayTag: "" };
+    const [y, m, d] = parts.map(Number);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const dayStr = String(d).padStart(2, "0");
+    const monthStr = months[(m || 1) - 1] || "";
+    const dateFormatted = `${dayStr} ${monthStr}, ${y}`;
+    const dayTag = dateStr === getTodayDateStr() ? "(Today)" : dateStr === getTomorrowDateStr() ? "(Tomorrow)" : "";
+    return { dateFormatted, dayTag };
+  };
+
   const { data: availableCities = ["Bangalore", "Chennai", "Mumbai", "Pune", "Delhi", "Jaipur", "Hyderabad", "Coimbatore"] } = useGetAvailableCitiesQuery();
   const [parseNlpMutation] = useParseNlpQueryMutation();
 
   const handleSwap = () => {
+    setSwapRotation((prev) => prev + 180);
     const temp = source;
     setSource(destination);
     setDestination(temp);
@@ -160,156 +177,184 @@ export default function HeroSearch() {
           </form>
         </div>
 
-        {/* Standard Search Card */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xl sm:shadow-2xl text-gray-800 dark:text-slate-100 border border-gray-100 dark:border-slate-800 max-w-4xl mx-auto">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-3 items-center">
-            {/* From City */}
-            <div className="md:col-span-4 relative">
-              <AiCityDropdown
-                label="From"
-                value={source}
-                onChange={setSource}
-                excludeCity={destination}
-                placeholder="Select departure city"
-                required
-              />
-            </div>
-
-            {/* Desktop Swap Button */}
-            <div className="hidden md:flex md:col-span-1 justify-center pt-5">
-              <button
-                type="button"
-                onClick={handleSwap}
-                title="Swap Cities"
-                className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 hover:text-[#d84e55] dark:hover:text-red-400 border border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-600 dark:text-slate-300 transition-all hover:scale-110 active:scale-95 cursor-pointer shadow-xs"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            </div>
-
-            {/* Mobile Swap Button */}
-            <div className="flex md:hidden justify-center -my-1 relative z-10">
-              <button
-                type="button"
-                onClick={handleSwap}
-                title="Swap Cities"
-                className="px-2.5 py-0.5 bg-gray-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 text-[#d84e55] dark:text-red-400 border border-gray-200 dark:border-slate-700 rounded-full text-[10px] font-bold shadow-2xs flex items-center space-x-1 transition-all active:scale-95 cursor-pointer"
-              >
-                <ArrowRightLeft className="w-3 h-3" />
-                <span>Swap Cities</span>
-              </button>
-            </div>
-
-            {/* To City */}
-            <div className="md:col-span-4 relative">
-              <AiCityDropdown
-                label="To"
-                value={destination}
-                onChange={setDestination}
-                excludeCity={source}
-                placeholder="Select destination city"
-                required
-              />
-            </div>
-
-            {/* Travel Date Box */}
-            <div className="md:col-span-3 relative">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] sm:text-xs font-bold text-gray-700 dark:text-slate-300 flex items-center space-x-1">
-                  <Calendar className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-[#d84e55]" />
-                  <span>Date</span>
-                </label>
-                <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={() => setQuickDate(0)}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                      date === getTodayDateStr()
-                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
-                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
-                    }`}
-                  >
-                    Today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuickDate(1)}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                      date === getTomorrowDateStr()
-                        ? "bg-red-100 text-[#d84e55] dark:bg-red-950/80 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-800"
-                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
-                    }`}
-                  >
-                    Tomorrow
-                  </button>
-                </div>
-              </div>
-
-              <div
-                onClick={() => setShowDateModal(true)}
-                className="w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-[#d84e55] dark:hover:border-red-500 transition-all cursor-pointer flex items-center justify-between group shadow-2xs"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setShowDateModal(true);
+        {/* Standard Search Card matching Image 1 */}
+        <div className="relative bg-white dark:bg-slate-900 rounded-[28px] p-3 sm:p-4 pb-8 sm:pb-9 shadow-2xl border border-gray-100 dark:border-slate-800 max-w-5xl mx-auto mb-8 sm:mb-10 text-gray-800 dark:text-slate-100 transition-all">
+          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch gap-2.5 sm:gap-3">
+            {/* 1. Combined FROM & TO with Circular Swap Button in between */}
+            <div className="flex-1 min-w-0 border border-gray-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 flex items-center divide-x divide-gray-200 dark:divide-slate-700 shadow-2xs relative group focus-within:border-gray-300 dark:focus-within:border-slate-600 transition-all">
+              {/* From Input */}
+              <div className="flex-1 min-w-0">
+                <AiCityDropdown
+                  label="From"
+                  value={source}
+                  onChange={setSource}
+                  excludeCity={destination}
+                  placeholder="Enter departure city"
+                  variant="hero"
+                  icon={
+                    <svg className="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="14" height="15" rx="2" />
+                      <path d="M3 9h14" />
+                      <circle cx="6.5" cy="16" r="1" fill="currentColor" />
+                      <circle cx="13.5" cy="16" r="1" fill="currentColor" />
+                      <path d="M19 12h3m-1.5-1.5l1.5 1.5-1.5 1.5" />
+                    </svg>
                   }
-                }}
-              >
-                <div className="flex items-center space-x-2 min-w-0">
-                  <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#d84e55] shrink-0" />
-                  <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
-                    {formatShortDateDisplay(date)}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-[#d84e55] group-hover:underline shrink-0">
-                  Change
-                </span>
+                  required
+                />
+              </div>
+
+              {/* Center Circular Swap Button */}
+              <div className="relative flex items-center justify-center -mx-3.5 z-10 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSwap}
+                  title="Swap Cities"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#3e3e3e] hover:bg-black text-white flex items-center justify-center cursor-pointer shadow-md transition-all duration-300 active:scale-90"
+                  style={{ transform: `rotate(${swapRotation}deg)` }}
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* To Input */}
+              <div className="flex-1 min-w-0">
+                <AiCityDropdown
+                  label="To"
+                  value={destination}
+                  onChange={setDestination}
+                  excludeCity={source}
+                  placeholder="Enter destination city"
+                  variant="hero"
+                  icon={
+                    <svg className="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="7" y="4" width="14" height="15" rx="2" />
+                      <path d="M7 9h14" />
+                      <circle cx="10.5" cy="16" r="1" fill="currentColor" />
+                      <circle cx="17.5" cy="16" r="1" fill="currentColor" />
+                      <path d="M5 12H2m1.5-1.5L2 12l1.5 1.5" />
+                    </svg>
+                  }
+                  required
+                />
               </div>
             </div>
 
-            {/* Booking for women Toggle Row */}
-            <div className="md:col-span-12 py-1 px-1 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-7 h-7 rounded-full bg-pink-100 dark:bg-pink-950 flex items-center justify-center text-pink-600">
-                  <User className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
-                    Booking for women
-                  </p>
-                  <p className="text-[10px] text-gray-400">
-                    Prioritizes solo women reserved seats & safe travel partners
-                  </p>
+            {/* 2. Date of Journey Box with Today & Tomorrow Quick Pills */}
+            <div
+              onClick={() => setShowDateModal(true)}
+              className="lg:w-[325px] border border-gray-200 dark:border-slate-700 rounded-2xl px-3.5 py-2 sm:py-2.5 flex items-center justify-between bg-white dark:bg-slate-900 cursor-pointer hover:border-gray-300 dark:hover:border-slate-600 transition-all shadow-2xs group"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setShowDateModal(true);
+                }
+              }}
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <Calendar className="w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0" />
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className="text-[10px] sm:text-[11px] text-gray-400 font-medium tracking-tight">
+                    Date of Journey
+                  </span>
+                  <div className="flex items-center space-x-1 mt-0.5">
+                    <span className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
+                      {formatHeroDate(date).dateFormatted}
+                    </span>
+                    {formatHeroDate(date).dayTag && (
+                      <span className="text-[10px] sm:text-[11px] text-gray-400 font-normal shrink-0">
+                        {formatHeroDate(date).dayTag}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              <div className="flex items-center space-x-1.5 shrink-0 pl-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setQuickDate(0)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    date === getTodayDateStr()
+                      ? "bg-[#fee2e2] text-gray-900 font-black shadow-2xs"
+                      : "bg-[#fee2e2]/70 hover:bg-[#fee2e2] text-gray-700"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickDate(1)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    date === getTomorrowDateStr()
+                      ? "bg-[#fee2e2] text-gray-900 font-black shadow-2xs"
+                      : "bg-[#fee2e2]/70 hover:bg-[#fee2e2] text-gray-700"
+                  }`}
+                >
+                  Tomorrow
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Booking for Women Card */}
+            <div className="lg:w-[235px] border border-gray-200 dark:border-slate-700 rounded-2xl px-3 sm:px-3.5 py-2 sm:py-2.5 flex items-center justify-between gap-2.5 bg-white dark:bg-slate-900 shadow-2xs">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                {/* Female Avatar matching Image 1 */}
+                <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-950/60 border border-pink-200/80 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                  <svg className="w-6 h-6" viewBox="0 0 36 36" fill="none">
+                    <circle cx="18" cy="13" r="6" fill="#F472B6" />
+                    <path d="M12 14c0-4 2.8-7 6-7s6 3 6 7c0 2-1 4-2 5.5-1 1.5-2.5 3-4 3s-3-1.5-4-3c-1-1.5-2-3.5-2-5.5z" fill="#DB2777" />
+                    <circle cx="18" cy="13" r="4.5" fill="#FDE047" />
+                    <path d="M14 13c0 2.5 1.8 4 4 4s4-1.5 4-4" fill="#FBBF24" />
+                    <path d="M11 29c0-4.5 3.1-8 7-8s7 3.5 7 8" fill="#F43F5E" />
+                    <path d="M15 24l3 2.5 3-2.5" stroke="#FFF" strokeWidth="1.2" strokeLinecap="round" />
+                  </svg>
+                </div>
+
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className="text-xs sm:text-[13px] font-black text-gray-900 dark:text-white whitespace-nowrap">
+                    Booking for women
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowWomenModal(true)}
+                    className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-800 text-left cursor-pointer"
+                  >
+                    Know more
+                  </button>
+                </div>
+              </div>
+
+              {/* Pill Switch */}
               <button
                 type="button"
                 onClick={toggleBookingForWomen}
                 role="switch"
                 aria-checked={bookingForWomen}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer ${
-                  bookingForWomen ? "bg-[#d84e55]" : "bg-gray-300 dark:bg-slate-700"
+                className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer shrink-0 ${
+                  bookingForWomen ? "bg-[#d84e55]" : "bg-gray-200 dark:bg-slate-700"
                 }`}
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                    bookingForWomen ? "translate-x-6" : "translate-x-0"
+                  className={`w-5 h-5 rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${
+                    bookingForWomen
+                      ? "translate-x-5 bg-white"
+                      : "translate-x-0 bg-[#4b5563]"
                   }`}
                 />
               </button>
             </div>
 
-            {/* Search Button */}
-            <div className="md:col-span-12 mt-1 sm:mt-2">
+            {/* Hanging Floating "Search buses" Button matching Image 1 */}
+            <div className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 z-20">
               <button
                 type="submit"
-                className="w-full py-2.5 sm:py-3.5 bg-[#d84e55] hover:bg-[#b83e44] text-white rounded-xl font-black text-xs sm:text-base shadow-md sm:shadow-lg shadow-red-500/25 transition-all flex items-center justify-center space-x-2 active:scale-[0.99] cursor-pointer"
+                className="px-8 sm:px-12 py-3 sm:py-3.5 bg-[#d84e55] hover:bg-[#c23b42] text-white rounded-full font-bold text-sm sm:text-base shadow-xl shadow-red-600/35 transition-all hover:scale-105 active:scale-95 flex items-center space-x-2.5 cursor-pointer whitespace-nowrap"
               >
-                <Search className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
-                <span>SEARCH BUSES</span>
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <span>Search buses</span>
               </button>
             </div>
           </form>
@@ -356,6 +401,68 @@ export default function HeroSearch() {
         selectedDate={date}
         onSelectDate={(newDate) => setDate(newDate)}
       />
+
+      {/* Booking for Women Info Modal */}
+      {showWomenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-950 flex items-center justify-center text-pink-600">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900 dark:text-white">
+                    Booking for women
+                  </h3>
+                  <p className="text-[11px] text-gray-500">Dedicated safety features for solo female travelers</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWomenModal(false)}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-gray-600 dark:text-gray-300">
+              <div className="p-3 bg-pink-50/70 dark:bg-pink-950/30 rounded-2xl border border-pink-100 dark:border-pink-900/40 space-y-1">
+                <p className="font-bold text-pink-900 dark:text-pink-300 text-sm">
+                  Priority Safe Travel
+                </p>
+                <p className="text-[11px] text-pink-700 dark:text-pink-400">
+                  When enabled, search results prioritize buses with women-only reserved seats and verified safety protocols.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-start space-x-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <p><span className="font-bold text-gray-800 dark:text-white">Adjacent Duo Seat Protection:</span> In sleeper and duo seats, male passengers cannot book adjacent to solo female travelers.</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <p><span className="font-bold text-gray-800 dark:text-white">Primo Certified Partners:</span> Certified operators with background-verified staff, emergency exits, and GPS tracking.</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <span className="text-pink-500 font-bold">•</span>
+                  <p><span className="font-bold text-gray-800 dark:text-white">24/7 Dedicated Support:</span> Priority assistance for female passengers before, during, and after travel.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowWomenModal(false)}
+              className="w-full py-2.5 bg-[#d84e55] hover:bg-[#c23b42] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

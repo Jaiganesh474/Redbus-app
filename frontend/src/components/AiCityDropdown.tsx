@@ -14,6 +14,7 @@ interface AiCityDropdownProps {
   icon?: React.ReactNode;
   required?: boolean;
   className?: string;
+  variant?: "default" | "hero";
 }
 
 export default function AiCityDropdown({
@@ -25,6 +26,7 @@ export default function AiCityDropdown({
   icon,
   required = false,
   className = "",
+  variant = "default",
 }: AiCityDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value || "");
@@ -81,7 +83,7 @@ export default function AiCityDropdown({
 
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
-      {label && (
+      {label && variant !== "hero" && (
         <label className="block text-[11px] sm:text-xs font-bold text-gray-700 dark:text-slate-300 mb-1 flex items-center space-x-1">
           {icon || <MapPin className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-[#d84e55]" />}
           <span>{label}</span>
@@ -94,36 +96,54 @@ export default function AiCityDropdown({
           setIsOpen(true);
           inputRef.current?.focus();
         }}
-        className={`w-full px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 rounded-xl border ${
-          isOpen
-            ? "border-[#d84e55] ring-2 ring-[#d84e55]/20 bg-white dark:bg-slate-900"
-            : "border-gray-200 dark:border-slate-700"
-        } text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-text transition-all shadow-2xs`}
+        className={`w-full flex items-center justify-between cursor-text transition-all ${
+          variant === "hero"
+            ? "px-3 sm:px-3.5 py-2 sm:py-2.5 bg-transparent"
+            : `px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 rounded-xl border ${
+                isOpen
+                  ? "border-[#d84e55] ring-2 ring-[#d84e55]/20 bg-white dark:bg-slate-900"
+                  : "border-gray-200 dark:border-slate-700"
+              } shadow-2xs`
+        } text-xs sm:text-sm font-bold text-gray-900 dark:text-white`}
       >
-        <div className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0 pr-1 sm:pr-2">
-          {icon || <MapPin className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#d84e55] shrink-0" />}
-          <input
-            ref={inputRef}
-            type="text"
-            required={required}
-            value={inputValue}
-            onChange={handleInputChange}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (cities.length > 0) {
-                  handleSelect(cities[0].name);
-                } else if (inputValue.trim()) {
-                  handleSelect(inputValue.trim());
+        <div className="flex items-center space-x-2 sm:space-x-2.5 flex-1 min-w-0 pr-1 sm:pr-2">
+          {icon || (
+            <MapPin
+              className={`text-[#d84e55] shrink-0 ${variant === "hero" ? "w-4 h-4 sm:w-5 sm:h-5" : "w-3.5 sm:w-4 h-3.5 sm:h-4"}`}
+            />
+          )}
+
+          <div className="flex flex-col min-w-0 flex-1 leading-tight">
+            {variant === "hero" && label && (
+              <span className="text-[10px] sm:text-[11px] text-gray-400 font-medium tracking-tight">
+                {label}
+              </span>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              required={required}
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={() => setIsOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (cities.length > 0) {
+                    handleSelect(cities[0].name);
+                  } else if (inputValue.trim()) {
+                    handleSelect(inputValue.trim());
+                  }
+                } else if (e.key === "Escape") {
+                  setIsOpen(false);
                 }
-              } else if (e.key === "Escape") {
-                setIsOpen(false);
-              }
-            }}
-            placeholder={placeholder}
-            className="w-full bg-transparent border-none outline-hidden text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder:text-gray-400 placeholder:font-normal focus:outline-hidden"
-          />
+              }}
+              placeholder={placeholder}
+              className={`w-full bg-transparent border-none outline-hidden text-gray-900 dark:text-white placeholder:text-gray-400 placeholder:font-normal focus:outline-hidden p-0 truncate ${
+                variant === "hero" ? "text-xs sm:text-sm font-black" : "text-xs sm:text-sm font-bold"
+              }`}
+            />
+          </div>
         </div>
 
         <div className="flex items-center space-x-1 text-gray-400 shrink-0">
@@ -131,22 +151,24 @@ export default function AiCityDropdown({
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 hover:text-red-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+              className="p-1 hover:text-red-500 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               title="Clear city"
             >
               <X className="w-3 h-3" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsOpen(!isOpen);
-            }}
-            className="p-0.5 hover:text-gray-600 cursor-pointer"
-          >
-            <ChevronDown className={`w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-          </button>
+          {variant !== "hero" && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(!isOpen);
+              }}
+              className="p-0.5 hover:text-gray-600 cursor-pointer"
+            >
+              <ChevronDown className={`w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+          )}
         </div>
       </div>
 
