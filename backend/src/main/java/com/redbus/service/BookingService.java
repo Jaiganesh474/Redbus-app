@@ -223,9 +223,7 @@ public class BookingService {
                             rs.setLockedByUserId(null);
                             routeSeatRepository.save(rs);
 
-                            if ("FEMALE".equalsIgnoreCase(bp.getGender())) {
-                                markAdjacentSeatFemaleRestricted(route.getId(), rs.getSeat());
-                            }
+                            updateAdjacentDuoSeatRestriction(route.getId(), rs.getSeat(), bp.getGender(), route.getBus() != null ? route.getBus().getBusType() : "");
                         });
             }
 
@@ -639,18 +637,18 @@ public class BookingService {
         return String.format("%012d", combined);
     }
 
-    private void markAdjacentSeatFemaleRestricted(Long routeId, Seat seat) {
+    private void updateAdjacentDuoSeatRestriction(Long routeId, Seat seat, String bookedGender, String busType) {
+        if (seat == null || routeId == null) return;
+        boolean is2x2 = busType != null && (busType.toLowerCase().contains("2+2") || busType.toLowerCase().contains("2x2") ||
+            (busType.toLowerCase().contains("seater") && !busType.toLowerCase().contains("sleeper")));
         List<RouteSeat> allRouteSeats = routeSeatRepository.findByRouteId(routeId);
         for (RouteSeat other : allRouteSeats) {
             Seat otherSeat = other.getSeat();
-            if (otherSeat.getDeck().equalsIgnoreCase(seat.getDeck())
-                    && otherSeat.getRowNum().equals(seat.getRowNum())
-                    && !otherSeat.getId().equals(seat.getId())) {
-                if (Math.abs(otherSeat.getColNum() - seat.getColNum()) == 1) {
-                    if ("AVAILABLE".equalsIgnoreCase(other.getStatus())) {
-                        other.setGenderRestriction("FEMALE");
-                        routeSeatRepository.save(other);
-                    }
+            if (otherSeat != null && BusRouteService.areSeatsAdjacentDuoPair(seat, otherSeat, is2x2)) {
+                if ("AVAILABLE".equalsIgnoreCase(other.getStatus())) {
+                    String restriction = "FEMALE".equalsIgnoreCase(bookedGender) ? "FEMALE" : "MALE";
+                    other.setGenderRestriction(restriction);
+                    routeSeatRepository.save(other);
                 }
             }
         }
@@ -1043,9 +1041,7 @@ public class BookingService {
             newRs.setLockedByUserId(null);
             routeSeatRepository.save(newRs);
 
-            if ("FEMALE".equalsIgnoreCase(passengerGender)) {
-                markAdjacentSeatFemaleRestricted(targetRoute.getId(), newRs.getSeat());
-            }
+            updateAdjacentDuoSeatRestriction(targetRoute.getId(), newRs.getSeat(), passengerGender, targetRoute.getBus() != null ? targetRoute.getBus().getBusType() : "");
 
             bp.setSeat(newRs.getSeat());
             bp.setSeatNumber(newRs.getSeat().getSeatNumber());

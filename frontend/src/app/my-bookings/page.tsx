@@ -2204,7 +2204,7 @@ export default function MyBookingsPage() {
           if (p && p.gender) {
             return p.gender.toUpperCase().startsWith("F");
           }
-          return ["U5", "U6", "L2", "L3"].includes(seatNum.trim().toUpperCase());
+          return false;
         };
         const hasFemaleBooked = bookedSeats.some((s) => isSeatFemale(s));
         const hasMaleBooked = bookedSeats.some((s) => !isSeatFemale(s));

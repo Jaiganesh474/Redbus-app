@@ -91,45 +91,39 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
   const upperDeckSeats = seats.filter((s) => s.deck === "UPPER");
   const hasUpperDeck = upperDeckSeats.length > 0;
 
+  // Helper to determine if two seats are adjacent in a duo pair
+  const isDuoPair = (s1: SeatItem, s2: SeatItem) => {
+    if (s1.deck !== s2.deck || s1.rowNum !== s2.rowNum || s1.id === s2.id) return false;
+    if (is2x2) {
+      // 2+2 layout: 1 & 2 left pair; 3 & 4 right pair. Aisle between 2 and 3!
+      return (
+        (s1.colNum === 1 && s2.colNum === 2) ||
+        (s1.colNum === 2 && s2.colNum === 1) ||
+        (s1.colNum === 3 && s2.colNum === 4) ||
+        (s1.colNum === 4 && s2.colNum === 3)
+      );
+    }
+    // 2+1 or 1+2 Sleeper: Col 1 is single (left). Col 2 and Col 3 are the only duo pair (right).
+    return (s1.colNum === 2 && s2.colNum === 3) || (s1.colNum === 3 && s2.colNum === 2);
+  };
+
   // Helper to check if a seat is adjacent to a female-booked seat
   const isAdjacentToFemale = (seat: SeatItem, allDeckSeats: SeatItem[]) => {
-    if (seat.genderRestriction === "FEMALE" || seat.seatNumber === "U6" || seat.seatNumber === "L3") return true;
-    const sameRowSeats = allDeckSeats.filter(
-      (s) => s.rowNum === seat.rowNum && s.id !== seat.id
+    const partner = allDeckSeats.find((s) => isDuoPair(seat, s));
+    if (!partner) return false;
+    return (
+      (partner.status === "BOOKED" || partner.status === "LOCKED") &&
+      partner.bookedGender?.toUpperCase() === "FEMALE"
     );
-    return sameRowSeats.some((other) => {
-      const isPair =
-        (seat.colNum === 2 && other.colNum === 3) ||
-        (seat.colNum === 3 && other.colNum === 2) ||
-        (seat.colNum === 1 && other.colNum === 2) ||
-        (seat.colNum === 2 && other.colNum === 1) ||
-        (seat.colNum === 3 && other.colNum === 4) ||
-        (seat.colNum === 4 && other.colNum === 3);
-      return (
-        isPair &&
-        (other.status === "BOOKED" && (other.bookedGender === "FEMALE" || other.seatNumber === "U5" || other.seatNumber === "L2"))
-      );
-    });
   };
 
   const isAdjacentToMale = (seat: SeatItem, allDeckSeats: SeatItem[]) => {
-    if (seat.genderRestriction === "MALE") return true;
-    const sameRowSeats = allDeckSeats.filter(
-      (s) => s.rowNum === seat.rowNum && s.id !== seat.id
+    const partner = allDeckSeats.find((s) => isDuoPair(seat, s));
+    if (!partner) return false;
+    return (
+      (partner.status === "BOOKED" || partner.status === "LOCKED") &&
+      partner.bookedGender?.toUpperCase() === "MALE"
     );
-    return sameRowSeats.some((other) => {
-      const isPair =
-        (seat.colNum === 2 && other.colNum === 3) ||
-        (seat.colNum === 3 && other.colNum === 2) ||
-        (seat.colNum === 1 && other.colNum === 2) ||
-        (seat.colNum === 2 && other.colNum === 1) ||
-        (seat.colNum === 3 && other.colNum === 4) ||
-        (seat.colNum === 4 && other.colNum === 3);
-      return (
-        isPair &&
-        (other.status === "BOOKED" && (other.bookedGender === "MALE" || other.seatNumber === "L1" || other.seatNumber === "U7"))
-      );
-    });
   };
 
   const handleSeatClick = (seat: SeatItem, deckSeats: SeatItem[]) => {
@@ -236,7 +230,7 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       seat.status === "LOCKED" &&
       !isSelected &&
       Boolean(seat.lockedByUserId && user?.id ? seat.lockedByUserId !== user.id : true);
-    const isFemaleBooked = isBooked && (seat.bookedGender === "FEMALE" || seat.seatNumber === "U5" || seat.seatNumber === "L2");
+    const isFemaleBooked = isBooked && seat.bookedGender?.toUpperCase() === "FEMALE";
     const isMaleBooked = isBooked && !isFemaleBooked;
     const isFemaleOnly = !isBooked && isAdjacentToFemale(seat, deckSeats);
     const isMaleOnly = !isBooked && !isFemaleOnly && isAdjacentToMale(seat, deckSeats);
@@ -344,7 +338,7 @@ export default function SeatMap({ route, onClose }: SeatMapProps) {
       seat.status === "LOCKED" &&
       !isSelected &&
       Boolean(seat.lockedByUserId && user?.id ? seat.lockedByUserId !== user.id : true);
-    const isFemaleBooked = isBooked && (seat.bookedGender === "FEMALE" || seat.seatNumber === "U5" || seat.seatNumber === "L2");
+    const isFemaleBooked = isBooked && seat.bookedGender?.toUpperCase() === "FEMALE";
     const isMaleBooked = isBooked && !isFemaleBooked;
     const isFemaleOnly = !isBooked && isAdjacentToFemale(seat, deckSeats);
     const isMaleOnly = !isBooked && !isFemaleOnly && isAdjacentToMale(seat, deckSeats);

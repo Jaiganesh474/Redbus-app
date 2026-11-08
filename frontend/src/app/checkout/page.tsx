@@ -172,7 +172,7 @@ function CheckoutContent() {
   const totalSeats = selectedSeats.length > 0 ? selectedSeats.length : 1;
 
   const femaleOnlySeat = selectedSeats.find(
-    (s) => s.genderRestriction === "FEMALE" || s.seatNumber === "U6" || s.seatNumber === "L3"
+    (s) => s.genderRestriction === "FEMALE"
   );
   const maleOnlySeat = selectedSeats.find(
     (s) => s.genderRestriction === "MALE"

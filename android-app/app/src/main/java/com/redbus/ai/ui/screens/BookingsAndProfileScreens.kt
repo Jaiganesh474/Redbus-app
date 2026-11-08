@@ -2218,7 +2218,7 @@ private fun BookedSeatLayoutModal(
             if (pass != null) {
                 pass.gender.startsWith("F", ignoreCase = true)
             } else {
-                seatNum.equals("U5", ignoreCase = true) || seatNum.equals("L2", ignoreCase = true)
+                false
             }
         }
     }

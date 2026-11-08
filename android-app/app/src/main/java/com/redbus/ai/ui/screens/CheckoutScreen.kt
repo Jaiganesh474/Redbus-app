@@ -137,9 +137,7 @@ fun CheckoutScreen(
     val context = LocalContext.current
 
     val femaleOnlySeat = uiState.selectedSeats.firstOrNull {
-        it.genderRestriction.equals("FEMALE", ignoreCase = true) ||
-        it.seatNumber.equals("U6", ignoreCase = true) ||
-        it.seatNumber.equals("L3", ignoreCase = true)
+        it.genderRestriction.equals("FEMALE", ignoreCase = true)
     }
     val maleOnlySeat = uiState.selectedSeats.firstOrNull {
         it.genderRestriction.equals("MALE", ignoreCase = true)

@@ -159,9 +159,8 @@ public class PaymentService {
                         rs.setLockedByUserId(null);
                         routeSeatRepository.save(rs);
 
-                        if ("FEMALE".equalsIgnoreCase(passenger.getGender())) {
-                            markAdjacentSeatFemaleRestricted(booking.getRoute().getId(), rs.getSeat());
-                        }
+                        updateAdjacentDuoSeatRestriction(booking.getRoute().getId(), rs.getSeat(), passenger.getGender(),
+                                booking.getRoute().getBus() != null ? booking.getRoute().getBus().getBusType() : "");
                     });
         }
 
@@ -173,18 +172,18 @@ public class PaymentService {
                 .build();
     }
 
-    private void markAdjacentSeatFemaleRestricted(Long routeId, Seat seat) {
+    private void updateAdjacentDuoSeatRestriction(Long routeId, Seat seat, String bookedGender, String busType) {
+        if (seat == null || routeId == null) return;
+        boolean is2x2 = busType != null && (busType.toLowerCase().contains("2+2") || busType.toLowerCase().contains("2x2") ||
+            (busType.toLowerCase().contains("seater") && !busType.toLowerCase().contains("sleeper")));
         List<RouteSeat> allRouteSeats = routeSeatRepository.findByRouteId(routeId);
         for (RouteSeat other : allRouteSeats) {
             Seat otherSeat = other.getSeat();
-            if (otherSeat.getDeck().equalsIgnoreCase(seat.getDeck())
-                    && otherSeat.getRowNum().equals(seat.getRowNum())
-                    && !otherSeat.getId().equals(seat.getId())) {
-                if (Math.abs(otherSeat.getColNum() - seat.getColNum()) == 1) {
-                    if ("AVAILABLE".equalsIgnoreCase(other.getStatus())) {
-                        other.setGenderRestriction("FEMALE");
-                        routeSeatRepository.save(other);
-                    }
+            if (otherSeat != null && BusRouteService.areSeatsAdjacentDuoPair(seat, otherSeat, is2x2)) {
+                if ("AVAILABLE".equalsIgnoreCase(other.getStatus())) {
+                    String restriction = "FEMALE".equalsIgnoreCase(bookedGender) ? "FEMALE" : "MALE";
+                    other.setGenderRestriction(restriction);
+                    routeSeatRepository.save(other);
                 }
             }
         }

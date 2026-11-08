@@ -441,35 +441,25 @@ public class BusRouteService {
             }
         }
 
+        boolean is2x2 = route.getBus() != null && route.getBus().getBusType() != null &&
+                (route.getBus().getBusType().toLowerCase().contains("2+2") ||
+                 route.getBus().getBusType().toLowerCase().contains("2x2") ||
+                 (route.getBus().getBusType().toLowerCase().contains("seater") && !route.getBus().getBusType().toLowerCase().contains("sleeper")));
+
         List<SeatDto> seatDtos = routeSeats.stream().map(rs -> {
             Seat s = rs.getSeat();
             BigDecimal price = rs.getPriceOverride() != null ? rs.getPriceOverride() : route.getBasePrice();
             String effectiveBookedGender = bookedGenders.get(rs.getId());
 
-            String genderRest = rs.getGenderRestriction();
-            if ((genderRest == null || "NONE".equalsIgnoreCase(genderRest)) && "AVAILABLE".equalsIgnoreCase(rs.getStatus()) && s != null) {
-                // Check if adjacent paired seat in the same deck and row is booked
+            String genderRest = "NONE";
+            if ("AVAILABLE".equalsIgnoreCase(rs.getStatus()) && s != null) {
+                // Check if adjacent paired seat in the same deck and row is booked (duo seats only, never across aisle)
                 for (RouteSeat otherRs : routeSeats) {
                     if (otherRs.getId().equals(rs.getId())) continue;
                     Seat otherS = otherRs.getSeat();
                     if (otherS == null) continue;
-                    if (s.getDeck() != null && s.getDeck().equalsIgnoreCase(otherS.getDeck()) &&
-                        s.getRowNum() != null && s.getRowNum().equals(otherS.getRowNum())) {
-                        boolean isPair = (s.getColNum() == 2 && otherS.getColNum() == 3) ||
-                                         (s.getColNum() == 3 && otherS.getColNum() == 2) ||
-                                         (s.getColNum() == 1 && otherS.getColNum() == 2) ||
-                                         (s.getColNum() == 2 && otherS.getColNum() == 1) ||
-                                         (s.getColNum() == 3 && otherS.getColNum() == 4) ||
-                                         (s.getColNum() == 4 && otherS.getColNum() == 3);
-                        // Also check explicit known pairs like U5 and U6, L2 and L3
-                        String sn = s.getSeatNumber().toUpperCase();
-                        String osn = otherS.getSeatNumber().toUpperCase();
-                        if ((sn.equals("U6") && osn.equals("U5")) || (sn.equals("U5") && osn.equals("U6")) ||
-                            (sn.equals("L3") && osn.equals("L2")) || (sn.equals("L2") && osn.equals("L3"))) {
-                            isPair = true;
-                        }
-
-                        if (isPair && "BOOKED".equalsIgnoreCase(otherRs.getStatus())) {
+                    if (areSeatsAdjacentDuoPair(s, otherS, is2x2)) {
+                        if ("BOOKED".equalsIgnoreCase(otherRs.getStatus())) {
                             String otherBg = bookedGenders.get(otherRs.getId());
                             if ("FEMALE".equalsIgnoreCase(otherBg)) {
                                 genderRest = "FEMALE";
@@ -481,6 +471,12 @@ public class BusRouteService {
                         }
                     }
                 }
+            }
+
+            // Heal and keep DB in sync
+            if (!genderRest.equalsIgnoreCase(rs.getGenderRestriction())) {
+                rs.setGenderRestriction(genderRest);
+                routeSeatRepository.save(rs);
             }
 
             return SeatDto.builder()
@@ -697,5 +693,26 @@ public class BusRouteService {
         if (diffMinutes < 0) diffMinutes += 24 * 60;
         double hours = Math.round((diffMinutes / 60.0) * 10.0) / 10.0;
         return BigDecimal.valueOf(hours);
+    }
+
+    public static boolean areSeatsAdjacentDuoPair(Seat s1, Seat s2, boolean is2x2) {
+        if (s1 == null || s2 == null) return false;
+        if (s1.getId() != null && s1.getId().equals(s2.getId())) return false;
+        if (s1.getDeck() != null && s2.getDeck() != null && !s1.getDeck().equalsIgnoreCase(s2.getDeck())) return false;
+        if (s1.getRowNum() != null && s2.getRowNum() != null && !s1.getRowNum().equals(s2.getRowNum())) return false;
+
+        int c1 = s1.getColNum() != null ? s1.getColNum() : 0;
+        int c2 = s2.getColNum() != null ? s2.getColNum() : 0;
+
+        if (is2x2) {
+            // 2+2 layout: Col 1 & 2 left pair; Col 3 & 4 right pair. Aisle between 2 and 3!
+            return (c1 == 1 && c2 == 2) || (c1 == 2 && c2 == 1) ||
+                   (c1 == 3 && c2 == 4) || (c1 == 4 && c2 == 3);
+        } else {
+            // 2+1 or 1+2 Sleeper layout (3 columns):
+            // Col 1 is SINGLE (left window). It has NO adjacent partner across the aisle!
+            // Col 2 and Col 3 are the DUO pair (right side).
+            return (c1 == 2 && c2 == 3) || (c1 == 3 && c2 == 2);
+        }
     }
 }

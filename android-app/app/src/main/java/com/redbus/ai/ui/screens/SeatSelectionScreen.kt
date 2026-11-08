@@ -1690,11 +1690,12 @@ private fun SingleDeckChassisColumn(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (s1 != null) {
+                                val cleanSingle = s1.copy(genderRestriction = "NONE")
                                 SleeperBerthItem(
-                                    seat = s1,
+                                    seat = cleanSingle,
                                     fallbackPrice = basePrice,
-                                    isSelected = isSeatSelected(s1, selectedSeats),
-                                    onClick = { onToggleSeat(s1) }
+                                    isSelected = isSeatSelected(cleanSingle, selectedSeats),
+                                    onClick = { onToggleSeat(cleanSingle) }
                                 )
                             } else {
                                 Spacer(modifier = Modifier.width(42.dp))
@@ -1962,13 +1963,14 @@ private fun DeckChassisColumn(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left Single Sleeper Berth (Col 1: L1, L4, L7, L10, L13)
+                        // Left Single Sleeper Berth (Col 1: L1, L4, L7, L10, L13 - Single seat, never gender restricted)
                         if (leftSeat != null) {
+                            val cleanSingle = leftSeat.copy(genderRestriction = "NONE")
                             SleeperBerthItem(
-                                seat = leftSeat,
+                                seat = cleanSingle,
                                 fallbackPrice = basePrice,
-                                isSelected = isSeatSelected(leftSeat, selectedSeats),
-                                onClick = { onToggleSeat(leftSeat) }
+                                isSelected = isSeatSelected(cleanSingle, selectedSeats),
+                                onClick = { onToggleSeat(cleanSingle) }
                             )
                         } else {
                             Spacer(modifier = Modifier.width(42.dp))
@@ -2039,13 +2041,12 @@ private fun DeckChassisColumn(
 
 private fun resolveSeatWithAdjacentRestriction(seat: SeatItem?, partner: SeatItem?): SeatItem? {
     if (seat == null) return null
-    if (!seat.genderRestriction.isNullOrBlank() && !seat.genderRestriction.equals("NONE", ignoreCase = true)) {
-        return seat
-    }
-    if (partner == null) return seat
+    if (partner == null) return seat.copy(genderRestriction = "NONE")
     val partnerIsSold = partner.status.equals("BOOKED", ignoreCase = true) || partner.status.equals("LOCKED", ignoreCase = true)
-    if (!partnerIsSold) return seat
-    val partnerIsFemale = partner.bookedGender.equals("FEMALE", ignoreCase = true) || partner.seatNumber.equals("U5", ignoreCase = true) || partner.seatNumber.equals("L2", ignoreCase = true)
+    if (!partnerIsSold) {
+        return seat.copy(genderRestriction = "NONE")
+    }
+    val partnerIsFemale = partner.bookedGender.equals("FEMALE", ignoreCase = true)
     val restriction = if (partnerIsFemale) "FEMALE" else "MALE"
     return seat.copy(genderRestriction = restriction)
 }
@@ -2058,7 +2059,7 @@ private fun SleeperBerthItem(
     onClick: () -> Unit
 ) {
     val isSold = !isSelected && (seat.status.equals("BOOKED", ignoreCase = true) || seat.status.equals("LOCKED", ignoreCase = true))
-    val isSoldFemale = isSold && (seat.bookedGender.equals("FEMALE", ignoreCase = true) || seat.seatNumber.equals("U5", ignoreCase = true) || seat.seatNumber.equals("L2", ignoreCase = true))
+    val isSoldFemale = isSold && seat.bookedGender.equals("FEMALE", ignoreCase = true)
     val isSoldMale = isSold && !isSoldFemale
 
     val isFemaleReserved = !isSold && !isSelected && seat.genderRestriction.equals("FEMALE", ignoreCase = true)
