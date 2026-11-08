@@ -395,7 +395,7 @@ function SearchResultsContent() {
       }
 
       if (aiQuery.includes("primo") || aiQuery.includes("top rated") || aiQuery.includes("best rating")) {
-        result = result.filter((r) => Boolean(r.primoCertified));
+        result = result.filter((r) => Boolean(r.primoCertified) || Boolean(r.rating && r.rating >= 4.4));
       }
 
       if (aiQuery.includes("single seat") || aiQuery.includes("single")) {
@@ -413,7 +413,7 @@ function SearchResultsContent() {
 
     // 2. Quick Filter Pills
     if (isPrimoFilter) {
-      result = result.filter((r) => Boolean(r.primoCertified));
+      result = result.filter((r) => Boolean(r.primoCertified) || Boolean(r.rating && r.rating >= 4.4));
     }
     if (isFreeCancellationFilter) {
       result = result.filter((r) => r.rating >= 4.0 || r.basePrice >= 600);
@@ -529,7 +529,7 @@ function SearchResultsContent() {
   // Counts for Quick Filter Pills strictly derived from real routes
   const filterCounts = useMemo(() => {
     const total = rawRoutes.length;
-    const primo = rawRoutes.filter((r) => r.rating >= 4.4).length;
+    const primo = rawRoutes.filter((r) => Boolean(r.primoCertified) || Boolean(r.rating && r.rating >= 4.4)).length;
     const freeCancel = rawRoutes.filter((r) => r.rating >= 4.0 || r.basePrice >= 600).length;
     const ac = rawRoutes.filter((r) => r.busType.toLowerCase().includes("ac") && !r.busType.toLowerCase().includes("non")).length;
     const sleeper = rawRoutes.filter((r) => r.busType.toLowerCase().includes("sleeper")).length;

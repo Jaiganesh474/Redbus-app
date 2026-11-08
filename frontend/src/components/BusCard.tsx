@@ -71,7 +71,7 @@ export default function BusCard({ route, autoOpen = false }: BusCardProps) {
     setShowModal(true);
   };
 
-  const isPrimo = Boolean(route.primoCertified);
+  const isPrimo = Boolean(route.primoCertified) || Boolean(route.rating && route.rating >= 4.4);
   const licensePlate =
     route.busNumber && route.busNumber.trim().length > 0
       ? route.busNumber.trim().toUpperCase()
