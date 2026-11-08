@@ -122,7 +122,7 @@ export default function HeroSearch() {
   };
 
   return (
-    <div className="relative bg-gradient-to-r from-[#d84e55] via-red-600 to-rose-600 overflow-hidden">
+    <div className="relative bg-gradient-to-r from-[#d84e55] via-red-600 to-rose-600 rounded-3xl sm:rounded-[36px] lg:rounded-[44px] overflow-hidden shadow-2xl shadow-red-600/20 border border-red-500/20">
       {/* Decorative SVG background shapes */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
