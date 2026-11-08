@@ -129,7 +129,7 @@ export default function HeroSearch() {
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-black/10 rounded-full blur-2xl transform -translate-x-1/3 translate-y-1/3" />
       </div>
 
-      <div className="px-3.5 py-6 sm:px-6 sm:py-12 md:py-16 text-white max-w-5xl mx-auto">
+      <div className="px-3.5 py-6 sm:px-6 sm:py-12 md:py-16 text-white max-w-6xl xl:max-w-7xl mx-auto">
         {/* Title */}
         <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-8">
           <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-0.5 sm:py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] sm:text-xs font-semibold tracking-wide uppercase mb-2 sm:mb-3 border border-white/15">
@@ -145,10 +145,10 @@ export default function HeroSearch() {
         </div>
 
         {/* NLP Natural Language Search Pill */}
-        <div className="max-w-3xl mx-auto mb-3.5 sm:mb-6">
+        <div className="max-w-3xl mx-auto mb-4 sm:mb-6">
           <form onSubmit={handleNlpSearch} className="relative">
             <div className="relative flex items-center">
-              <div className="absolute left-3 sm:left-4 flex items-center pointer-events-none text-[#d84e55]">
+              <div className="absolute left-3.5 sm:left-4.5 flex items-center pointer-events-none text-[#d84e55]">
                 <Sparkles className="w-3.5 h-3.5 sm:w-5 sm:h-5 animate-pulse" />
               </div>
               <input
@@ -156,12 +156,12 @@ export default function HeroSearch() {
                 value={nlpQuery}
                 onChange={(e) => setNlpQuery(e.target.value)}
                 placeholder="Ask AI: 'AC sleeper Bangalore to Chennai tomorrow'..."
-                className="w-full pl-8 sm:pl-12 pr-24 sm:pr-36 py-2 sm:py-3.5 bg-white dark:bg-slate-900 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-400 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm font-medium shadow-md sm:shadow-lg border border-red-100 dark:border-slate-800 focus:outline-hidden focus:ring-4 focus:ring-amber-300/50"
+                className="w-full pl-9 sm:pl-12 pr-24 sm:pr-36 py-2.5 sm:py-3.5 bg-white dark:bg-slate-900 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-400 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm font-medium shadow-md sm:shadow-lg border border-red-100 dark:border-slate-800 focus:outline-hidden focus:ring-4 focus:ring-amber-300/50"
               />
               <button
                 type="submit"
                 disabled={isNlpLoading}
-                className="absolute right-1 sm:right-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-[#d84e55] to-red-600 hover:from-[#b83e44] hover:to-red-700 text-white rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-md flex items-center space-x-1 disabled:opacity-70 cursor-pointer"
+                className="absolute right-1.5 sm:right-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-[#d84e55] to-red-600 hover:from-[#b83e44] hover:to-red-700 text-white rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-md flex items-center space-x-1 disabled:opacity-70 cursor-pointer"
               >
                 {isNlpLoading ? (
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -177,11 +177,11 @@ export default function HeroSearch() {
           </form>
         </div>
 
-        {/* Standard Search Card matching Image 1 */}
-        <div className="relative bg-white dark:bg-slate-900 rounded-[28px] p-3 sm:p-4 pb-8 sm:pb-9 shadow-2xl border border-gray-100 dark:border-slate-800 max-w-5xl mx-auto mb-8 sm:mb-10 text-gray-800 dark:text-slate-100 transition-all">
-          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch gap-2.5 sm:gap-3">
+        {/* Standard Search Card matching redBus design with generous spacing */}
+        <div className="relative bg-white dark:bg-slate-900 rounded-[28px] p-3.5 sm:p-5 pb-9 sm:pb-10 shadow-2xl border border-gray-100 dark:border-slate-800 max-w-6xl xl:max-w-7xl mx-auto mb-8 sm:mb-10 text-gray-800 dark:text-slate-100 transition-all">
+          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row items-stretch gap-3 lg:gap-3.5">
             {/* 1. Combined FROM & TO with Circular Swap Button in between */}
-            <div className="flex-1 min-w-0 border border-gray-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 flex items-center divide-x divide-gray-200 dark:divide-slate-700 shadow-2xs relative group focus-within:border-gray-300 dark:focus-within:border-slate-600 transition-all">
+            <div className="flex-1 lg:flex-[1.4] min-w-0 border border-gray-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 flex items-center divide-x divide-gray-200 dark:divide-slate-700 shadow-2xs relative group focus-within:border-gray-300 dark:focus-within:border-slate-600 transition-all">
               {/* From Input */}
               <div className="flex-1 min-w-0">
                 <AiCityDropdown
@@ -243,7 +243,7 @@ export default function HeroSearch() {
             {/* 2. Date of Journey Box with Today & Tomorrow Quick Pills */}
             <div
               onClick={() => setShowDateModal(true)}
-              className="lg:w-[325px] border border-gray-200 dark:border-slate-700 rounded-2xl px-3.5 py-2 sm:py-2.5 flex items-center justify-between bg-white dark:bg-slate-900 cursor-pointer hover:border-gray-300 dark:hover:border-slate-600 transition-all shadow-2xs group"
+              className="lg:w-[330px] xl:w-[360px] shrink-0 border border-gray-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 sm:py-3 flex items-center justify-between bg-white dark:bg-slate-900 cursor-pointer hover:border-gray-300 dark:hover:border-slate-600 transition-all shadow-2xs group"
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -259,7 +259,7 @@ export default function HeroSearch() {
                   <span className="text-[10px] sm:text-[11px] text-gray-400 font-medium tracking-tight">
                     Date of Journey
                   </span>
-                  <div className="flex items-center space-x-1 mt-0.5">
+                  <div className="flex items-center space-x-1.5 mt-0.5">
                     <span className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
                       {formatHeroDate(date).dateFormatted}
                     </span>
@@ -298,10 +298,10 @@ export default function HeroSearch() {
               </div>
             </div>
 
-            {/* 3. Booking for Women Card */}
-            <div className="lg:w-[235px] border border-gray-200 dark:border-slate-700 rounded-2xl px-3 sm:px-3.5 py-2 sm:py-2.5 flex items-center justify-between gap-2.5 bg-white dark:bg-slate-900 shadow-2xs">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                {/* Female Avatar matching Image 1 */}
+            {/* 3. Booking for Women Card with Generous Spacing and Separated Toggle */}
+            <div className="lg:w-[280px] xl:w-[310px] shrink-0 border border-gray-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 sm:py-3 flex items-center justify-between gap-4 sm:gap-6 bg-white dark:bg-slate-900 shadow-2xs">
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                {/* Female Avatar */}
                 <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-950/60 border border-pink-200/80 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
                   <svg className="w-6 h-6" viewBox="0 0 36 36" fill="none">
                     <circle cx="18" cy="13" r="6" fill="#F472B6" />
@@ -320,20 +320,20 @@ export default function HeroSearch() {
                   <button
                     type="button"
                     onClick={() => setShowWomenModal(true)}
-                    className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-800 text-left cursor-pointer"
+                    className="text-[10px] sm:text-[11px] text-blue-600 dark:text-blue-400 font-semibold underline hover:text-blue-800 text-left cursor-pointer mt-0.5"
                   >
                     Know more
                   </button>
                 </div>
               </div>
 
-              {/* Pill Switch */}
+              {/* Pill Switch with generous gap and margin */}
               <button
                 type="button"
                 onClick={toggleBookingForWomen}
                 role="switch"
                 aria-checked={bookingForWomen}
-                className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer shrink-0 ${
+                className={`ml-auto shrink-0 w-11 h-6 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer ${
                   bookingForWomen ? "bg-[#d84e55]" : "bg-gray-200 dark:bg-slate-700"
                 }`}
               >
@@ -347,11 +347,11 @@ export default function HeroSearch() {
               </button>
             </div>
 
-            {/* Hanging Floating "Search buses" Button matching Image 1 */}
+            {/* Hanging Floating "Search buses" Button matching redBus */}
             <div className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 z-20">
               <button
                 type="submit"
-                className="px-8 sm:px-12 py-3 sm:py-3.5 bg-[#d84e55] hover:bg-[#c23b42] text-white rounded-full font-bold text-sm sm:text-base shadow-xl shadow-red-600/35 transition-all hover:scale-105 active:scale-95 flex items-center space-x-2.5 cursor-pointer whitespace-nowrap"
+                className="px-10 sm:px-14 py-3 sm:py-3.5 bg-[#d84e55] hover:bg-[#c23b42] text-white rounded-full font-bold text-sm sm:text-base shadow-xl shadow-red-600/35 transition-all hover:scale-105 active:scale-95 flex items-center space-x-2.5 cursor-pointer whitespace-nowrap"
               >
                 <Search className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 <span>Search buses</span>

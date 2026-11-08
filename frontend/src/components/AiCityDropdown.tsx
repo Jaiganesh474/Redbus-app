@@ -98,7 +98,7 @@ export default function AiCityDropdown({
         }}
         className={`w-full flex items-center justify-between cursor-text transition-all ${
           variant === "hero"
-            ? "px-3 sm:px-3.5 py-2 sm:py-2.5 bg-transparent"
+            ? "px-3.5 sm:px-4 py-2.5 sm:py-3 bg-transparent"
             : `px-3 sm:px-3.5 py-2 sm:py-2.5 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100/80 dark:hover:bg-slate-700/80 rounded-xl border ${
                 isOpen
                   ? "border-[#d84e55] ring-2 ring-[#d84e55]/20 bg-white dark:bg-slate-900"
