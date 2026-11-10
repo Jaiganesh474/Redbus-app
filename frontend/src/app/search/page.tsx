@@ -929,7 +929,7 @@ function SearchResultsContent() {
                       : "border-purple-200 dark:border-purple-800/80 bg-white dark:bg-[#0f172a] hover:border-purple-400"
                   }`}
                 >
-                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 ml-1 shrink-0 animate-pulse" />
+                  
                   {!aiFilterQuery && !isListening && (
                     <div className="absolute left-8 right-12 inset-y-0 flex items-center pointer-events-none">
                       <AutotypingPlaceholder
